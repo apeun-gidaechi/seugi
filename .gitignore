@@ -1,6 +1,8 @@
 node_modules
 .workspace
 dist
+.data
+data
 .env
 .upstream
 apps/web/build

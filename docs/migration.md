@@ -13,4 +13,4 @@ The original repositories were imported for analysis only and are excluded from 
 
 Implemented routes currently cover `/member`, `/workspace`, `/profile`, `/chat/group`, `/chat/personal`, `/chat/group/member`, `/message`, `/notification`, `/timetable`, `/task`, `/meal`, `/schedule`, `/email`, `/oauth`, `/ai`, and `/file`.
 
-The original server also relies on MySQL, MongoDB, Redis, RabbitMQ, S3, Firebase Cloud Messaging, Google Classroom, NEIS, and OpenAI. These integrations cannot be faithfully activated without deployment credentials and provider decisions. `apps/api` makes those boundaries explicit; it must not be deployed with its in-memory Store.
+The original server also relies on MySQL, MongoDB, Redis, RabbitMQ, S3, Firebase Cloud Messaging, Google Classroom, NEIS, and OpenAI. These integrations cannot be faithfully activated without deployment credentials and provider decisions. `apps/api` now supplies an atomic file-backed store for durable single-node use, but a relational/shared adapter is required before multi-instance production deployment.

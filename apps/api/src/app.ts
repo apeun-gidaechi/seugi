@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { ApiResponse, ChatMessage, Notification, Profile, Role, RoomType, Timetable } from "@seugi/contracts";
 import { Store } from "./store.js";
@@ -20,6 +21,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   await app.register(cors, { origin: true });
   await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+  app.addHook("onResponse", async () => { store.persist(); });
   app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; return reply.code(error instanceof z.ZodError ? 400 : message.endsWith("NOT_FOUND") ? 404 : 500).send({ message }); });
   app.get("/health", async () => ok("healthy", { status: "ok" }));
 
@@ -27,7 +29,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.post("/member/register", async (request, reply) => {
     const input = body(credentials, request);
     if ([...store.members.values()].some((member) => member.email === input.email)) return reply.code(409).send({ message: "이미 가입된 이메일입니다" });
-    const member: { id: string; email: string; name: string; password: string; refreshToken?: string } = { id: store.id(), email: input.email, name: input.name ?? input.email.split("@")[0], password: input.password };
+    const member: { id: string; email: string; name: string; password: string; refreshToken?: string } = { id: store.id(), email: input.email, name: input.name ?? input.email.split("@")[0], password: await bcrypt.hash(input.password, 12) };
     store.members.set(member.id, member);
     const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
     member.refreshToken = tokens.refreshToken;
@@ -35,7 +37,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   });
   app.post("/member/login", async (request, reply) => {
     const input = body(credentials.pick({ email: true, password: true }), request);
-    const member = [...store.members.values()].find((item) => item.email === input.email && item.password === input.password);
+    const candidate = [...store.members.values()].find((item) => item.email === input.email);
+    const member = candidate?.password && await bcrypt.compare(input.password, candidate.password) ? candidate : undefined;
     if (!member) return reply.code(401).send({ message: "이메일 또는 비밀번호가 올바르지 않습니다" });
     const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
     member.refreshToken = tokens.refreshToken;
@@ -46,7 +49,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     try { const claims = app.jwt.verify<Claims>(token); const member = store.requireMember(claims.sub); if (member.refreshToken !== token) throw new Error(); return ok("토큰 재발급 성공", app.jwt.sign({ sub: member.id })); }
     catch { return reply.code(401).send({ message: "유효하지 않은 리프레시 토큰입니다" }); }
   });
-  app.get("/member/myInfo", { preHandler: auth }, async (request) => ok("내 정보 조회 성공", store.requireMember(request.user.sub)));
+  app.get("/member/myInfo", { preHandler: auth }, async (request) => { const { password: _password, refreshToken: _refreshToken, ...member } = store.requireMember(request.user.sub); return ok("내 정보 조회 성공", member); });
   app.patch("/member/edit", { preHandler: auth }, async (request) => { const input = body(z.object({ name: z.string().min(1).max(40).optional(), picture: z.string().url().optional() }), request); Object.assign(store.requireMember(request.user.sub), input); return ok("회원 정보 수정 성공"); });
   app.post("/member/logout", { preHandler: auth }, async (request) => { store.requireMember(request.user.sub).refreshToken = undefined; return ok("로그아웃 성공"); });
   app.delete("/member/remove", { preHandler: auth }, async (request) => { store.members.delete(request.user.sub); return ok("회원 탈퇴 성공"); });

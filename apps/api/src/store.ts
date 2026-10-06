@@ -1,6 +1,25 @@
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import type { ChatMessage, Member, Notification, Profile, Room, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
 
+type Snapshot = {
+  members: Array<[string, Member & { password?: string; refreshToken?: string }]>;
+  profiles: Array<[string, Profile]>;
+  workspaces: Array<[string, Workspace]>;
+  rooms: Array<[string, Room]>;
+  messages: Array<[string, ChatMessage]>;
+  notifications: Array<[string, Notification]>;
+  timetables: Array<[string, Timetable]>;
+  tasks: Array<[string, Task]>;
+  schedules: Schedule[];
+};
+
+/**
+ * Domain storage with an optional atomic JSON persistence adapter. The adapter is
+ * intentionally dependency-free so local Docker/dev instances retain data; use a
+ * relational adapter before horizontally scaling a production deployment.
+ */
 export class Store {
   members = new Map<string, Member & { password?: string; refreshToken?: string }>();
   profiles = new Map<string, Profile>();
@@ -11,8 +30,26 @@ export class Store {
   timetables = new Map<string, Timetable>();
   tasks = new Map<string, Task>();
   schedules: Schedule[] = [];
+  constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
   requireWorkspace(id: string) { const value = this.workspaces.get(id); if (!value) throw new Error("WORKSPACE_NOT_FOUND"); return value; }
   canAccess(workspaceId: string, memberId: string) { return this.requireWorkspace(workspaceId).members.includes(memberId); }
+  load() {
+    if (!this.filePath || !existsSync(this.filePath)) return;
+    const snapshot = JSON.parse(readFileSync(this.filePath, "utf8")) as Snapshot;
+    this.members = new Map(snapshot.members ?? []); this.profiles = new Map(snapshot.profiles ?? []);
+    this.workspaces = new Map(snapshot.workspaces ?? []); this.rooms = new Map(snapshot.rooms ?? []);
+    this.messages = new Map(snapshot.messages ?? []); this.notifications = new Map(snapshot.notifications ?? []);
+    this.timetables = new Map(snapshot.timetables ?? []); this.tasks = new Map(snapshot.tasks ?? []);
+    this.schedules = snapshot.schedules ?? [];
+  }
+  persist() {
+    if (!this.filePath) return;
+    mkdirSync(dirname(this.filePath), { recursive: true });
+    const snapshot: Snapshot = { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules };
+    const temporary = `${this.filePath}.tmp`;
+    writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
+    renameSync(temporary, this.filePath);
+  }
 }

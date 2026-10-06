@@ -1,0 +1,14 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DATA_FILE: /data/seugi.json
+    ports:
+      - "8080:8080"
+    volumes:
+      - seugi-data:/data
+volumes:
+  seugi-data:
