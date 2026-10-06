@@ -9,6 +9,7 @@ import { z } from "zod";
 import type { ApiResponse, ChatMessage, Notification, Profile, Role, RoomType, Timetable } from "@seugi/contracts";
 import { Store } from "./store.js";
 import { NeisClient } from "./neis.js";
+import { OAuthProvider } from "./oauth.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" { interface FastifyJWT { user: Claims } }
@@ -23,6 +24,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
   const uploadDirectory = process.env.UPLOAD_DIR ?? "./data/uploads";
   const neis = new NeisClient();
+  const oauth = new OAuthProvider();
   await app.register(cors, { origin: true });
   await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
@@ -130,7 +132,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.get("/schedule/:workspaceId", { preHandler: auth }, async (request) => { const workspaceId = workspaceParam.parse(request.params).workspaceId; if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const schedules = store.schedules.filter((item) => item.workspaceId === workspaceId); return ok("학사일정 전부 불러오기 성공", schedules.length ? schedules : await resetSchedules(workspaceId)); });
   app.get("/schedule/month", { preHandler: auth }, async (request) => { const input = query(z.object({ workspaceId: z.string().uuid(), month: z.coerce.number().int().min(1).max(12) }), request); if (!store.canAccess(input.workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const all = store.schedules.filter((item) => item.workspaceId === input.workspaceId); const schedules = all.length ? all : await resetSchedules(input.workspaceId); return ok("학사일정 한달치 불러오기 성공", schedules.filter((item) => new Date(item.date).getMonth() + 1 === input.month)); });
   app.get("/email/send", async (request) => { query(z.object({ email: z.string().email() }), request); return ok("이메일 인증 코드 발송 성공"); });
-  app.post("/oauth/:provider/authenticate", async (request, reply) => { const provider = z.object({ provider: z.enum(["google", "apple"]) }).parse(request.params).provider; const input = body(z.object({ email: z.string().email().optional(), name: z.string().optional(), code: z.string().min(1) }), request); const email = input.email ?? `${provider}-${input.code}@oauth.seugi.local`; let member = [...store.members.values()].find((item) => item.email === email); if (!member) { member = { id: store.id(), email, name: input.name ?? provider, password: undefined }; store.members.set(member.id, member); } const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
+  app.post("/oauth/:provider/authenticate", async (request, reply) => { const provider = z.object({ provider: z.enum(["google", "apple"]) }).parse(request.params).provider; const input = body(z.object({ code: z.string().min(1), platform: z.enum(["WEB", "ANDROID", "IOS"]).default("WEB"), name: z.string().optional() }), request); const identity = provider === "google" ? await oauth.google(input.code, input.platform) : await oauth.apple(input.code, input.platform, input.name); let member = [...store.members.values()].find((item) => item.email === identity.email); if (!member) { member = { id: store.id(), email: identity.email, name: identity.name, password: undefined }; store.members.set(member.id, member); } const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
   app.post("/oauth/google/connect", { preHandler: auth }, async () => ok("구글 연동 성공"));
   app.delete("/oauth/google/remove", { preHandler: auth }, async () => ok("삭제 성공 !"));
   app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", `캣스기는 아직 외부 AI 제공자 설정이 필요합니다. 질문: ${input.message}`); });
