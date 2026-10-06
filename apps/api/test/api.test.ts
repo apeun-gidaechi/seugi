@@ -3,7 +3,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { io } from "socket.io-client";
 import { buildApp } from "../src/app.js";
+import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
 
 test("member can register, create a workspace, and retrieve it", async () => {
@@ -33,4 +35,24 @@ test("persistent store survives a new application instance", async () => {
     assert.equal(result.json().data[0].name, "영속 학교");
     await second.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("authenticated room members receive Socket.IO messages", async () => {
+  const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "chat@example.com", password: "password123" } });
+  const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
+  const workspaceResponse = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "채팅 학교" } });
+  const workspaceId = workspaceResponse.json().data as string;
+  const roomResponse = await app.inject({ method: "POST", url: "/chat/group/create", headers, payload: { workspaceId, name: "테스트 방", memberIds: [] } });
+  const roomId = roomResponse.json().data as string;
+  await app.listen({ port: 0, host: "127.0.0.1" });
+  const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  const socket = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
+  try {
+    await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
+    socket.emit("room:join", roomId);
+    const received = new Promise<{ message: string }>((resolve) => socket.once("chat:message", resolve));
+    const acknowledged = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "안녕하세요" }, resolve));
+    assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");
+  } finally { socket.close(); await app.close(); }
 });

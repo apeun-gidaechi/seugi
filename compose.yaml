@@ -6,6 +6,7 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       DATA_FILE: /data/seugi.json
+      UPLOAD_DIR: /data/uploads
     ports:
       - "8080:8080"
     volumes:

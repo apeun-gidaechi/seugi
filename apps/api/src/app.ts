@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
@@ -18,12 +20,14 @@ const workspaceParam = z.object({ workspaceId: z.string().uuid() });
 
 export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
+  const uploadDirectory = process.env.UPLOAD_DIR ?? "./data/uploads";
   await app.register(cors, { origin: true });
   await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook("onResponse", async () => { store.persist(); });
   app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; return reply.code(error instanceof z.ZodError ? 400 : message.endsWith("NOT_FOUND") ? 404 : 500).send({ message }); });
   app.get("/health", async () => ok("healthy", { status: "ok" }));
+  app.get("/uploads/:name", async (request, reply) => { const name = basename(z.object({ name: z.string() }).parse(request.params).name); const file = join(uploadDirectory, name); if (!existsSync(file)) return reply.code(404).send({ message: "FILE_NOT_FOUND" }); return reply.send(readFileSync(file)); });
 
   const credentials = z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(1).max(40).optional() });
   app.post("/member/register", async (request, reply) => {
@@ -126,6 +130,6 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.post("/oauth/google/connect", { preHandler: auth }, async () => ok("구글 연동 성공"));
   app.delete("/oauth/google/remove", { preHandler: auth }, async () => ok("삭제 성공 !"));
   app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", `캣스기는 아직 외부 AI 제공자 설정이 필요합니다. 질문: ${input.message}`); });
-  app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); return ok("파일 업로드 성공", { name: file.filename, type, mimeType: file.mimetype, size: bytes.length, url: `/uploads/${encodeURIComponent(file.filename)}` }); });
+  app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`; mkdirSync(uploadDirectory, { recursive: true }); writeFileSync(join(uploadDirectory, name), bytes); return ok("파일 업로드 성공", { name, type, mimeType: file.mimetype, size: bytes.length, url: `/uploads/${encodeURIComponent(name)}` }); });
   return app;
 }
