@@ -1,6 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
@@ -14,6 +13,7 @@ import { sendVerificationEmail } from "./mailer.js";
 import { fetchClassroomTasks } from "./classroom.js";
 import { answerWithCatseugi } from "./ai.js";
 import { PushNotifications } from "./push.js";
+import { FileStorage } from "./storage.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" { interface FastifyJWT { user: Claims } }
@@ -27,6 +27,7 @@ const workspaceParam = z.object({ workspaceId: z.string().uuid() });
 export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
   const uploadDirectory = process.env.UPLOAD_DIR ?? "./data/uploads";
+  const storage = new FileStorage(uploadDirectory);
   const neis = new NeisClient();
   const oauth = new OAuthProvider();
   const push = new PushNotifications();
@@ -36,7 +37,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.addHook("onResponse", async () => { store.persist(); });
   app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; return reply.code(error instanceof z.ZodError ? 400 : message.endsWith("NOT_FOUND") ? 404 : message.startsWith("AI_") ? 503 : 500).send({ message }); });
   app.get("/health", async () => ok("healthy", { status: "ok" }));
-  app.get("/uploads/:name", async (request, reply) => { const name = basename(z.object({ name: z.string() }).parse(request.params).name); const file = join(uploadDirectory, name); if (!existsSync(file)) return reply.code(404).send({ message: "FILE_NOT_FOUND" }); return reply.send(readFileSync(file)); });
+  app.get("/uploads/:name", async (request, reply) => { const name = basename(z.object({ name: z.string() }).parse(request.params).name); try { return reply.send(await storage.read(name)); } catch (error) { if (error instanceof Error && error.message === "FILE_NOT_FOUND") return reply.code(404).send({ message: "FILE_NOT_FOUND" }); throw error; } });
 
   const credentials = z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(1).max(40).optional() });
   app.post("/member/register", async (request, reply) => {
@@ -155,6 +156,6 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     return ok("삭제 성공 !");
   });
   app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", await answerWithCatseugi(input.message)); });
-  app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`; mkdirSync(uploadDirectory, { recursive: true }); writeFileSync(join(uploadDirectory, name), bytes); return ok("파일 업로드 성공", { name, type, mimeType: file.mimetype, size: bytes.length, url: `/uploads/${encodeURIComponent(name)}` }); });
+  app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`; const uploaded = await storage.put(name, bytes, file.mimetype); return ok("파일 업로드 성공", { name, type, mimeType: file.mimetype, size: bytes.length, url: uploaded.url }); });
   return app;
 }
