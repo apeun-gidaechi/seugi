@@ -10,7 +10,8 @@ export class SeugiApi {
     if (!response.ok) throw new Error(payload.message);
     return payload;
   }
-  register(input: { email: string; password: string; name?: string }) { return this.request<Tokens>("/member/register", { method: "POST", body: JSON.stringify(input) }); }
+  sendVerification(email: string) { return this.request<void>(`/email/send?email=${encodeURIComponent(email)}`); }
+  register(input: { email: string; password: string; name?: string; code: string }) { return this.request<Tokens>("/member/register", { method: "POST", body: JSON.stringify(input) }); }
   login(input: { email: string; password: string }) { return this.request<Tokens>("/member/login", { method: "POST", body: JSON.stringify(input) }); }
   workspaces() { return this.request<Workspace[]>("/workspace"); }
   createWorkspace(input: { name: string; schoolCode?: string }) { return this.request<string>("/workspace", { method: "POST", body: JSON.stringify(input) }); }

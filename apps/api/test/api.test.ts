@@ -9,8 +9,8 @@ import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
 
 test("member can register, create a workspace, and retrieve it", async () => {
-  const app = await buildApp();
-  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "student@example.com", password: "password123", name: "학생" } });
+  const store = new Store(); store.emailCodes.set("student@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "student@example.com", password: "password123", name: "학생", code: "123456" } });
   assert.equal(registration.statusCode, 200);
   const authorization = `Bearer ${registration.json().data.accessToken}`;
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "스기고" } });
@@ -20,12 +20,22 @@ test("member can register, create a workspace, and retrieve it", async () => {
   await app.close();
 });
 
+test("email code must be issued before email-password registration", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  const before = await app.inject({ method: "POST", url: "/member/register", payload: { email: "verify@example.com", password: "password123", code: "123456" } }); assert.equal(before.statusCode, 409);
+  const sent = await app.inject({ url: "/email/send?email=verify@example.com" }); assert.equal(sent.statusCode, 200);
+  const issued = store.emailCodes.get("verify@example.com"); assert.match(issued?.code ?? "", /^\d{6}$/);
+  const confirm = await app.inject({ method: "POST", url: "/email/confirm", payload: { email: "verify@example.com", code: issued?.code } }); assert.equal(confirm.statusCode, 200);
+  const registered = await app.inject({ method: "POST", url: "/member/register", payload: { email: "verify@example.com", password: "password123", code: issued?.code } }); assert.equal(registered.statusCode, 200);
+  await app.close();
+});
+
 test("persistent store survives a new application instance", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-api-"));
   try {
     const file = join(directory, "state.json");
-    const firstStore = new Store(file); const first = await buildApp(firstStore);
-    const registered = await first.inject({ method: "POST", url: "/member/register", payload: { email: "persist@example.com", password: "password123" } });
+    const firstStore = new Store(file); firstStore.emailCodes.set("persist@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const first = await buildApp(firstStore);
+    const registered = await first.inject({ method: "POST", url: "/member/register", payload: { email: "persist@example.com", password: "password123", code: "123456" } });
     const authorization = `Bearer ${registered.json().data.accessToken}`;
     await first.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "영속 학교" } });
     await first.close();
@@ -39,7 +49,7 @@ test("persistent store survives a new application instance", async () => {
 
 test("authenticated room members receive Socket.IO messages", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
-  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "chat@example.com", password: "password123" } });
+  store.emailCodes.set("chat@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "chat@example.com", password: "password123", code: "123456" } });
   const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
   const workspaceResponse = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "채팅 학교" } });
   const workspaceId = workspaceResponse.json().data as string;

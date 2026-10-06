@@ -10,6 +10,7 @@ import type { ApiResponse, ChatMessage, Notification, Profile, Role, RoomType, T
 import { Store } from "./store.js";
 import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
+import { sendVerificationEmail } from "./mailer.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" { interface FastifyJWT { user: Claims } }
@@ -35,10 +36,12 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
 
   const credentials = z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(1).max(40).optional() });
   app.post("/member/register", async (request, reply) => {
-    const input = body(credentials, request);
+    const input = body(credentials.extend({ code: z.string().regex(/^\d{6}$/) }), request); const verification = store.emailCodes.get(input.email);
+    if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) return reply.code(409).send({ message: "이메일 인증 코드가 일치하지 않거나 만료되었습니다" });
     if ([...store.members.values()].some((member) => member.email === input.email)) return reply.code(409).send({ message: "이미 가입된 이메일입니다" });
     const member: { id: string; email: string; name: string; password: string; refreshToken?: string } = { id: store.id(), email: input.email, name: input.name ?? input.email.split("@")[0], password: await bcrypt.hash(input.password, 12) };
     store.members.set(member.id, member);
+    store.emailCodes.delete(input.email);
     const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
     member.refreshToken = tokens.refreshToken;
     return ok("회원가입 성공", tokens);
@@ -131,7 +134,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const resetSchedules = async (workspaceId: string) => { const schedules = await neis.schedules(store.requireWorkspace(workspaceId), new Date().getFullYear()); store.schedules = [...store.schedules.filter((item) => item.workspaceId !== workspaceId), ...schedules]; return schedules; };
   app.get("/schedule/:workspaceId", { preHandler: auth }, async (request) => { const workspaceId = workspaceParam.parse(request.params).workspaceId; if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const schedules = store.schedules.filter((item) => item.workspaceId === workspaceId); return ok("학사일정 전부 불러오기 성공", schedules.length ? schedules : await resetSchedules(workspaceId)); });
   app.get("/schedule/month", { preHandler: auth }, async (request) => { const input = query(z.object({ workspaceId: z.string().uuid(), month: z.coerce.number().int().min(1).max(12) }), request); if (!store.canAccess(input.workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const all = store.schedules.filter((item) => item.workspaceId === input.workspaceId); const schedules = all.length ? all : await resetSchedules(input.workspaceId); return ok("학사일정 한달치 불러오기 성공", schedules.filter((item) => new Date(item.date).getMonth() + 1 === input.month)); });
-  app.get("/email/send", async (request) => { query(z.object({ email: z.string().email() }), request); return ok("이메일 인증 코드 발송 성공"); });
+  app.get("/email/send", async (request) => { const email = query(z.object({ email: z.string().email() }), request).email; const code = String(Math.floor(100000 + Math.random() * 900000)); store.emailCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 }); await sendVerificationEmail(email, code); return ok("이메일 인증 코드 발송 성공"); });
+  app.post("/email/confirm", async (request, reply) => { const input = body(z.object({ email: z.string().email(), code: z.string().regex(/^\d{6}$/) }), request); const verification = store.emailCodes.get(input.email); if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) return reply.code(409).send({ message: "코드가 일치하지 않거나 만료되었습니다" }); return ok("이메일 인증 성공"); });
   app.post("/oauth/:provider/authenticate", async (request, reply) => { const provider = z.object({ provider: z.enum(["google", "apple"]) }).parse(request.params).provider; const input = body(z.object({ code: z.string().min(1), platform: z.enum(["WEB", "ANDROID", "IOS"]).default("WEB"), name: z.string().optional() }), request); const identity = provider === "google" ? await oauth.google(input.code, input.platform) : await oauth.apple(input.code, input.platform, input.name); let member = [...store.members.values()].find((item) => item.email === identity.email); if (!member) { member = { id: store.id(), email: identity.email, name: identity.name, password: undefined }; store.members.set(member.id, member); } const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
   app.post("/oauth/google/connect", { preHandler: auth }, async () => ok("구글 연동 성공"));
   app.delete("/oauth/google/remove", { preHandler: auth }, async () => ok("삭제 성공 !"));
