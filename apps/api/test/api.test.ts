@@ -56,3 +56,14 @@ test("authenticated room members receive Socket.IO messages", async () => {
     assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");
   } finally { socket.close(); await app.close(); }
 });
+
+test("uploaded files are persisted and served back", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "seugi-upload-")); const previous = process.env.UPLOAD_DIR; process.env.UPLOAD_DIR = directory;
+  const app = await buildApp(); await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  try {
+    const form = new FormData(); form.set("file", new Blob(["seugi file"], { type: "text/plain" }), "hello.txt");
+    const upload = await fetch(`http://127.0.0.1:${address.port}/file/upload/FILE`, { method: "POST", body: form }); assert.equal(upload.status, 200);
+    const url = (await upload.json() as { data: { url: string } }).data.url;
+    assert.equal(await (await fetch(`http://127.0.0.1:${address.port}${url}`)).text(), "seugi file");
+  } finally { await app.close(); if (previous === undefined) delete process.env.UPLOAD_DIR; else process.env.UPLOAD_DIR = previous; rmSync(directory, { recursive: true, force: true }); }
+});

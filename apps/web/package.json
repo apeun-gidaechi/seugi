@@ -9,7 +9,7 @@
     "build": "node src/swEnvBuild.js && vite build",
     "preview": "vite preview",
     "electron-test": "electron .",
-    "test": "echo 'test1' && wait-on tcp:127.0.0.1:5173 && echo 'test'",
+    "test": "vite build",
     "electron": "tsc ./public/electron.ts && concurrently 'cross-env BROWSER=none npm run dev' 'echo 'Starting Waiton App' && wait-on tcp:127.0.0.1:5173 && echo 'Starting Electron App' && electron .'",
     "electron-build": "tsc && vite build && electron-builder"
   },  
