@@ -15,6 +15,10 @@ test("member can register, create a workspace, and retrieve it", async () => {
   const authorization = `Bearer ${registration.json().data.accessToken}`;
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "스기고" } });
   assert.equal(workspace.statusCode, 200);
+  const task = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "수학 과제" } });
+  assert.equal(task.statusCode, 200);
+  const tasks = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
+  assert.equal(tasks.json().data[0].title, "수학 과제");
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
   await app.close();
