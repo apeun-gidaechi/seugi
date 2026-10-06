@@ -12,6 +12,7 @@ import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { sendVerificationEmail } from "./mailer.js";
 import { fetchClassroomTasks } from "./classroom.js";
+import { answerWithCatseugi } from "./ai.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" { interface FastifyJWT { user: Claims } }
@@ -31,7 +32,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook("onResponse", async () => { store.persist(); });
-  app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; return reply.code(error instanceof z.ZodError ? 400 : message.endsWith("NOT_FOUND") ? 404 : 500).send({ message }); });
+  app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; return reply.code(error instanceof z.ZodError ? 400 : message.endsWith("NOT_FOUND") ? 404 : message.startsWith("AI_") ? 503 : 500).send({ message }); });
   app.get("/health", async () => ok("healthy", { status: "ok" }));
   app.get("/uploads/:name", async (request, reply) => { const name = basename(z.object({ name: z.string() }).parse(request.params).name); const file = join(uploadDirectory, name); if (!existsSync(file)) return reply.code(404).send({ message: "FILE_NOT_FOUND" }); return reply.send(readFileSync(file)); });
 
@@ -149,7 +150,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     store.oauth.delete(`${request.user.sub}:google`);
     return ok("삭제 성공 !");
   });
-  app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", `캣스기는 아직 외부 AI 제공자 설정이 필요합니다. 질문: ${input.message}`); });
+  app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", await answerWithCatseugi(input.message)); });
   app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`; mkdirSync(uploadDirectory, { recursive: true }); writeFileSync(join(uploadDirectory, name), bytes); return ok("파일 업로드 성공", { name, type, mimeType: file.mimetype, size: bytes.length, url: `/uploads/${encodeURIComponent(name)}` }); });
   return app;
 }
