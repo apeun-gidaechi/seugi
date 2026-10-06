@@ -138,8 +138,17 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.get("/email/send", async (request) => { const email = query(z.object({ email: z.string().email() }), request).email; const code = String(Math.floor(100000 + Math.random() * 900000)); store.emailCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 }); await sendVerificationEmail(email, code); return ok("이메일 인증 코드 발송 성공"); });
   app.post("/email/confirm", async (request, reply) => { const input = body(z.object({ email: z.string().email(), code: z.string().regex(/^\d{6}$/) }), request); const verification = store.emailCodes.get(input.email); if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) return reply.code(409).send({ message: "코드가 일치하지 않거나 만료되었습니다" }); return ok("이메일 인증 성공"); });
   app.post("/oauth/:provider/authenticate", async (request, reply) => { const provider = z.object({ provider: z.enum(["google", "apple"]) }).parse(request.params).provider; const input = body(z.object({ code: z.string().min(1), platform: z.enum(["WEB", "ANDROID", "IOS"]).default("WEB"), name: z.string().optional() }), request); const identity = provider === "google" ? await oauth.google(input.code, input.platform) : await oauth.apple(input.code, input.platform, input.name); let member = [...store.members.values()].find((item) => item.email === identity.email); if (!member) { member = { id: store.id(), email: identity.email, name: identity.name, password: undefined }; store.members.set(member.id, member); } store.oauth.set(`${member.id}:${provider}`, { provider, accessToken: identity.accessToken, refreshToken: identity.refreshToken }); const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
-  app.post("/oauth/google/connect", { preHandler: auth }, async () => ok("구글 연동 성공"));
-  app.delete("/oauth/google/remove", { preHandler: auth }, async () => ok("삭제 성공 !"));
+  const googleConnectionInput = z.object({ code: z.string().min(1), platform: z.enum(["WEB", "ANDROID", "IOS"]).default("WEB") });
+  app.post("/oauth/google/connect", { preHandler: auth }, async (request) => {
+    const input = body(googleConnectionInput, request);
+    const identity = await oauth.google(input.code, input.platform);
+    store.oauth.set(`${request.user.sub}:google`, { provider: "google", accessToken: identity.accessToken, refreshToken: identity.refreshToken });
+    return ok("구글 연동 성공");
+  });
+  app.delete("/oauth/google/remove", { preHandler: auth }, async (request) => {
+    store.oauth.delete(`${request.user.sub}:google`);
+    return ok("삭제 성공 !");
+  });
   app.post("/ai", { preHandler: auth }, async (request) => { const input = body(z.object({ message: z.string().min(1).max(4000) }), request); return ok("캣스기답변", `캣스기는 아직 외부 AI 제공자 설정이 필요합니다. 질문: ${input.message}`); });
   app.post("/file/upload/:type", async (request) => { const file = await request.file(); if (!file) throw new Error("FILE_REQUIRED"); const type = z.object({ type: z.enum(["IMAGE", "FILE", "PROFILE"]) }).parse(request.params).type; const bytes = await file.toBuffer(); const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`; mkdirSync(uploadDirectory, { recursive: true }); writeFileSync(join(uploadDirectory, name), bytes); return ok("파일 업로드 성공", { name, type, mimeType: file.mimetype, size: bytes.length, url: `/uploads/${encodeURIComponent(name)}` }); });
   return app;

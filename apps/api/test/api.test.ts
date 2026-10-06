@@ -30,6 +30,16 @@ test("email code must be issued before email-password registration", async () =>
   await app.close();
 });
 
+test("a member can remove a saved Google Classroom connection", async () => {
+  const store = new Store(); store.emailCodes.set("google@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "google@example.com", password: "password123", code: "123456" } });
+  const memberId = app.jwt.decode<{ sub: string }>(registration.json().data.accessToken)?.sub; assert.ok(memberId);
+  store.oauth.set(`${memberId}:google`, { provider: "google", accessToken: "access", refreshToken: "refresh" });
+  const response = await app.inject({ method: "DELETE", url: "/oauth/google/remove", headers: { authorization: `Bearer ${registration.json().data.accessToken}` } });
+  assert.equal(response.statusCode, 200); assert.equal(store.oauth.has(`${memberId}:google`), false);
+  await app.close();
+});
+
 test("persistent store survives a new application instance", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-api-"));
   try {
