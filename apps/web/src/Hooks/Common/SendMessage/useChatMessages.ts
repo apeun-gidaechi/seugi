@@ -36,6 +36,9 @@ export interface Message {
   emoticon?: string;
 }
 
+type ApiMessage = { id: string; roomId: string; senderId: string; message: string; createdAt: string; emojis: Record<string, string[]> };
+const adaptMessage = (message: ApiMessage): Message => ({ id: message.id, uuid: message.id, chatRoomId: Number(message.roomId), userId: Number(message.senderId), message: message.message, mention: [], mentionAll: false, eventList: [], timestamp: message.createdAt });
+
 const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
   const [receivedMessages, setReceivedMessages] = useState<Message[]>([]);
   const [lastTimestamps, setLastTimestamps] = useState<{ [roomId: string]: number }>({});
@@ -43,20 +46,14 @@ const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
   useEffect(() => {
     console.log('useChatMessages.useEffect called');
 
-    setTimeout(() => {
-      socketService.subscribeToMessages(selectedRoom.id, (message) => {
-        console.log(`useChatMessages.subscribeToMessages: new message - ${message}`);
-        const newMessage = JSON.parse(message);
-        setReceivedMessages((prevMessages) => [...prevMessages, newMessage]);
-      });
-      
-    }, 1500); // connection 지연 시간
+    socketService.subscribeToMessages(selectedRoom.id, (message) => {
+      const newMessage = adaptMessage(JSON.parse(message) as ApiMessage);
+      setReceivedMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
 
     fetchNewMessages();
 
-    // return () => {
-    //   socketService.unsubscribeFromMessages(selectedRoom.id);
-    // };
+    return () => socketService.unsubscribeFromMessages(selectedRoom.id);
   }, [selectedRoom]);
 
   const sendMessage = (message: string, type: MessageType) => {
@@ -93,7 +90,7 @@ const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
 
     try {
       const response = await SeugiCustomAxios.get(url);
-      const messages: Message[] = response.data.data.messages
+      const messages = (response.data.data.messages as ApiMessage[]).map(adaptMessage);
       messages
         .sort((a, b) => new Date(a.timestamp ?? '').getTime() - new Date(b.timestamp ?? '').getTime())
 

@@ -5,6 +5,8 @@ import {useLocation} from "react-router-dom";
 import ChatRoom from "@/Components/common/ChatRoom";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
+type ApiRoom = { id: string; workspaceId: string; type: string; name: string; adminId: string; image?: string; memberIds: string[] };
+const toChatRoom = (room: ApiRoom): ChatRoom => ({ id: room.id, workspaceId: room.workspaceId, type: room.type, roomAdmin: Number(room.adminId), chatName: room.name, chatRoomImg: room.image ?? "", createdAt: "", chatStatusEnum: "ALIVE", joinUserInfo: [], lastMessage: "", lastMessageTimestamp: "", notReadCnt: 0 });
 
 // Axios 인스턴스 생성
 // export const SeugiCustomAxios: AxiosInstance = axios.create({
@@ -37,12 +39,12 @@ const useChat = () => {
       if (pathname === "/chat") {
         const response = await SeugiCustomAxios.get(`/chat/personal/search?workspace=${storedWorkspaceId}`);
 
-        const personalRooms = response.data.data; // 개인 채팅방 데이터
+        const personalRooms = (response.data.data as ApiRoom[]).map(toChatRoom);
         updatePersonalChatRooms(personalRooms);
       } else if (pathname === "/groupchat") {
         const response = await SeugiCustomAxios.get(`/chat/group/search?workspace=${storedWorkspaceId}`);
 
-        const groupRooms = response.data.data; // 그룹 채팅방 데이터
+        const groupRooms = (response.data.data as ApiRoom[]).map(toChatRoom);
         updateGroupChatRooms(groupRooms);
       }
     } catch (error) {
@@ -52,10 +54,9 @@ const useChat = () => {
 
   const createRoom = async (roomName: string) => {
     const requestData = {
-      workspaceId: "669e339593e10f4f59f8c583", // 워크스페이스 ID
-      roomName: roomName,
-      joinUsers: [10],
-      chatRoomImg: "",
+      workspaceId: Cookies.get("workspaceId"),
+      name: roomName,
+      memberIds: [],
     };
     try {
       const response = await SeugiCustomAxios.post('/chat/personal/create', requestData);

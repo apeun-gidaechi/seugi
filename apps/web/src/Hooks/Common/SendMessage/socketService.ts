@@ -1,92 +1,35 @@
-import Stomp from 'stompjs';
+import { io, type Socket } from "socket.io-client";
 import Cookies from "js-cookie";
 
-let socket: Stomp.Client | undefined;
-let isConnected = false;
-const subscriptions: { [key: string]: Stomp.Subscription } = {};
+let socket: Socket | undefined;
+const listeners = new Map<string, (message: unknown) => void>();
+const apiUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:8080";
 
 export const socketService = {
   connect: (callback?: () => void) => {
-    if (socket && isConnected) {
-      if (callback) callback();  // 이미 연결된 경우 바로 콜백 실행
-      return;
-    }
-    
-    socket = Stomp.client('wss://api.seugi.com/stomp/chat');
-
-    socket.connect({   
-      'Authorization': Cookies.get("accessToken")
-    }, (frame) => {
-      console.log('소켓 연결됨');
-      isConnected = true;
-      if (callback) callback();  // 연결 후 콜백 실행
-    }, (error: any) => {
-      console.error("소켓 연결 오류:", error);
-    });
+    if (socket?.connected) { callback?.(); return; }
+    const token = Cookies.get("accessToken")?.replace("Bearer ", "");
+    socket = io(apiUrl, { auth: { token } });
+    socket.on("connect", () => callback?.());
+    socket.on("connect_error", (error) => console.error("소켓 연결 오류:", error));
   },
-  disconnect: () => {
-    if (!socket) return;
-
-    socket.disconnect(() => {
-      console.log('소켓 연결 해제됨');
-      isConnected = false;
-    }, (error: any) => {
-      console.error("소켓 연결 해제 오류:", error);
-    });
-  },
-  sendMessage: (message: string) => {
-    if (!socket || !socket.connected) {
-      console.error("소켓이 연결되지 않았습니다.");
-      return;
-    }
-
+  disconnect: () => { socket?.close(); socket = undefined; listeners.clear(); },
+  sendMessage: (payload: string) => {
+    if (!socket?.connected) return console.error("소켓이 연결되지 않았습니다.");
     try {
-      socket.send(`/pub/chat.message`, {'Authorization': Cookies.get("accessToken")}, message);
-    } catch (error) {
-      console.error(error);
-    }
+      const message = JSON.parse(payload) as { roomId: string; message: string };
+      socket.emit("chat:message", { roomId: message.roomId, message: message.message }, (result: { message: string }) => {
+        if (result.message !== "메시지 전송 성공") console.error(result.message);
+      });
+    } catch (error) { console.error(error); }
   },
   subscribeToMessages: (roomId: string, callback: (message: string) => void) => {
-    if (!socket || !isConnected) {
-      console.warn("소켓이 연결되지 않았습니다. 소켓을 연결 중...");
-      socketService.connect();
-      return;
-    }
-
-    const topic = `/exchange/chat.exchange/room.${roomId}`;
-    if (subscriptions[topic]) {
-      console.warn(`이미 구독 중인 채팅방: ${roomId}`);
-      return;
-    }
-
-    subscriptions[topic] = socket.subscribe(topic, (message: Stomp.Message) => {
-      callback(message.body);
-    });
+    if (!socket?.connected) { socketService.connect(() => socketService.subscribeToMessages(roomId, callback)); return; }
+    socket.emit("room:join", roomId);
+    const listener = (message: unknown) => callback(JSON.stringify(message));
+    listeners.set(roomId, listener); socket.on("chat:message", listener);
   },
   unsubscribeFromMessages: (roomId: string) => {
-    const topic = `/exchange/chat.exchange/room.${roomId}`;
-
-    if (!socket || !isConnected) {
-      console.warn("소켓이 연결되지 않았습니다. 연결 중...");
-
-      socketService.connect(() => {
-        if (subscriptions[topic]) {
-          subscriptions[topic].unsubscribe();
-          delete subscriptions[topic];
-          console.log(`채팅방 ${roomId} 구독 해제됨`);
-        } else {
-          console.warn(`해제할 구독이 없습니다: ${roomId}`);
-        }
-      });
-      return;
-    }
-
-    if (subscriptions[topic]) {
-      subscriptions[topic].unsubscribe();
-      delete subscriptions[topic];
-      console.log(`채팅방 ${roomId} 구독 해제됨`);
-    } else {
-      console.warn(`해제할 구독이 없습니다: ${roomId}`);
-    }
+    const listener = listeners.get(roomId); if (listener) socket?.off("chat:message", listener); listeners.delete(roomId);
   },
 };
