@@ -3,6 +3,7 @@ import type { ApiResponse, ChatMessage, Notification, Room, Task, Timetable, Tok
 export class SeugiApi {
   constructor(readonly baseUrl: string, private token?: string) {}
   setToken(token?: string) { this.token = token; }
+  accessToken() { return this.token; }
   private async request<T>(path: string, init: RequestInit = {}): Promise<ApiResponse<T>> {
     const response = await fetch(`${this.baseUrl.replace(/\/$/, "")}${path}`, { ...init, headers: { "content-type": "application/json", ...(this.token ? { authorization: `Bearer ${this.token}` } : {}), ...init.headers } });
     const payload = await response.json() as ApiResponse<T>;

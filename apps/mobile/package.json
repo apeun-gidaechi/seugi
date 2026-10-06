@@ -4,6 +4,6 @@
   "private": true,
   "main": "expo/AppEntry",
   "scripts": { "start": "expo start", "android": "expo start --android", "ios": "expo start --ios", "build": "tsc --noEmit", "check": "tsc --noEmit", "test": "tsc --noEmit" },
-  "dependencies": { "@seugi/api-client": "workspace:*", "@seugi/contracts": "workspace:*", "expo": "^52.0.0", "react": "18.3.1", "react-native": "0.76.9" },
+  "dependencies": { "@seugi/api-client": "workspace:*", "@seugi/contracts": "workspace:*", "expo": "^52.0.0", "react": "18.3.1", "react-native": "0.76.9", "socket.io-client": "^4.8.1" },
   "devDependencies": { "@types/node": "^22.10.2", "@types/react": "^18.3.12", "typescript": "^5.7.3" }
 }
