@@ -55,6 +55,17 @@ test("a member can register and remove a device notification token", async () =>
   await app.close();
 });
 
+test("workspace data rejects unauthenticated and non-member access with HTTP semantics", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  for (const email of ["owner@example.com", "other@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "owner@example.com", password: "password123", code: "123456" } });
+  const other = await app.inject({ method: "POST", url: "/member/register", payload: { email: "other@example.com", password: "password123", code: "123456" } });
+  const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { name: "권한 학교" } });
+  assert.equal((await app.inject({ method: "GET", url: `/task/${workspace.json().data}` })).statusCode, 401);
+  assert.equal((await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization: `Bearer ${other.json().data.accessToken}` } })).statusCode, 403);
+  await app.close();
+});
+
 test("persistent store survives a new application instance", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-api-"));
   try {
