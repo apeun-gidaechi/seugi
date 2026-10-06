@@ -1,0 +1,9 @@
+{
+  "name": "@seugi/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@seugi/contracts": "workspace:*" },
+  "scripts": { "build": "tsc --noEmit", "check": "tsc --noEmit", "test": "tsc --noEmit" }
+}

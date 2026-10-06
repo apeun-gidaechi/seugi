@@ -1,0 +1,7 @@
+node_modules
+.workspace
+dist
+.env
+.upstream
+apps/web/build
+apps/web/dist

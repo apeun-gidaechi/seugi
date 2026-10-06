@@ -1,0 +1,13 @@
+{
+  "name": "seugi",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "dev": "pnpm --parallel --filter @seugi/api --filter @seugi/web dev",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": { "typescript": "^5.7.3" }
+}

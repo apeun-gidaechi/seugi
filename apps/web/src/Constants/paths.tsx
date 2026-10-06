@@ -1,0 +1,18 @@
+export const paths = {
+    home: '/',
+    login: '/login',
+    signup: '/emailsignup',
+    auth: '/emailauthentication',
+    selectjob: '/selectjob',
+    chat: '/chat',
+    selectschool:'/selectschool',
+    schoolcode: '/schoolcode',
+    joinsuccess: '/joinsuccess',
+    createschool: '/createschool',
+    waitingjoin: '/waitingjoin',
+    groupchat: '/groupchat',
+    admingeneral: '/admingeneral',
+    adminalarm: '/adminalarm',
+    managemember: '/managemember',
+    invitemember: '/invitemember',
+} as const;

@@ -1,0 +1,1 @@
+{ "expo": { "name": "Seugi", "slug": "seugi", "scheme": "seugi", "version": "0.1.0", "orientation": "portrait", "userInterfaceStyle": "light", "ios": { "bundleIdentifier": "com.seugi.app" }, "android": { "package": "com.seugi.app" } } }

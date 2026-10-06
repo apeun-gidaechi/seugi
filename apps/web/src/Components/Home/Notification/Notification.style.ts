@@ -1,0 +1,298 @@
+import styled from "styled-components";
+import { SeugiColor } from "@/Design/color/SeugiColor";
+import { SeugiFont } from "@/Design/text/SeugiFont";
+
+export const LeftContainer = styled.div`
+  display: flex;
+  padding: 12px 12px 16px 12px;
+  justify-content:center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 0 0;
+
+  border-radius: 12px;
+  background: ${SeugiColor.White};
+
+  box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
+
+  position:relative;
+`;
+
+export const NoNotification = styled.span`
+  color: ${SeugiColor.Black};
+
+  ${SeugiFont.subtitle.subtitle2};
+`
+export const NotificationContainer = styled.div`
+  display: flex;
+  padding: 4px;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+`;
+
+export const NotificationTitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+`
+
+export const NotificationLogo = styled.img`
+  width: 32px;
+  height: 32px;
+`;
+
+export const NotificationTitle = styled.h2`
+  position: relative;
+
+  left: 8px;
+
+  color: ${SeugiColor.Black};
+
+  ${SeugiFont.subtitle.subtitle2};
+`;
+
+export const ArrowLButton = styled.button`
+  background: none;
+  border: none;
+
+  cursor: pointer;
+`;
+
+export const NArrowLogo = styled.img`
+  position: relative;
+`;
+
+export const NotificationBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  max-height: 500px;
+  overflow-y: auto; 
+  padding-right: 10px;
+`;
+
+export const NotificationWrapper = styled.div`
+  position:relative;
+  display: flex;
+  padding: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  align-self: stretch;
+
+  border-radius: 8px;
+  background: ${SeugiColor.White};
+
+  box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
+`;
+
+export const NotificationContentAuthor = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+`;
+
+export const NotificationContentAuthorSpan = styled.span`
+  color:${SeugiColor.Gray600};
+
+  ${SeugiFont.caption.caption2};
+`
+
+export const NotificationContentTitle = styled.span`
+  position: relative;
+
+  color: ${SeugiColor.Black};
+
+  ${SeugiFont.subtitle.subtitle2};
+`;
+
+export const NotificationContentDescription = styled.span`
+  position: relative;
+
+  color: ${SeugiColor.Black};
+
+  ${SeugiFont.body.body2};
+`;
+
+export const NotificationEmojiBox = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex-direction: row;
+  overflow-y: hidden;
+`;
+
+export const NotificationAddEmojiButton = styled.button`
+  border:none;
+  background:none;
+
+  cursor: pointer;
+`
+
+export const NotificationAddEmoji = styled.img`
+  position: relative;
+
+  width: 30px;
+  height: 30px;
+
+  padding: 4px;
+
+
+`;
+
+export const NotificationEmojiWrapper = styled.div`
+  position: relative;
+
+  display: flex;
+  &.Clicked {
+    font-weight: bold;
+  }
+
+  justify-content: center;
+  align-items: center;
+
+  margin-right: 4px;
+
+  cursor: pointer;
+
+  &.Clicked {
+    border-radius: 8px;
+    border: 1px solid ${SeugiColor.Primary300};
+    background: ${SeugiColor.Primary100};
+  }
+
+  transition: background 0.25s;
+
+  border-radius: 8px;
+  border: 1px solid ${SeugiColor.Gray200};
+  background: ${SeugiColor.Gray100};
+
+  width: 51px;
+  height: 29px;
+
+  position: relative;
+`;
+
+export const NotificationEmoji = styled.img`
+  position: relative;
+
+  width: 15px;
+  height: 16px;
+`;
+
+export const NotificationEmojiCount = styled.span`
+  margin: 3px;
+
+  color: ${SeugiColor.Gray600};
+  ${SeugiFont.subtitle.subtitle2};
+`;
+
+export const Number = styled.div`
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+
+  color: ${SeugiColor.Primary300};
+
+  ${SeugiFont.body.body1};
+
+  &.Today {
+    color: ${SeugiColor.Primary500};
+  }
+  height: 1.7vh;
+`;
+
+export const Item = styled.div`
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+
+  padding: 8px 0;
+
+  color: ${SeugiColor.Primary200};
+
+  background-color: ${SeugiColor.Primary500};
+
+  &.First {
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+  }
+
+  &.Last {
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+  }
+
+  &.Today {
+    color: ${SeugiColor.White};
+  }
+
+  &.After {
+    background-color: transparent;
+    color: ${SeugiColor.Primary300};
+  }
+`;
+
+export const NotificationActionButton = styled.button`
+    right:0;
+    cursor: pointer;
+
+    background:none;
+    border:none;
+`;
+
+export const NotificationActionButtonimg = styled.img`
+  
+`
+
+export const EditedLabel = styled.span`
+    color : ${SeugiColor.Gray500};
+    ${SeugiFont.caption.caption2};
+
+    margin-left:4px;
+`
+
+export const NoNotificationDiv = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+`
+export const NoNotificationImg = styled.img`
+  margin-bottom:4px;
+`
+
+export const PaginationContainer = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  /* padding:0 0 0 12vw; */
+  /* text-align:center; */
+  margin: 0 auto;
+  gap:4px;
+`
+
+export const PageButton = styled.button<{ active: boolean }>`
+  width:30px;
+  height:30px;
+
+  border:none;
+  border-radius:4px;
+
+  background-color: ${(props) => (props.active ? `${SeugiColor.Primary200}` : `${SeugiColor.Gray300}`)};
+  ${SeugiFont.body.body1};
+  color:${SeugiColor.White};
+
+  cursor: pointer;
+`
