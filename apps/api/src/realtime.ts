@@ -2,9 +2,11 @@ import { Server } from "socket.io";
 import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
 import type { Store } from "./store.js";
+import { PushNotifications } from "./push.js";
 
 export function attachRealtime(app: FastifyInstance, store: Store) {
   const io = new Server(app.server, { cors: { origin: true } });
+  const push = new PushNotifications();
   io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
     socket.on("room:join", (roomId: string) => { const room = store.rooms.get(roomId); if (room?.memberIds.includes(socket.data.userId)) socket.join(roomId); });
@@ -12,7 +14,10 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
       const room = store.rooms.get(input.roomId);
       if (!room?.memberIds.includes(socket.data.userId) || !input.message.trim()) return done?.({ message: "ROOM_NOT_FOUND" });
       const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: socket.data.userId, message: input.message.trim(), files: input.files, createdAt: new Date().toISOString(), emojis: {} };
-      store.messages.set(message.id, message); io.to(room.id).emit("chat:message", message); done?.({ message: "메시지 전송 성공", data: message });
+      store.messages.set(message.id, message); io.to(room.id).emit("chat:message", message);
+      const tokens = room.memberIds.filter((id) => id !== socket.data.userId).flatMap((id) => store.deviceTokens.get(id) ?? []);
+      void push.send(tokens, { title: room.name || "1대1 채팅", body: `${store.requireMember(socket.data.userId).name}: ${message.files?.length && !message.message ? "파일을 보냈습니다." : message.message}`, imageUrl: store.requireMember(socket.data.userId).picture }).catch((error) => app.log.error(error, "FCM chat push failed"));
+      done?.({ message: "메시지 전송 성공", data: message });
     });
   });
   return io;

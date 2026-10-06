@@ -44,6 +44,17 @@ test("a member can remove a saved Google Classroom connection", async () => {
   await app.close();
 });
 
+test("a member can register and remove a device notification token", async () => {
+  const store = new Store(); store.emailCodes.set("device@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "device@example.com", password: "password123", code: "123456" } });
+  const authorization = { authorization: `Bearer ${registration.json().data.accessToken}` };
+  const registered = await app.inject({ method: "POST", url: "/member/device-token", headers: authorization, payload: { token: "fcm-device-token" } });
+  assert.equal(registered.statusCode, 200); assert.deepEqual([...store.deviceTokens.values()], [["fcm-device-token"]]);
+  const removed = await app.inject({ method: "DELETE", url: "/member/device-token", headers: authorization, payload: { token: "fcm-device-token" } });
+  assert.equal(removed.statusCode, 200); assert.deepEqual([...store.deviceTokens.values()], [[]]);
+  await app.close();
+});
+
 test("persistent store survives a new application instance", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-api-"));
   try {

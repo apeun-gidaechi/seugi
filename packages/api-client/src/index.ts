@@ -13,6 +13,8 @@ export class SeugiApi {
   sendVerification(email: string) { return this.request<void>(`/email/send?email=${encodeURIComponent(email)}`); }
   register(input: { email: string; password: string; name?: string; code: string }) { return this.request<Tokens>("/member/register", { method: "POST", body: JSON.stringify(input) }); }
   login(input: { email: string; password: string }) { return this.request<Tokens>("/member/login", { method: "POST", body: JSON.stringify(input) }); }
+  registerDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "POST", body: JSON.stringify({ token }) }); }
+  removeDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "DELETE", body: JSON.stringify({ token }) }); }
   workspaces() { return this.request<Workspace[]>("/workspace"); }
   createWorkspace(input: { name: string; schoolCode?: string }) { return this.request<string>("/workspace", { method: "POST", body: JSON.stringify(input) }); }
   rooms(workspaceId: string, type: "group" | "personal" = "group") { return this.request<Room[]>(`/chat/${type}/search/${workspaceId}`); }

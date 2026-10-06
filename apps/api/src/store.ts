@@ -16,6 +16,7 @@ type Snapshot = {
   meals: Array<[string, Meal[]]>;
   emailCodes: Array<[string, { code: string; expiresAt: number }]>;
   oauth: Array<[string, { provider: "google" | "apple"; accessToken: string; refreshToken?: string }]>;
+  deviceTokens: Array<[string, string[]]>;
 };
 
 /**
@@ -36,6 +37,7 @@ export class Store {
   meals = new Map<string, Meal[]>();
   emailCodes = new Map<string, { code: string; expiresAt: number }>();
   oauth = new Map<string, { provider: "google" | "apple"; accessToken: string; refreshToken?: string }>();
+  deviceTokens = new Map<string, string[]>();
   constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
@@ -48,12 +50,12 @@ export class Store {
     this.workspaces = new Map(snapshot.workspaces ?? []); this.rooms = new Map(snapshot.rooms ?? []);
     this.messages = new Map(snapshot.messages ?? []); this.notifications = new Map(snapshot.notifications ?? []);
     this.timetables = new Map(snapshot.timetables ?? []); this.tasks = new Map(snapshot.tasks ?? []);
-    this.schedules = snapshot.schedules ?? []; this.meals = new Map(snapshot.meals ?? []); this.emailCodes = new Map(snapshot.emailCodes ?? []); this.oauth = new Map(snapshot.oauth ?? []);
+    this.schedules = snapshot.schedules ?? []; this.meals = new Map(snapshot.meals ?? []); this.emailCodes = new Map(snapshot.emailCodes ?? []); this.oauth = new Map(snapshot.oauth ?? []); this.deviceTokens = new Map(snapshot.deviceTokens ?? []);
   }
   persist() {
     if (!this.filePath) return;
     mkdirSync(dirname(this.filePath), { recursive: true });
-    const snapshot: Snapshot = { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals], emailCodes: [...this.emailCodes], oauth: [...this.oauth] };
+    const snapshot: Snapshot = { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals], emailCodes: [...this.emailCodes], oauth: [...this.oauth], deviceTokens: [...this.deviceTokens] };
     const temporary = `${this.filePath}.tmp`;
     writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
     renameSync(temporary, this.filePath);
