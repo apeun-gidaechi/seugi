@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import type { ApiResponse, ChatMessage, Notification, Profile, Role, RoomType, Timetable } from "@seugi/contracts";
 import { Store } from "./store.js";
+import { NeisClient } from "./neis.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" { interface FastifyJWT { user: Claims } }
@@ -21,6 +22,7 @@ const workspaceParam = z.object({ workspaceId: z.string().uuid() });
 export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
   const uploadDirectory = process.env.UPLOAD_DIR ?? "./data/uploads";
+  const neis = new NeisClient();
   await app.register(cors, { origin: true });
   await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
@@ -58,7 +60,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.post("/member/logout", { preHandler: auth }, async (request) => { store.requireMember(request.user.sub).refreshToken = undefined; return ok("로그아웃 성공"); });
   app.delete("/member/remove", { preHandler: auth }, async (request) => { store.members.delete(request.user.sub); return ok("회원 탈퇴 성공"); });
 
-  const workspaceInput = z.object({ name: z.string().min(1).max(80), schoolCode: z.string().optional(), image: z.string().url().optional() });
+  const workspaceInput = z.object({ name: z.string().min(1).max(80), schoolCode: z.string().optional(), educationOfficeCode: z.string().optional(), schoolType: z.string().optional(), image: z.string().url().optional() });
   app.post("/workspace", { preHandler: auth }, async (request) => { const input = body(workspaceInput, request); const workspace = { id: store.id(), code: store.id().slice(0, 8).toUpperCase(), ownerId: request.user.sub, members: [request.user.sub], waitlist: [], ...input }; store.workspaces.set(workspace.id, workspace); return ok("워크스페이스 생성 성공", workspace.id); });
   app.get("/workspace", { preHandler: auth }, async (request) => ok("워크스페이스 조회 성공", [...store.workspaces.values()].filter((item) => item.members.includes(request.user.sub))));
   app.get("/workspace/:workspaceId", { preHandler: auth }, async (request) => { const id = workspaceParam.parse(request.params).workspaceId; const workspace = store.requireWorkspace(id); if (!workspace.members.includes(request.user.sub)) throw new Error("WORKSPACE_NOT_FOUND"); return ok("워크스페이스 조회 성공", workspace); });
@@ -120,11 +122,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.post("/task", async (request) => { const input = body(taskInput, request); store.requireWorkspace(input.workspaceId); const id = store.id(); store.tasks.set(id, { id, ...input, createdAt: new Date().toISOString() }); return ok("과제 만들기 성공 !"); });
   app.get("/task/:workspaceId", async (request) => { const workspaceId = workspaceParam.parse(request.params).workspaceId; return ok("과제 불러오기 성공 !", [...store.tasks.values()].filter((item) => item.workspaceId === workspaceId)); });
   app.get("/task/classroom", { preHandler: auth }, async () => ok("클래스룸 과제 불러오기 성공 !", []));
-  app.get("/meal", async (request) => { const { workspaceId, date } = query(z.object({ workspaceId: z.string().uuid(), date: z.string() }), request); store.requireWorkspace(workspaceId); return ok("날짜로 급식 조회 성공", []); });
-  app.get("/meal/all", async (request) => { const workspaceId = query(z.object({ workspaceId: z.string().uuid() }), request).workspaceId; store.requireWorkspace(workspaceId); return ok("모든 급식 조회 성공", []); });
-  app.post("/meal/reset/:workspaceId", async (request) => { store.requireWorkspace(workspaceParam.parse(request.params).workspaceId); return ok("급식 저장 성공"); });
-  app.get("/schedule/:workspaceId", { preHandler: auth }, async (request) => { const workspaceId = workspaceParam.parse(request.params).workspaceId; if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); return ok("학사일정 전부 불러오기 성공", store.schedules.filter((item) => item.workspaceId === workspaceId)); });
-  app.get("/schedule/month", { preHandler: auth }, async (request) => { const input = query(z.object({ workspaceId: z.string().uuid(), month: z.coerce.number().int().min(1).max(12) }), request); return ok("학사일정 한달치 불러오기 성공", store.schedules.filter((item) => item.workspaceId === input.workspaceId && new Date(item.date).getMonth() + 1 === input.month)); });
+  const resetMeals = async (workspaceId: string) => { const workspace = store.requireWorkspace(workspaceId); const today = new Date(); const from = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}01`; const to = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()).padStart(2, "0")}`; const meals = await neis.meals(workspace, from, to); store.meals.set(workspaceId, meals); return meals; };
+  app.get("/meal", async (request) => { const { workspaceId, date } = query(z.object({ workspaceId: z.string().uuid(), date: z.string() }), request); const meals = store.meals.get(workspaceId) ?? await resetMeals(workspaceId); return ok("날짜로 급식 조회 성공", meals.filter((meal) => meal.date === date)); });
+  app.get("/meal/all", async (request) => { const workspaceId = query(z.object({ workspaceId: z.string().uuid() }), request).workspaceId; return ok("모든 급식 조회 성공", store.meals.get(workspaceId) ?? await resetMeals(workspaceId)); });
+  app.post("/meal/reset/:workspaceId", async (request) => { await resetMeals(workspaceParam.parse(request.params).workspaceId); return ok("급식 저장 성공"); });
+  const resetSchedules = async (workspaceId: string) => { const schedules = await neis.schedules(store.requireWorkspace(workspaceId), new Date().getFullYear()); store.schedules = [...store.schedules.filter((item) => item.workspaceId !== workspaceId), ...schedules]; return schedules; };
+  app.get("/schedule/:workspaceId", { preHandler: auth }, async (request) => { const workspaceId = workspaceParam.parse(request.params).workspaceId; if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const schedules = store.schedules.filter((item) => item.workspaceId === workspaceId); return ok("학사일정 전부 불러오기 성공", schedules.length ? schedules : await resetSchedules(workspaceId)); });
+  app.get("/schedule/month", { preHandler: auth }, async (request) => { const input = query(z.object({ workspaceId: z.string().uuid(), month: z.coerce.number().int().min(1).max(12) }), request); if (!store.canAccess(input.workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const all = store.schedules.filter((item) => item.workspaceId === input.workspaceId); const schedules = all.length ? all : await resetSchedules(input.workspaceId); return ok("학사일정 한달치 불러오기 성공", schedules.filter((item) => new Date(item.date).getMonth() + 1 === input.month)); });
   app.get("/email/send", async (request) => { query(z.object({ email: z.string().email() }), request); return ok("이메일 인증 코드 발송 성공"); });
   app.post("/oauth/:provider/authenticate", async (request, reply) => { const provider = z.object({ provider: z.enum(["google", "apple"]) }).parse(request.params).provider; const input = body(z.object({ email: z.string().email().optional(), name: z.string().optional(), code: z.string().min(1) }), request); const email = input.email ?? `${provider}-${input.code}@oauth.seugi.local`; let member = [...store.members.values()].find((item) => item.email === email); if (!member) { member = { id: store.id(), email, name: input.name ?? provider, password: undefined }; store.members.set(member.id, member); } const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
   app.post("/oauth/google/connect", { preHandler: auth }, async () => ok("구글 연동 성공"));

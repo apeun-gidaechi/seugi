@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ChatMessage, Member, Notification, Profile, Room, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
+import type { ChatMessage, Meal, Member, Notification, Profile, Room, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
 
 type Snapshot = {
   members: Array<[string, Member & { password?: string; refreshToken?: string }]>;
@@ -13,6 +13,7 @@ type Snapshot = {
   timetables: Array<[string, Timetable]>;
   tasks: Array<[string, Task]>;
   schedules: Schedule[];
+  meals: Array<[string, Meal[]]>;
 };
 
 /**
@@ -30,6 +31,7 @@ export class Store {
   timetables = new Map<string, Timetable>();
   tasks = new Map<string, Task>();
   schedules: Schedule[] = [];
+  meals = new Map<string, Meal[]>();
   constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
@@ -42,12 +44,12 @@ export class Store {
     this.workspaces = new Map(snapshot.workspaces ?? []); this.rooms = new Map(snapshot.rooms ?? []);
     this.messages = new Map(snapshot.messages ?? []); this.notifications = new Map(snapshot.notifications ?? []);
     this.timetables = new Map(snapshot.timetables ?? []); this.tasks = new Map(snapshot.tasks ?? []);
-    this.schedules = snapshot.schedules ?? [];
+    this.schedules = snapshot.schedules ?? []; this.meals = new Map(snapshot.meals ?? []);
   }
   persist() {
     if (!this.filePath) return;
     mkdirSync(dirname(this.filePath), { recursive: true });
-    const snapshot: Snapshot = { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules };
+    const snapshot: Snapshot = { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals] };
     const temporary = `${this.filePath}.tmp`;
     writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
     renameSync(temporary, this.filePath);
