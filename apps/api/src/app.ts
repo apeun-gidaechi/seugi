@@ -1126,7 +1126,11 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     async (request) => {
       const input = body(chatMemberEventSchema, request);
       const room = store.rooms.get(input.roomId);
-      if (!room || room.type !== "GROUP" || room.adminId !== request.user.sub)
+      if (
+        !room ||
+        room.type !== "GROUP" ||
+        !room.memberIds.includes(request.user.sub)
+      )
         throw new Error("권한이 없습니다");
       const workspace = store.requireWorkspace(room.workspaceId);
       if (input.memberIds.some((id: string) => !workspace.members.includes(id)))

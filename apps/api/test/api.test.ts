@@ -733,41 +733,44 @@ test("timetable routes preserve the upstream date/class contract and protect tea
   await app.close();
 });
 
-test("group room administration enforces membership and requires leadership transfer before leaving", async () => {
+test("group room member invitations follow native behavior while administration requires leadership", async () => {
   const store = new Store(); const app = await buildApp(store);
-  const emails = ["room-admin@example.com", "room-member@example.com", "room-outsider@example.com"];
+  const emails = ["room-admin@example.com", "room-member@example.com", "room-outsider@example.com", "room-invitee@example.com"];
   for (const email of emails) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
   const register = async (email: string) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } });
-  const [owner, member, outsider] = await Promise.all(emails.map(register));
+  const [owner, member, outsider, invitee] = await Promise.all(emails.map(register));
   const token = (response: typeof owner) => response.json().data.accessToken as string;
   const ownerId = app.jwt.decode<{ sub: string }>(token(owner))?.sub;
   const memberId = app.jwt.decode<{ sub: string }>(token(member))?.sub;
+  const outsiderId = app.jwt.decode<{ sub: string }>(token(outsider))?.sub;
+  const inviteeId = app.jwt.decode<{ sub: string }>(token(invitee))?.sub;
   const outsiderHeaders = { authorization: `Bearer ${token(outsider)}` };
-  assert.ok(ownerId); assert.ok(memberId);
+  assert.ok(ownerId); assert.ok(memberId); assert.ok(outsiderId); assert.ok(inviteeId);
   const ownerHeaders = { authorization: `Bearer ${token(owner)}` };
   const memberHeaders = { authorization: `Bearer ${token(member)}` };
   const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "채팅 관리 학교" } })).json().data as string;
-  store.workspaces.get(workspaceId)?.members.push(memberId);
-  const outsiderId = app.jwt.decode<{ sub: string }>(token(outsider))?.sub; assert.ok(outsiderId);
   assert.equal((await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "잘못된 초대", memberIds: [outsiderId] } })).statusCode, 403);
+  store.workspaces.get(workspaceId)?.members.push(memberId, outsiderId, inviteeId);
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "관리 테스트", memberIds: [memberId] } })).json().data as string;
   const searchResult = await app.inject({ url: `/chat/group/search?workspace=${workspaceId}&word=${encodeURIComponent("관리")}`, headers: ownerHeaders });
   assert.deepEqual(searchResult.json().data.map((room: { id: string }) => room.id), [roomId]);
   const noMatch = await app.inject({ url: `/chat/group/search?workspace=${workspaceId}&word=${encodeURIComponent("없는 방")}`, headers: ownerHeaders });
   assert.deepEqual(noMatch.json().data, []);
 
-  assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: outsiderHeaders, payload: { roomId, memberIds: [memberId] } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: outsiderHeaders, payload: { roomId, memberIds: [inviteeId] } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: memberHeaders, payload: { roomId, memberIds: [inviteeId] } })).statusCode, 200);
+  assert.equal(store.rooms.get(roomId)?.memberIds.includes(inviteeId), true);
   assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: ownerHeaders, payload: { roomId, memberIds: ["00000000-0000-4000-8000-000000000000"] } })).statusCode, 403);
   assert.equal((await app.inject({ method: "PATCH", url: "/chat/group/member/toss", headers: memberHeaders, payload: { roomId, memberId: ownerId, memberIds: [] } })).statusCode, 403);
   assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: outsiderHeaders })).statusCode, 404);
 
   assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 400);
   const room = store.rooms.get(roomId);
-  assert.deepEqual(room?.memberIds, [ownerId, memberId]);
+  assert.deepEqual(room?.memberIds, [ownerId, memberId, inviteeId]);
   assert.equal(room?.adminId, ownerId);
   assert.equal((await app.inject({ method: "PATCH", url: "/chat/group/member/toss", headers: ownerHeaders, payload: { roomId, memberId, memberIds: [] } })).statusCode, 200);
   assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 200);
-  assert.deepEqual(room?.memberIds, [memberId]);
+  assert.deepEqual(room?.memberIds, [memberId, inviteeId]);
   assert.equal(room?.adminId, memberId);
 
   const singleRoomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "마지막 구성원", memberIds: [] } })).json().data as string;
