@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, BackHandler, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { SeugiColor } from "@seugi/design-tokens";
@@ -37,15 +37,21 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
   const [showSignInOptions, setShowSignInOptions] = useState(false);
   const [verificationWaiting, setVerificationWaiting] = useState(false);
   const [verificationSeconds, setVerificationSeconds] = useState(300);
+  const leaveVerification = useCallback(() => {
+    onCodeChange("");
+    onError("");
+    setScreen("signup");
+  }, [onCodeChange, onError]);
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (showSignInOptions) { setShowSignInOptions(false); return true; }
       if (screen === "start") return false;
-      setScreen(screen === "verification" ? "signup" : "start");
+      if (screen === "verification") leaveVerification();
+      else setScreen("start");
       return true;
     });
     return () => subscription.remove();
-  }, [screen, showSignInOptions]);
+  }, [screen, showSignInOptions, leaveVerification]);
   useEffect(() => {
     if (!verificationWaiting) return;
     const timer = setInterval(() => setVerificationSeconds((remaining) => {
@@ -71,7 +77,7 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
     </View>
   </SafeAreaView>;
   if (screen === "verification") return <SafeAreaView style={[styles.auth, styles.formScreen]}>
-    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" onPress={() => setScreen("signup")} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>이메일 인증</Text><View style={styles.formBack} /></View>
+    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" onPress={leaveVerification} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>이메일 인증</Text><View style={styles.formBack} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
       <SeugiCodeTextField label="인증코드" value={code} limit={6} onChangeText={(value) => onCodeChange(value.replace(/\D/g, ""))} error={!!error} containerStyle={styles.codeField} keyboardType="number-pad" />
       <View style={styles.resendRow}>{verificationWaiting ? <Text style={styles.hint}>{Math.floor(verificationSeconds / 60)}분 {String(verificationSeconds % 60).padStart(2, "0")}초 남음</Text> : <TouchableOpacity accessibilityRole="button" disabled={loading} onPress={async () => { if (await onSendVerification()) { setVerificationSeconds(300); setVerificationWaiting(true); } }}><Text style={styles.link}>{loading ? "전송 중…" : "인증 코드 전송"}</Text></TouchableOpacity>}</View>
