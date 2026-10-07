@@ -142,21 +142,28 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} onOpenPersonalChat={(nextRoom) => { setManageMembers(false); onOpenRoom(nextRoom); }} /> : <>
       <FlatList style={styles.content} data={visibleMessages} keyExtractor={(item) => item.id} ListEmptyComponent={searchText.trim() ? <Text style={styles.emptySearch}>검색 결과가 없습니다.</Text> : null} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
         ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const parts = item.message.split("::");
           const imageUrl = item.type === "IMG" ? parts[0] : undefined;
           const fileUrl = item.type === "FILE" ? parts[0] : undefined;
           const fileName = item.type === "FILE" ? parts[1] : undefined;
-          return <TouchableOpacity activeOpacity={1} onLongPress={() => item.messageStatus !== "DELETE" && setSelectedMessage(item)} style={styles.message}>
+          const ownMessage = item.senderId === memberId;
+          const previous = visibleMessages[index - 1];
+          const showDate = !previous || localDateKey(previous.createdAt) !== localDateKey(item.createdAt);
+          const reactions = Object.entries(item.emojis).filter(([, users]) => users.length > 0);
+          return <View>
+            {showDate ? <Text style={styles.dateDivider}>{formatLocalDate(item.createdAt)}</Text> : null}
+            <TouchableOpacity activeOpacity={1} onLongPress={() => item.messageStatus !== "DELETE" && setSelectedMessage(item)} style={[styles.message, ownMessage ? styles.ownMessage : styles.otherMessage]}>
             {item.messageStatus === "DELETE" ? <Text style={styles.muted}>메시지가 삭제되었습니다.</Text> : <>
               {imageUrl ? <TouchableOpacity onPress={() => setPreviewImage({ url: imageUrl, name: parts[1] || "채팅 이미지" })}><Image source={{ uri: absoluteApiUrl(imageUrl) }} resizeMode="cover" style={styles.imageMessage} /></TouchableOpacity> : null}
               {fileUrl ? <TouchableOpacity onPress={() => openFile(fileUrl, fileName)} style={styles.fileMessage}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={1} style={styles.rowTitle}>{fileName || "첨부 파일"}</Text><Text style={styles.link}>파일 저장/공유 ↗</Text></View></TouchableOpacity> : null}
               {visibleMessage(item) && !imageUrl && !fileUrl ? <Text>{visibleMessage(item)}</Text> : null}
               {item.files?.map((url) => <TouchableOpacity key={url} onPress={() => /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? setPreviewImage({ url, name: fileNameFromUrl(url) }) : openFile(url)}><Text style={styles.link}>{/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? "이미지 미리보기" : "첨부 파일 저장/공유 ↗"}</Text></TouchableOpacity>)}
             </>}
-            <View style={styles.row}><Text style={styles.muted}>{new Date(item.createdAt).toLocaleTimeString()}</Text>{item.senderId === memberId && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
-            {item.messageStatus !== "DELETE" ? <View style={styles.reactions}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {(item.emojis[emoji] ?? []).length}</Text></TouchableOpacity>)}</View> : null}
-          </TouchableOpacity>;
+            <View style={styles.messageMeta}><Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text>{ownMessage && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
+            {item.messageStatus !== "DELETE" && reactions.length ? <View style={styles.reactions}>{reactions.map(([emoji, users]) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}</View> : null}
+            </TouchableOpacity>
+          </View>;
         }}
       />
       <SeugiChatTextField value={draft} onChangeText={setDraft} placeholder="메시지 입력" onAddClick={() => setShowAttachmentOptions(true)} onSendClick={() => void send()} sendEnabled={!sending && !!draft.trim()} editable={!sending} />
@@ -171,6 +178,9 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
 }
 
 function visibleMessage(message: ChatMessage) { if (message.type !== "BOT") return message.message; try { const value = JSON.parse(message.message) as { data?: unknown }; return typeof value.data === "string" ? value.data : message.message; } catch { return message.message; } }
+function localDateKey(value: string) { const date = new Date(value); return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
+function formatLocalDate(value: string) { return new Date(value).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" }); }
+function formatLocalTime(value: string) { return new Date(value).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true }); }
 function formatFileSize(size: number) { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB`; }
 function fileNameFromUrl(url: string) { const segment = url.split(/[?#]/, 1)[0]?.split("/").pop() || "첨부 파일"; try { return decodeURIComponent(segment); } catch { return segment; } }
 function mimeTypeForName(name: string) { const extension = name.split(".").pop()?.toLowerCase(); return ({ pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", heic: "image/heic", txt: "text/plain", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", zip: "application/zip" } as Record<string, string>)[extension ?? ""] ?? "application/octet-stream"; }
@@ -185,7 +195,11 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
   link: { color: SeugiColor.Primary500 },
   rowTitle: { fontWeight: "600" },
-  message: { backgroundColor: SeugiColor.White, borderRadius: 12, padding: 12, marginBottom: 8, alignSelf: "flex-start", maxWidth: "85%" },
+  message: { borderRadius: 12, padding: 12, marginBottom: 8, maxWidth: "85%" },
+  ownMessage: { backgroundColor: SeugiColor.Primary100, alignSelf: "flex-end" },
+  otherMessage: { backgroundColor: SeugiColor.White, alignSelf: "flex-start" },
+  messageMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 6 },
+  dateDivider: { alignSelf: "center", color: SeugiColor.Gray500, fontSize: 12, backgroundColor: SeugiColor.Gray100, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, marginVertical: 12 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
