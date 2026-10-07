@@ -30,6 +30,7 @@ import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
 
 export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspace";
+const MEAL_PRIORITY: Record<string, number> = { 조식: 0, 중식: 1, 석식: 2 };
 
 export function HomeScreen({
   workspace,
@@ -94,10 +95,9 @@ export function HomeScreen({
     void refreshHome();
   }, [refreshHome, refreshToken]);
   const today = localDateKey(new Date());
-  const mealPriority = ["조식", "중식", "석식"];
   const todaysMeals = (meals ?? [])
     .filter((item) => item.date.slice(0, 10) === today)
-    .sort((a, b) => mealPriority.indexOf(a.type) - mealPriority.indexOf(b.type));
+    .sort((a, b) => (MEAL_PRIORITY[a.type] ?? Number.MAX_SAFE_INTEGER) - (MEAL_PRIORITY[b.type] ?? Number.MAX_SAFE_INTEGER));
   const mealPages = Platform.OS === "android"
     ? ["조식", "중식", "석식"].map((type) => ({ type, meal: todaysMeals.find((item) => item.type === type) }))
     : todaysMeals.map((meal) => ({ type: meal.type, meal }));
@@ -453,9 +453,9 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
         `${year}-${String(monthNumber).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`,
     ),
   ];
-  const selectedMeals = meals.filter(
-    (meal) => meal.date.slice(0, 10) === selectedDate,
-  );
+  const selectedMeals = meals
+    .filter((meal) => meal.date.slice(0, 10) === selectedDate)
+    .sort((a, b) => (MEAL_PRIORITY[a.type] ?? Number.MAX_SAFE_INTEGER) - (MEAL_PRIORITY[b.type] ?? Number.MAX_SAFE_INTEGER));
   const shiftMonth = (amount: number) => {
     const next = new Date(year, monthNumber - 1 + amount, 1);
     setMonth(next);
@@ -565,7 +565,7 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
           {dayMeals.map((meal, mealIndex) => (
             <View key={`${meal.date}-${meal.type}`} style={mealIndex ? styles.mealSection : undefined}>
               <View style={styles.mealHeading}>
-                <Text style={styles.mealType}>{meal.type}</Text>
+                <Text style={styles.mealType}>{Platform.OS === "android" ? ({ 조식: "아침", 중식: "점심", 석식: "저녁" }[meal.type] ?? meal.type) : meal.type}</Text>
                 {meal.calorie ? <Text style={styles.muted}>{meal.calorie}</Text> : null}
               </View>
               {meal.menu.map((dish, index) => <Text key={`${index}-${dish}`}>{dish}</Text>)}
