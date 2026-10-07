@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Linking, Modal, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
@@ -27,9 +27,24 @@ export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Pro
 export type WorkspaceSection = "workspaceEdit" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";
 
 export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void }) {
+  const [role, setRole] = useState<Role>("STUDENT");
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)])
+      .then(([member, profile]) => {
+        if (!active) return;
+        setRole(workspace.ownerId === member.data?.id ? "ADMIN" : profile.data?.role ?? "STUDENT");
+      })
+      .catch(() => active && setRole("STUDENT"));
+    return () => { active = false; };
+  }, [workspace.id, workspace.ownerId]);
+  const canInvite = Platform.OS === "ios"
+    ? role !== "STUDENT"
+    : role === "ADMIN" || role === "MIDDLE_ADMIN";
+
   return <ScrollView style={styles.content}>
     <Card title="가입된 학교">{workspaces.map((item) => <TouchableOpacity key={item.id} onPress={() => onSelect(item)}><Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text></TouchableOpacity>)}</Card>
-    <Card title="학교 관리"><Button label="학교 정보 수정" kind="secondary" onPress={() => onNavigate("workspaceEdit")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} /><Button label="초대 코드" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /><Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
+    <Card title="학교 관리"><Button label="학교 정보 수정" kind="secondary" onPress={() => onNavigate("workspaceEdit")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} />{canInvite ? <Button label="초대 코드" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /> : null}<Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
     <Card title="학교 추가"><Button label="가입 승인 대기" kind="secondary" onPress={() => onNavigate("workspacePending")} /><Button label="새 학교 만들기" kind="secondary" onPress={() => onNavigate("workspaceCreate")} /><Button label="초대 코드로 학교 가입" kind="secondary" onPress={() => onNavigate("workspaceJoin")} /></Card>
   </ScrollView>;
 }
