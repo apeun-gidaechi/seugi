@@ -12,7 +12,7 @@ import type { Room, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
-type RoomMessagesProps = { room: Room; onBack: () => void };
+type RoomMessagesProps = { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void };
 
 export function ChatScreen({
   workspace,
@@ -59,8 +59,10 @@ export function ChatScreen({
   if (selected)
     return (
       <RoomMessagesComponent
+        key={selected.id}
         room={selected}
-      onBack={() => { setSelected(undefined); onConversationChange(undefined); }}
+        onBack={() => { setSelected(undefined); onConversationChange(undefined); }}
+        onOpenRoom={(room) => { setSelected(room); onConversationChange(room); }}
       />
     );
   return (

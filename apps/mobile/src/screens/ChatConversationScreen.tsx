@@ -10,7 +10,7 @@ import { API_URL } from "../config";
 import { createAuthenticatedSocket } from "../realtime";
 import { absoluteApiUrl } from "../utils/url";
 
-export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: () => void }) {
+export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]); const [memberId, setMemberId] = useState(""); const [currentRoom, setCurrentRoom] = useState(room); const [manageMembers, setManageMembers] = useState(false); const [draft, setDraft] = useState(""); const [sending, setSending] = useState(false); const [uploading, setUploading] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false); const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [previewImage, setPreviewImage] = useState<string>();
@@ -86,7 +86,7 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
   });
   return <View style={styles.chatPage}>
     <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <TextInput autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : null}</>}</View>
-    {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} /> : <>
+    {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} onOpenPersonalChat={(nextRoom) => { setManageMembers(false); onOpenRoom(nextRoom); }} /> : <>
       <FlatList style={styles.content} data={visibleMessages} keyExtractor={(item) => item.id} ListEmptyComponent={searchText.trim() ? <Text style={styles.emptySearch}>검색 결과가 없습니다.</Text> : null} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
         ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
         renderItem={({ item }) => {

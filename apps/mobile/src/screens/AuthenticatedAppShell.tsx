@@ -235,11 +235,13 @@ function TabIcon({ tab, selected }: { tab: Tab; selected: boolean }) {
 function RoomMessages({
   room,
   onBack,
+  onOpenRoom,
 }: {
   room: Parameters<typeof ChatConversationScreen>[0]["room"];
   onBack: () => void;
+  onOpenRoom: (room: Room) => void;
 }) {
-  return <ChatConversationScreen room={room} onBack={onBack} />;
+  return <ChatConversationScreen room={room} onBack={onBack} onOpenRoom={onOpenRoom} />;
 }
 
 const styles = StyleSheet.create({
