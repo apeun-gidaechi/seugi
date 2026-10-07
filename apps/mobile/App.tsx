@@ -295,10 +295,13 @@ export default function App() {
         error={error}
         onCreated={load}
         onLogout={async () => {
+          await api.logout(deviceToken).catch(() => undefined);
           api.setToken();
           api.setRefreshToken();
           await SecureStore.deleteItemAsync(accessTokenKey);
           await SecureStore.deleteItemAsync(refreshTokenKey);
+          setDeviceToken(undefined);
+          setError("");
           setAuthenticated(false);
         }}
       />
