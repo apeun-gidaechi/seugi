@@ -82,11 +82,11 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
     } finally { setBusy(false); }
   };
   const saveName = async () => {
-    if (busy || !draft.trim()) return;
+    if (busy) return;
     setBusy(true); setMessage("");
     try {
-      await api.editMember({ name: draft.trim() });
-      setName(draft.trim());
+      await api.editMember({ name: draft });
+      setName(draft);
       setEditingName(false);
       setMessage("이름을 변경했습니다.");
     } catch (error) {
@@ -107,7 +107,7 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
       {busy ? <Text style={styles.muted}>변경 사항을 저장하는 중…</Text> : null}
       {message ? <Text style={message.includes("변경") ? styles.answer : styles.error}>{message}</Text> : null}
     </Card>
-    <Modal visible={editingName} transparent animationType="slide" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={Platform.OS === "ios" ? undefined : "이름을 입력해주세요"} /><Button label={busy ? "저장 중…" : "저장"} onPress={() => void saveName()} disabled={busy || !draft.trim()} /></View></View></Modal>
+    <Modal visible={editingName} transparent animationType="slide" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={Platform.OS === "ios" ? undefined : "이름을 입력해주세요"} /><Button label={busy ? "저장 중…" : "저장"} onPress={() => void saveName()} disabled={busy} /></View></View></Modal>
   </>;
 }
 
