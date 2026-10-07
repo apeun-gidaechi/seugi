@@ -1,5 +1,6 @@
 export { API_SPEC } from "./api-spec.js";
 export { createTaskSchema, type CreateTaskInput } from "./task.js";
+export { createWorkspaceSchema, updateWorkspaceSchema, joinWorkspaceSchema, workspaceFieldsSchema, type CreateWorkspaceInput, type UpdateWorkspaceInput, type JoinWorkspaceInput } from "./workspace.js";
 
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";

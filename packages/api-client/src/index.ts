@@ -1,4 +1,4 @@
-import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type Meal, type Member, type Notification, type Profile, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type CreateWorkspaceInput, type JoinWorkspaceInput, type Meal, type Member, type Notification, type Profile, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -34,17 +34,17 @@ export class SeugiApi {
   removeDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "DELETE", body: JSON.stringify({ token }) }); }
   logout(deviceToken?: string) { return this.request<void>("/member/logout", { method: "POST", body: JSON.stringify({ deviceToken }) }); }
   removeMember() { return this.request<void>("/member/remove", { method: "DELETE" }); }
-  workspaces() { return this.request<Workspace[]>("/workspace"); }
+  workspaces() { return this.request<Workspace[]>(API_SPEC.listWorkspaces.path); }
   myWaitingWorkspaces() { return this.request<Workspace[]>("/workspace/my/wait-list"); }
   cancelMyWorkspaceRequest(workspaceId: string) { return this.request<void>("/workspace/cancel", { method: "DELETE", body: JSON.stringify({ workspaceId }) }); }
   workspaceCode(workspaceId: string) { return this.request<string>(`/workspace/code/${encodeURIComponent(workspaceId)}`); }
   memberInfo() { return this.request<Member>("/member/myInfo"); }
   editMember(input: { name?: string; picture?: string }) { return this.request<void>("/member/edit", { method: "PATCH", body: JSON.stringify(input) }); }
-  createWorkspace(input: { name: string; schoolCode?: string; image?: string }) { return this.request<string>("/workspace", { method: "POST", body: JSON.stringify(input) }); }
-  updateWorkspace(input: { workspaceId: string; name?: string; image?: string }) { return this.request<void>("/workspace", { method: "PATCH", body: JSON.stringify({ workspaceId: input.workspaceId, ...(input.name !== undefined ? { workspaceName: input.name } : {}), ...(input.image !== undefined ? { workspaceImgUrl: input.image } : {}) }) }); }
-  joinWorkspace(input: { code: string; role?: "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" }) { return this.request<void>("/workspace/join", { method: "POST", body: JSON.stringify(input) }); }
-  workspaceMembers(workspaceId: string) { return this.request<Member[]>(`/workspace/members?workspaceId=${encodeURIComponent(workspaceId)}`); }
-  workspaceMemberChart(workspaceId: string) { return this.request<WorkspaceMemberChart>(`/workspace/members/chart?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  createWorkspace(input: CreateWorkspaceInput) { return this.request<string>(API_SPEC.createWorkspace.path, { method: API_SPEC.createWorkspace.method, body: JSON.stringify(input) }); }
+  updateWorkspace(input: UpdateWorkspaceInput) { return this.request<void>(API_SPEC.updateWorkspace.path, { method: API_SPEC.updateWorkspace.method, body: JSON.stringify(input) }); }
+  joinWorkspace(input: JoinWorkspaceInput) { return this.request<void>(API_SPEC.joinWorkspace.path, { method: API_SPEC.joinWorkspace.method, body: JSON.stringify(input) }); }
+  workspaceMembers(workspaceId: string) { return this.request<Member[]>(`${API_SPEC.workspaceMembers.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  workspaceMemberChart(workspaceId: string) { return this.request<WorkspaceMemberChart>(`${API_SPEC.workspaceMemberChart.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
   workspaceNotificationPreference(workspaceId: string) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`); }
   setWorkspaceNotificationPreference(workspaceId: string, receivePush: boolean) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`, { method: "PATCH", body: JSON.stringify({ receivePush }) }); }
   setWorkspaceMemberRole(workspaceId: string, memberId: string, role: Role) { return this.request<void>("/workspace/permission", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId, role }) }); }
