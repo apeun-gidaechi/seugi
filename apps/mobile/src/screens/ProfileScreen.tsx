@@ -24,7 +24,7 @@ export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Pro
   return <ScrollView style={styles.content}><Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card><Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} /><Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView>;
 }
 
-export type WorkspaceSection = "workspaceEdit" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";
+export type WorkspaceSection = "workspaceGeneral" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";
 
 export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void }) {
   const [role, setRole] = useState<Role>("STUDENT");
@@ -44,12 +44,15 @@ export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavig
 
   return <ScrollView style={styles.content}>
     <Card title="가입된 학교">{workspaces.map((item) => <TouchableOpacity key={item.id} onPress={() => onSelect(item)}><Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text></TouchableOpacity>)}</Card>
-    <Card title="학교 관리"><Button label="학교 정보 수정" kind="secondary" onPress={() => onNavigate("workspaceEdit")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} />{canInvite ? <Button label="초대 코드" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /> : null}<Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
+    <Card title="학교 관리"><Button label="일반" kind="secondary" onPress={() => onNavigate("workspaceGeneral")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} />{canInvite ? <Button label="멤버 초대" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /> : null}<Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
     <Card title="학교 추가"><Button label="가입 승인 대기" kind="secondary" onPress={() => onNavigate("workspacePending")} /><Button label="새 학교 만들기" kind="secondary" onPress={() => onNavigate("workspaceCreate")} /><Button label="초대 코드로 학교 가입" kind="secondary" onPress={() => onNavigate("workspaceJoin")} /></Card>
   </ScrollView>;
 }
 
-export function WorkspaceEditScreen({ workspace, onReload }: { workspace: Workspace; onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><WorkspaceEditor workspace={workspace} onSaved={onReload} /></ScrollView>; }
+export function WorkspaceGeneralScreen() {
+  const leaveWorkspace = () => Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
+  return <ScrollView style={styles.content}><TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}><Text style={styles.leaveWorkspace}>학교 나가기</Text><Text style={styles.muted}>›</Text></TouchableOpacity></ScrollView>;
+}
 export function WorkspaceMembersScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceMembers workspace={workspace} /></ScrollView>; }
 export function WorkspaceJoinRequestsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /></ScrollView>; }
@@ -156,6 +159,8 @@ const styles = StyleSheet.create({
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   memberRow: { borderBottomWidth: 1, borderColor: SeugiColor.Gray100, paddingVertical: 12, gap: 8 },
+  generalAction: { minHeight: 56, paddingHorizontal: 4, borderBottomWidth: 1, borderColor: SeugiColor.Gray100, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  leaveWorkspace: { color: SeugiColor.Red500, fontSize: 15, fontWeight: "600" },
   memberActions: { flexDirection: "row", gap: 14 },
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   numberInput: { flex: 1, minWidth: 0 },

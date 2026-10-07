@@ -28,7 +28,7 @@ import {
   AccountSettingsScreen,
   WorkspaceCreateScreen,
   WorkspaceDetailScreen,
-  WorkspaceEditScreen,
+  WorkspaceGeneralScreen,
   WorkspaceInviteScreen,
   WorkspaceJoinRequestsScreen,
   WorkspaceJoinScreen,
@@ -66,7 +66,7 @@ const detailTitles: Record<AppDetail, string> = {
   createNotice: "공지 작성",
   editNotice: "공지 수정",
   accountSettings: "설정",
-  workspaceEdit: "학교 정보 수정",
+  workspaceGeneral: "일반",
   workspaceMembers: "구성원",
   workspaceJoinRequests: "가입 신청 관리",
   workspaceInvite: "초대 코드",
@@ -160,7 +160,7 @@ export function AuthenticatedAppShell({
       ) : null}
       {detail === "catSeugi" ? <CatSeugiScreen workspace={workspace} /> : null}
       {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={onSelectWorkspace} onNavigate={pushDetail} /> : null}
-      {detail === "workspaceEdit" ? <WorkspaceEditScreen workspace={workspace} onReload={onReload} /> : null}
+      {detail === "workspaceGeneral" ? <WorkspaceGeneralScreen /> : null}
       {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}
       {detail === "workspaceJoinRequests" ? <WorkspaceJoinRequestsScreen workspace={workspace} /> : null}
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
