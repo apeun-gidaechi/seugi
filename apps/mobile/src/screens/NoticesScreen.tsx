@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
-import { Button, Card } from "../components/ui";
+import { Button } from "../components/ui";
 import { api } from "../services/api";
 import { SeugiTextField } from "../design-system/TextField";
 import { SeugiTopBar } from "../design-system/TopBar";
@@ -85,16 +85,30 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
     { text: "취소", style: "cancel" },
     { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(() => setItems((current) => current.filter((notice) => notice.id !== item.id))).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
   ]);
+  const showActions = (item: Notification) => {
+    const isAuthor = item.authorId === memberId;
+    const actions: Array<{ text: string; style?: "cancel" | "destructive"; onPress?: () => void }> = [
+      ...(isAuthor ? [{ text: "공지 수정", onPress: () => onEdit(item) }] : []),
+      { text: "공지 신고" },
+      ...(isAuthor || canManage ? [{ text: "공지 삭제", style: "destructive" as const, onPress: () => remove(item) }] : []),
+      { text: "닫기", style: "cancel" },
+    ];
+    Alert.alert("공지", "", actions);
+  };
   return <><FlatList style={styles.content} data={items} keyExtractor={(item) => item.id}
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={SeugiColor.Primary500} />}
     onEndReached={() => void loadNextPage()}
     onEndReachedThreshold={0.5}
     ListHeaderComponent={error ? <Text style={styles.error}>{error}</Text> : null}
     ListFooterComponent={loadingMore ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loader} /> : hasNextPage ? <TouchableOpacity style={styles.loadMore} onPress={() => void loadNextPage()}><Text style={styles.link}>이전 공지 더 보기</Text></TouchableOpacity> : null}
-    ListEmptyComponent={<Text style={styles.empty}>새 공지가 없습니다.</Text>}
-    renderItem={({ item }) => <Card title={item.title}><Text>{item.content}</Text><Text style={styles.muted}>{new Date(item.createdAt).toLocaleString()}</Text>
-      {(item.authorId === memberId || canManage) ? <View style={styles.memberActions}>{item.authorId === memberId ? <TouchableOpacity onPress={() => onEdit(item)}><Text style={styles.link}>수정</Text></TouchableOpacity> : null}<TouchableOpacity onPress={() => remove(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity></View> : null}
-      <View style={styles.reactions}>{Object.entries(item.emojis).filter(([, users]) => users.length > 0).map(([emoji, users]) => <TouchableOpacity key={emoji} accessibilityRole="button" accessibilityState={{ selected: users.includes(memberId) }} style={[styles.reaction, users.includes(memberId) && styles.reactionSelected]} onPress={() => void react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}<TouchableOpacity accessibilityRole="button" style={styles.addReaction} onPress={() => { setCustomEmoji(""); setEmojiTarget(item); }}><Text style={styles.addReactionText}>＋</Text></TouchableOpacity></View></Card>}
+    contentContainerStyle={styles.noticeListContent}
+    ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyFace}>☹</Text><Text style={styles.emptyText}>공지가 없어요</Text></View>}
+    renderItem={({ item }) => <View style={styles.noticeCard}>
+      <View style={styles.noticeHeader}><Text numberOfLines={1} style={styles.noticeAuthorDate}>{item.userName ? `${item.userName} · ` : ""}{new Date(item.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" })}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="공지 메뉴" onPress={() => showActions(item)} hitSlop={8}><Text style={styles.noticeMenu}>⋮</Text></TouchableOpacity></View>
+      <Text style={styles.noticeTitle}>{item.title}</Text>
+      <Text style={styles.noticeContent}>{item.content}</Text>
+      <View style={styles.reactions}>{Object.entries(item.emojis).filter(([, users]) => users.length > 0).map(([emoji, users]) => <TouchableOpacity key={emoji} accessibilityRole="button" accessibilityState={{ selected: users.includes(memberId) }} style={[styles.reaction, users.includes(memberId) && styles.reactionSelected]} onPress={() => void react(item, emoji)}><Text>{emoji}</Text><Text style={styles.reactionCount}>{users.length}</Text></TouchableOpacity>)}<TouchableOpacity accessibilityRole="button" accessibilityLabel="반응 추가" style={styles.addReaction} onPress={() => { setCustomEmoji(""); setEmojiTarget(item); }}><Text style={styles.addReactionText}>＋</Text></TouchableOpacity></View>
+    </View>}
     />
     <Modal visible={!!emojiTarget} transparent animationType="slide" onRequestClose={() => setEmojiTarget(undefined)}>
       <View style={styles.modalBackdrop}><TouchableOpacity style={styles.modalDismiss} activeOpacity={1} onPress={() => setEmojiTarget(undefined)} /><View style={styles.emojiSheet}><View style={styles.sheetHandle} /><Text style={styles.sheetTitle}>반응 추가</Text><Text style={styles.muted}>이모지를 선택하거나 직접 입력하세요.</Text><ScrollView contentContainerStyle={styles.emojiGrid}>{NOTICE_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" style={styles.emojiOption} onPress={() => emojiTarget && void react(emojiTarget, emoji)}><Text style={styles.emojiText}>{emoji}</Text></TouchableOpacity>)}</ScrollView><View style={styles.customEmojiRow}><SeugiTextField value={customEmoji} onChangeText={setCustomEmoji} fieldStyle={styles.customEmojiField} style={styles.customEmojiInput} placeholder="다른 이모지 입력" maxLength={16} /><Button label="추가" onPress={() => emojiTarget && customEmoji.trim() && void react(emojiTarget, customEmoji.trim())} disabled={!customEmoji.trim()} /></View></View></View>
@@ -134,7 +148,14 @@ export function NoticeEditorScreen({ workspace, initial, onSaved, onCancel }: { 
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: 16 },
+  content: { flex: 1, paddingHorizontal: 20 },
+  noticeListContent: { paddingTop: 12, paddingBottom: 80 },
+  noticeCard: { backgroundColor: SeugiColor.White, borderRadius: 8, padding: 12, marginBottom: 8, gap: 8, shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 1 },
+  noticeHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  noticeAuthorDate: { flex: 1, minWidth: 0, color: SeugiColor.Gray600, fontSize: 12 },
+  noticeMenu: { color: SeugiColor.Gray500, fontSize: 22, lineHeight: 24, paddingHorizontal: 4 },
+  noticeTitle: { color: SeugiColor.Gray800, fontSize: 17, fontWeight: "600" },
+  noticeContent: { color: SeugiColor.Gray800, fontSize: 14 },
   editorScreen: { flex: 1, backgroundColor: SeugiColor.White },
   editorScroll: { flex: 1 },
   editorFields: { paddingHorizontal: 20, paddingTop: 6 },
@@ -143,19 +164,21 @@ const styles = StyleSheet.create({
   editorDone: { color: SeugiColor.Gray800, fontSize: 14, paddingVertical: 9, paddingHorizontal: 12 },
   editorDoneDisabled: { color: SeugiColor.Gray300 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
-  empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
+  empty: { alignItems: "center", paddingVertical: 30, gap: 8 },
+  emptyFace: { color: SeugiColor.Gray500, fontSize: 34 },
+  emptyText: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   editorField: { marginBottom: 10 },
   noticeBodyField: { minHeight: 360, height: undefined, alignItems: "flex-start" },
   noticeBodyInput: { minHeight: 360, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
   link: { color: SeugiColor.Primary500 },
-  memberActions: { flexDirection: "row", gap: 14 },
-  reactions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingTop: 6 },
+  reactions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, paddingTop: 2 },
   loader: { padding: 16 },
   loadMore: { alignItems: "center", paddingVertical: 18 },
-  reaction: { borderWidth: 1, borderColor: SeugiColor.Gray100, backgroundColor: SeugiColor.Gray100, borderRadius: 16, paddingHorizontal: 9, paddingVertical: 5 },
-  reactionSelected: { borderColor: SeugiColor.Primary500, backgroundColor: SeugiColor.Primary050 },
-  addReaction: { width: 34, height: 30, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  reaction: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: SeugiColor.Gray200, backgroundColor: SeugiColor.Gray100, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  reactionSelected: { borderColor: SeugiColor.Primary300, backgroundColor: SeugiColor.Primary100 },
+  reactionCount: { color: SeugiColor.Gray600, fontSize: 14 },
+  addReaction: { width: 36, height: 36, alignItems: "center", justifyContent: "center", marginRight: 4 },
   addReactionText: { color: SeugiColor.Gray600, fontSize: 18, lineHeight: 20 },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.32)" },
   modalDismiss: { flex: 1 },
