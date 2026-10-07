@@ -10,7 +10,8 @@ import ImageIcon from "@/Assets/image/chat/fileButton/image_line.svg";
 import PlusMessageFile from "@/Assets/image/chat-components/MessageFile.svg";
 import SendArrowBlue from "@/Assets/image/chat-components/sendBlueArrow.svg";
 import SendArrow from "@/Assets/image/chat-components/SendArrow.svg";
-import useFileUpload, { FileType } from "@/Hooks/Common/SendMessage/useFileUpload";
+import useFileUpload from "@/Hooks/Common/SendMessage/useFileUpload";
+import { FileType } from "@/Types/upload";
 
 interface SelectedChatRoomProps {
   room: ChatRoom;

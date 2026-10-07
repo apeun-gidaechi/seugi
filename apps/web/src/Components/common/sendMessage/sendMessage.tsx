@@ -1,5 +1,5 @@
 import React, {useState, useRef} from "react";
-import {Message} from '@/Hooks/Common/SendMessage/useChatMessages';
+import type { Message } from '@/Types/chat';
 import * as S from "./sendMessage.style";
 import MessageBox from "@/Components/Chat/MessageBox/messageBox";
 import PlusMessageFile from "@/Assets/image/chat-components/MessageFile.svg";
@@ -8,7 +8,8 @@ import SendArrowBlue from "@/Assets/image/chat-components/sendBlueArrow.svg";
 import FileIcon from "@/Assets/image/chat/fileButton/file_line.svg";
 import ImageIcon from "@/Assets/image/chat/fileButton/image_line.svg";
 import {ChatRoom} from "@/Components/common/ChatRoom";
-import useFileUpload, {FileCompletion, FileType} from "@/Hooks/Common/SendMessage/useFileUpload";
+import useFileUpload from "@/Hooks/Common/SendMessage/useFileUpload";
+import type { FileCompletion, FileType } from "@/Types/upload";
 
 interface SendMessageProps {
   chatRoom: ChatRoom;
@@ -32,4 +33,4 @@ const SendMessage: React.FC<SendMessageProps> = (
   );
 };
 
-export default SendMessage;   
+export default SendMessage;

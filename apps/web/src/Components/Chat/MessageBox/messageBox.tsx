@@ -1,6 +1,6 @@
 import React from 'react';
 import * as S from "./messageBox.style";
-import {Message} from "@/Hooks/Common/SendMessage/useChatMessages";
+import type { Message } from "@/Types/chat";
 import { SERVER_URL } from "@/Api/client";
 
 interface MessageBoxProps {

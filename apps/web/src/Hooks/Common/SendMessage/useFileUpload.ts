@@ -1,20 +1,6 @@
 import { useState } from "react";
 import { withSeugiApi } from "@/Api/client";
-
-// TODO: Move to file
-export enum FileType {
-  IMG,
-  FILE,
-  EMOJI
-}
-
-export interface FileResult {
-  url: string;
-  name: string;
-  byte?: number;
-}   
-
-export type FileCompletion = (result: FileResult, type: FileType) => void
+import { FileType, type FileCompletion, type FileResult } from "@/Types/upload";
 
 const useFileUpload = (completion: FileCompletion) => {
   const [uploading, setUploading] = useState(false);

@@ -3,38 +3,7 @@ import { socketService } from "./socketService";
 import type { ChatRoom } from "@/Components/common/ChatRoom";
 import { getChatMessages } from "@/Api/chat";
 import type { ChatMessage } from "@seugi/contracts";
-
-export type MessageType =
-  'MESSAGE'
-  | 'IMG'
-  | 'FILE'
-  | 'ENTER'
-  | 'LEFT'
-  | 'TRANFER_ADMIN'
-  | 'SUB'
-  | 'UNSUB'
-  | 'DELETE_MESSAGE'   
-  | 'ADD_EMOJI'
-  | 'REMOVE_EMOJI'
-  | 'BOT'
-export type MessageStatus = 'ALIVE' | 'DELETE';
-
-export interface Message {
-  id?: string;
-  chatRoomId?: string;
-  type?: MessageType;
-  userId: string;
-  message: string;
-  uuid: string;
-  emojiList?: ChatMessage["emojiList"];
-  mention: Array<string | number>;
-  mentionAll: boolean
-  timestamp?: string
-  messageStatus?: MessageStatus
-  eventList: number[];
-  emoticon?: string;
-  files?: string[];
-}
+import type { Message } from "@/Types/chat";
 
 const adaptMessage = (message: ChatMessage): Message => ({
   id: message.id,
