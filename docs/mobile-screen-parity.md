@@ -10,8 +10,8 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Chat | `ChatScreen` (`roomType="personal"`) | device QA pending |
 | Group rooms | `ChatScreen` (`roomType="group"`) | device QA pending |
 | Chat detail | `ChatConversationScreen` | device QA pending |
-| Create room, member step | `CreateRoomScreen` | device QA pending |
-| Create room, name step | `CreateRoomScreen` internal step | device QA pending |
+| Create room, member step | `CreateRoomScreen` with removable selected-member chips, avatars, and native top-bar completion action | source layout/interactions restored; device QA pending |
+| Create room, name step | `CreateRoomScreen` internal step with native top-bar back/completion actions | source layout/interactions restored; device QA pending |
 | Profile | `ProfileScreen` | device QA pending |
 | Account settings | `AccountSettingsScreen` | profile identity editing restored; device QA pending |
 | Notices | `NoticesScreen` | device QA pending |
