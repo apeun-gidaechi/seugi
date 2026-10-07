@@ -34,6 +34,33 @@ test("shared API client refreshes an expired access token once and retries the r
   }
 });
 
+test("shared API client coalesces concurrent token refreshes", async () => {
+  const originalFetch = globalThis.fetch;
+  let refreshCalls = 0;
+  const retriedPaths: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const authorization = new Headers(init?.headers).get("authorization");
+    if (url.includes("/member/refresh?")) {
+      refreshCalls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return new Response(JSON.stringify({ message: "갱신", data: "fresh-access" }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (authorization === "Bearer expired-access") return new Response(JSON.stringify({ message: "만료" }), { status: 401, headers: { "content-type": "application/json" } });
+    retriedPaths.push(new URL(url).pathname);
+    return new Response(JSON.stringify({ message: "ok", data: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    const api = new SeugiApi("https://api.example.com", "expired-access", "valid-refresh");
+    await Promise.all([api.workspaces(), api.memberInfo()]);
+    assert.equal(refreshCalls, 1);
+    assert.deepEqual(retriedPaths.sort(), ["/member/myInfo", "/workspace"].sort());
+    assert.equal(api.accessToken(), "fresh-access");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("shared API client builds query and parameter URLs consistently from its contract", async () => {
   const originalFetch = globalThis.fetch;
   const paths: string[] = [];
