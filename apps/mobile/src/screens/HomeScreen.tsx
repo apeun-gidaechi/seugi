@@ -359,8 +359,8 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
   return (
     <FlatList
       style={styles.content}
-      data={selectedMeals}
-      keyExtractor={(item) => `${item.date}-${item.type}`}
+      data={selectedMeals.length ? [selectedMeals] : []}
+      keyExtractor={() => selectedDate}
       ListHeaderComponent={
         <>
           <Card title="급식 달력">
@@ -452,27 +452,21 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
               }}
             />
           </Card>
-          <Card title={`${selectedDate} 급식`}>
-            {busy ? (
-              <Text style={styles.muted}>급식 정보를 불러오는 중…</Text>
-            ) : error ? (
-              <Text style={styles.error}>{error}</Text>
-            ) : null}
-            {!busy && !error && !selectedMeals.length ? (
-              <Text style={styles.muted}>이 날짜의 급식 정보가 없습니다.</Text>
-            ) : null}
-          </Card>
         </>
       }
-      renderItem={({ item }) => (
-        <Card title={item.type}>
-          {item.calorie ? (
-            <Text style={styles.muted}>{item.calorie}</Text>
-          ) : null}
-          {item.menu.map((dish, index) => (
-            <Text key={`${index}-${dish}`}>{dish}</Text>
+      ListEmptyComponent={busy ? <Text style={styles.muted}>급식 정보를 불러오는 중…</Text> : error ? <Text style={styles.error}>{error}</Text> : <Text style={styles.muted}>급식이 없어요</Text>}
+      renderItem={({ item: dayMeals }) => (
+        <View style={styles.mealPanel}>
+          {dayMeals.map((meal, mealIndex) => (
+            <View key={`${meal.date}-${meal.type}`} style={mealIndex ? styles.mealSection : undefined}>
+              <View style={styles.mealHeading}>
+                <Text style={styles.mealType}>{meal.type}</Text>
+                {meal.calorie ? <Text style={styles.muted}>{meal.calorie}</Text> : null}
+              </View>
+              {meal.menu.map((dish, index) => <Text key={`${index}-${dish}`}>{dish}</Text>)}
+            </View>
           ))}
-        </Card>
+        </View>
       )}
     />
   );
@@ -511,6 +505,10 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
+  mealPanel: { backgroundColor: SeugiColor.White, borderRadius: 18, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, marginTop: 8 },
+  mealSection: { borderTopWidth: 1, borderTopColor: SeugiColor.Gray100, marginTop: 12, paddingTop: 12 },
+  mealHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+  mealType: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
   row: {
     backgroundColor: SeugiColor.White,
     padding: 16,
