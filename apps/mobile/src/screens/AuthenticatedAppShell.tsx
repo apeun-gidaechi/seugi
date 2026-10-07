@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   BackHandler,
   SafeAreaView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +13,8 @@ import { SeugiColor } from "@seugi/design-tokens";
 import Svg, { Path } from "react-native-svg";
 import { api } from "../services/api";
 import { SeugiTopBar } from "../design-system/TopBar";
+import { SeugiBottomNavigation, type SeugiTab } from "../design-system/BottomNavigation";
+export type Tab = SeugiTab;
 import { AssignmentsScreen, TaskCreateScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
 import { ChatScreen } from "./ChatScreen";
@@ -39,15 +40,7 @@ import {
   type WorkspaceSection,
 } from "./ProfileScreen";
 
-export type Tab = "home" | "chat" | "group" | "notice" | "profile";
-const tabs: Array<[Tab, string]> = [
-  ["home", "홈"],
-  ["chat", "채팅"],
-  ["group", "단체"],
-  ["notice", "공지"],
-  ["profile", "프로필"],
-];
-const tabTitles: Record<Tab, string> = {
+const tabTitles: Record<SeugiTab, string> = {
   home: "홈",
   chat: "채팅",
   group: "단체",
@@ -75,11 +68,11 @@ const detailTitles: Record<AppDetail, string> = {
 };
 
 type AuthenticatedAppShellProps = {
-  tab: Tab;
+  tab: SeugiTab;
   workspace: Workspace;
   workspaces: Workspace[];
   error: string;
-  onTabChange: (tab: Tab) => void;
+  onTabChange: (tab: SeugiTab) => void;
   onReload: () => Promise<void>;
   onSelectWorkspace: (workspace: Workspace) => void;
   onLogout: () => void | Promise<void>;
@@ -106,7 +99,7 @@ export function AuthenticatedAppShell({
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
   const closeRoomSearch = () => { setRoomSearchActive(false); setRoomSearch(""); };
-  const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange(next); };
+  const changeTab = (next: SeugiTab) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange(next); };
   const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onSelectWorkspace(selected); onTabChange("home"); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
 
@@ -232,22 +225,7 @@ export function AuthenticatedAppShell({
         />
       ) : null}
 
-      {!detail && !activeConversation ? (
-        <View style={styles.tabbar}>
-          {tabs.map(([key, label]) => (
-            <TouchableOpacity
-              key={key}
-              accessibilityRole="button"
-              accessibilityState={{ selected: tab === key }}
-              onPress={() => changeTab(key)}
-              style={styles.tab}
-            >
-              <TabIcon tab={key} selected={tab === key} />
-              {Platform.OS !== "ios" ? <Text style={tab === key ? styles.tabLabelActive : styles.tabLabelInactive}>{label}</Text> : null}
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : null}
+      {!detail && !activeConversation ? <SeugiBottomNavigation selected={tab} onSelect={changeTab} /> : null}
     </SafeAreaView>
   );
 }
