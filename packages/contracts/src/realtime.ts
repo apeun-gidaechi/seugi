@@ -28,6 +28,12 @@ export interface ChatMessageEmojiEvent {
   action: "ADD" | "REMOVE";
 }
 
+export interface ChatMemberReadEvent {
+  roomId: string;
+  userId: string;
+  readAt: string;
+}
+
 export interface ClientToServerEvents {
   "room:join": (roomId: string, acknowledge?: (joined: boolean) => void) => void;
   "room:leave": (roomId: string, acknowledge?: () => void) => void;
@@ -38,4 +44,5 @@ export interface ServerToClientEvents {
   "chat:message": (message: ChatMessage) => void;
   "chat:message-deleted": (event: ChatMessageDeletedEvent) => void;
   "chat:message-emoji": (event: ChatMessageEmojiEvent) => void;
+  "chat:member-read": (event: ChatMemberReadEvent) => void;
 }

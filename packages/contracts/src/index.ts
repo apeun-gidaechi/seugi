@@ -9,7 +9,7 @@ export { createTimetableSchema, updateTimetableSchema, mealDateQuerySchema, meal
 export { oauthProviderSchema, authenticateOAuthSchema, connectGoogleSchema, sendVerificationQuerySchema, aiPromptSchema, uploadTypeSchema, type AuthenticateOAuthInput, type ConnectGoogleInput } from "./integrations.js";
 export { CHAT_EMOJIS } from "./constants.js";
 export { idParamSchema, workspaceIdParamSchema, tokenQuerySchema, uploadNameParamSchema } from "./common.js";
-export type { ChatMessageInput, ChatMessageAck, ChatMessageDeletedEvent, ChatMessageEmojiEvent, ClientToServerEvents, ServerToClientEvents } from "./realtime.js";
+export type { ChatMessageInput, ChatMessageAck, ChatMessageDeletedEvent, ChatMessageEmojiEvent, ChatMemberReadEvent, ClientToServerEvents, ServerToClientEvents } from "./realtime.js";
 
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";

@@ -48,9 +48,13 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
     socket.on("room:join", (roomId: string, acknowledge) => {
       const sequence = ++roomJoinSequence;
       pendingRoomJoins.set(roomId, sequence);
-      void store.withMutation(() => { const room = store.rooms.get(roomId); if (!room?.memberIds.includes(socket.data.userId)) return false; room.memberReadAt ??= {}; room.memberReadAt[socket.data.userId] = new Date().toISOString(); return true; })
-        .then((allowed) => {
-          if (allowed && pendingRoomJoins.get(roomId) === sequence) socket.join(roomId);
+      void store.withMutation(() => { const room = store.rooms.get(roomId); if (!room?.memberIds.includes(socket.data.userId)) return undefined; const readAt = new Date().toISOString(); room.memberReadAt ??= {}; room.memberReadAt[socket.data.userId] = readAt; return readAt; })
+        .then((readAt) => {
+          const allowed = !!readAt;
+          if (allowed && pendingRoomJoins.get(roomId) === sequence) {
+            socket.join(roomId);
+            io.to(roomId).emit("chat:member-read", { roomId, userId: socket.data.userId, readAt });
+          }
           if (pendingRoomJoins.get(roomId) === sequence) pendingRoomJoins.delete(roomId);
           acknowledge?.(allowed);
         })
@@ -133,8 +137,8 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
           catch { write(socket, "ERROR", { message: "UNAUTHORIZED" }, "인증에 실패했습니다."); socket.close(1008, "UNAUTHORIZED"); }
         } else if (command === "SUBSCRIBE" && state.userId) {
           const roomId = /\/room\.([0-9a-f-]{36})$/i.exec(headers.destination ?? "")?.[1];
-          void store.withMutation(() => { const room = roomId ? store.rooms.get(roomId) : undefined; if (!room?.memberIds.includes(state.userId!)) return false; room.memberReadAt ??= {}; room.memberReadAt[state.userId!] = new Date().toISOString(); return true; }).then((allowed) => {
-            if (allowed && roomId) state.rooms.add(roomId); else write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }, "채팅방을 찾을 수 없습니다.");
+          void store.withMutation(() => { const room = roomId ? store.rooms.get(roomId) : undefined; if (!room?.memberIds.includes(state.userId!)) return undefined; const readAt = new Date().toISOString(); room.memberReadAt ??= {}; room.memberReadAt[state.userId!] = readAt; return readAt; }).then((readAt) => {
+            if (readAt && roomId) { state.rooms.add(roomId); io.to(roomId).emit("chat:member-read", { roomId, userId: state.userId!, readAt }); } else write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }, "채팅방을 찾을 수 없습니다.");
           }).catch((error) => app.log.error(error, "STOMP room authorization failed"));
         } else if (command === "SEND" && state.userId) {
           let rawInput: unknown; try { rawInput = JSON.parse(body); } catch { write(socket, "ERROR", { message: "MESSAGE_INVALID" }); continue; }

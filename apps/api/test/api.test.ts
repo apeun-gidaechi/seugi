@@ -848,8 +848,13 @@ test("authenticated room members receive Socket.IO messages", async () => {
   const socket = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
   try {
     await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
+    const memberRead = new Promise<{ roomId: string; userId: string; readAt: string }>((resolve) => socket.once("chat:member-read", resolve));
     const joinedRoom = await new Promise<boolean>((resolve) => socket.emit("room:join", roomId, resolve));
     assert.equal(joinedRoom, true);
+    const readEvent = await memberRead;
+    assert.equal(readEvent.roomId, roomId);
+    assert.equal(readEvent.userId, app.jwt.decode<{ sub: string }>(token)?.sub);
+    assert.ok(Date.parse(readEvent.readAt));
     const received = new Promise<{ message: string }>((resolve) => socket.once("chat:message", resolve));
     const acknowledged = await new Promise<{ message: string; data?: ChatMessage }>((resolve) => socket.emit("chat:message", { roomId, message: "안녕하세요" }, resolve));
     assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");

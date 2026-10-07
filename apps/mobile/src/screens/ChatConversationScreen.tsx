@@ -5,7 +5,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { SeugiColor } from "@seugi/design-tokens";
-import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type LegacyProfile, type Room } from "@seugi/contracts";
+import { CHAT_EMOJIS, type ChatMemberReadEvent, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type LegacyProfile, type Room } from "@seugi/contracts";
 import { Button } from "../components/ui";
 import { SeugiTextField } from "../design-system/TextField";
 import { ZoomableImage } from "../components/ZoomableImage";
@@ -34,7 +34,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => { setSearchMode(false); setSearchText(""); return true; });
     return () => subscription.remove();
   }, [searchMode]);
-  useEffect(() => { let active = true; const socket = createAuthenticatedSocket(api, API_URL, () => Alert.alert("세션 오류", "세션을 갱신할 수 없습니다. 다시 로그인해주세요.")); api.messages(room.id).then((result) => { if (!active) return; setMessages((result.data?.messages ?? []).reverse()); setHasOlderMessages(result.data?.hasNext ?? false); }).catch(() => undefined); api.memberInfo().then((result) => active && setMemberId(result.data?.id ?? "")).catch(() => undefined); socket.on("connect", () => socket.emit("room:join", room.id)); socket.on("chat:message", (message: ChatMessage) => { if (message.roomId === room.id) setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]); }); socket.on("chat:message-deleted", (event: ChatMessageDeletedEvent) => { if (event.roomId === room.id) setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item)); }); socket.on("chat:message-emoji", (event: ChatMessageEmojiEvent) => { if (event.roomId !== room.id) return; setMessages((current) => current.map((item) => { if (item.id !== event.messageId) return item; const users = item.emojis[event.emoji] ?? []; const nextUsers = event.action === "ADD" ? [...new Set([...users, event.senderId])] : users.filter((id) => id !== event.senderId); return { ...item, emojis: { ...item.emojis, [event.emoji]: nextUsers } }; })); }); return () => { active = false; socket.close(); }; }, [room.id]);
+  useEffect(() => { let active = true; const socket = createAuthenticatedSocket(api, API_URL, () => Alert.alert("세션 오류", "세션을 갱신할 수 없습니다. 다시 로그인해주세요.")); api.messages(room.id).then((result) => { if (!active) return; setMessages((result.data?.messages ?? []).reverse()); setHasOlderMessages(result.data?.hasNext ?? false); }).catch(() => undefined); api.memberInfo().then((result) => active && setMemberId(result.data?.id ?? "")).catch(() => undefined); socket.on("connect", () => socket.emit("room:join", room.id)); socket.on("chat:message", (message: ChatMessage) => { if (message.roomId === room.id) setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]); }); socket.on("chat:message-deleted", (event: ChatMessageDeletedEvent) => { if (event.roomId === room.id) setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item)); }); socket.on("chat:message-emoji", (event: ChatMessageEmojiEvent) => { if (event.roomId !== room.id) return; setMessages((current) => current.map((item) => { if (item.id !== event.messageId) return item; const users = item.emojis[event.emoji] ?? []; const nextUsers = event.action === "ADD" ? [...new Set([...users, event.senderId])] : users.filter((id) => id !== event.senderId); return { ...item, emojis: { ...item.emojis, [event.emoji]: nextUsers } }; })); }); socket.on("chat:member-read", (event: ChatMemberReadEvent) => { if (event.roomId !== room.id) return; setCurrentRoom((current) => ({ ...current, memberReadAt: { ...current.memberReadAt, [event.userId]: event.readAt }, joinUserInfo: current.joinUserInfo?.map((member) => member.userInfo.id === event.userId ? { ...member, timestamp: event.readAt } : member) })); }); return () => { active = false; socket.close(); }; }, [room.id]);
   const loadOlderMessages = async () => {
     const cursor = messages[0]?.createdAt;
     if (!cursor || !hasOlderMessages || loadingOlderMessages) return;
@@ -150,17 +150,25 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
           const ownMessage = item.senderId === memberId;
           const previous = visibleMessages[index - 1];
           const showDate = !previous || localDateKey(previous.createdAt) !== localDateKey(item.createdAt);
+          const showSender = !ownMessage && (showDate || previous?.senderId !== item.senderId);
+          const sender = currentRoom.joinUserInfo?.find(({ userInfo }) => userInfo.id === item.senderId)?.userInfo;
+          const unreadCount = ownMessage ? currentRoom.memberIds.filter((id) => {
+            if (id === memberId) return false;
+            const readAt = currentRoom.memberReadAt?.[id] ?? currentRoom.joinUserInfo?.find(({ userInfo }) => userInfo.id === id)?.timestamp;
+            return !readAt || readAt < item.createdAt;
+          }).length : 0;
           const reactions = Object.entries(item.emojis).filter(([, users]) => users.length > 0);
           return <View>
             {showDate ? <Text style={styles.dateDivider}>{formatLocalDate(item.createdAt)}</Text> : null}
             <TouchableOpacity activeOpacity={1} onLongPress={() => item.messageStatus !== "DELETE" && setSelectedMessage(item)} style={[styles.message, ownMessage ? styles.ownMessage : styles.otherMessage]}>
+            {showSender ? <View style={styles.senderHeader}>{sender?.picture ? <Image source={{ uri: absoluteApiUrl(sender.picture) }} style={styles.senderAvatar} /> : <View style={styles.senderAvatarFallback}><Text style={styles.muted}>{sender?.name.slice(0, 1) ?? "?"}</Text></View>}<Text style={styles.senderName}>{sender?.name ?? "구성원"}</Text></View> : null}
             {item.messageStatus === "DELETE" ? <Text style={styles.muted}>메시지가 삭제되었습니다.</Text> : <>
               {imageUrl ? <TouchableOpacity onPress={() => setPreviewImage({ url: imageUrl, name: parts[1] || "채팅 이미지" })}><Image source={{ uri: absoluteApiUrl(imageUrl) }} resizeMode="cover" style={styles.imageMessage} /></TouchableOpacity> : null}
               {fileUrl ? <TouchableOpacity onPress={() => openFile(fileUrl, fileName)} style={styles.fileMessage}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={1} style={styles.rowTitle}>{fileName || "첨부 파일"}</Text><Text style={styles.link}>파일 저장/공유 ↗</Text></View></TouchableOpacity> : null}
               {visibleMessage(item) && !imageUrl && !fileUrl ? <Text>{visibleMessage(item)}</Text> : null}
               {item.files?.map((url) => <TouchableOpacity key={url} onPress={() => /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? setPreviewImage({ url, name: fileNameFromUrl(url) }) : openFile(url)}><Text style={styles.link}>{/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? "이미지 미리보기" : "첨부 파일 저장/공유 ↗"}</Text></TouchableOpacity>)}
             </>}
-            <View style={styles.messageMeta}><Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text>{ownMessage && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
+            <View style={styles.messageMeta}>{unreadCount ? <Text style={styles.unreadCount}>안읽음 {unreadCount}</Text> : null}<Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text>{ownMessage && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
             {item.messageStatus !== "DELETE" && reactions.length ? <View style={styles.reactions}>{reactions.map(([emoji, users]) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}</View> : null}
             </TouchableOpacity>
           </View>;
@@ -200,6 +208,11 @@ const styles = StyleSheet.create({
   otherMessage: { backgroundColor: SeugiColor.White, alignSelf: "flex-start" },
   messageMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 6 },
   dateDivider: { alignSelf: "center", color: SeugiColor.Gray500, fontSize: 12, backgroundColor: SeugiColor.Gray100, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, marginVertical: 12 },
+  senderHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  senderAvatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: SeugiColor.Gray100 },
+  senderAvatarFallback: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Gray100 },
+  senderName: { color: SeugiColor.Gray700, fontSize: 12, fontWeight: "600" },
+  unreadCount: { color: SeugiColor.Primary500, fontSize: 11, fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
