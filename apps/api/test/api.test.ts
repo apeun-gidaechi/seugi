@@ -415,18 +415,24 @@ test("authenticated room members receive Socket.IO messages", async () => {
 
 test("uploaded files are persisted and served back", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-upload-")); const previous = process.env.UPLOAD_DIR; process.env.UPLOAD_DIR = directory;
-  const app = await buildApp(); await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  const store = new Store(); const memberId = store.id(); store.members.set(memberId, { id: memberId, email: "upload@example.com", name: "업로드 사용자" });
+  const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`; await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
   try {
+    const unauthorized = new FormData(); unauthorized.set("file", new Blob(["no token"], { type: "text/plain" }), "unauthorized.txt");
+    assert.equal((await fetch(`http://127.0.0.1:${address.port}/file/upload/FILE`, { method: "POST", body: unauthorized })).status, 401);
     const form = new FormData(); form.set("file", new Blob(["seugi file"], { type: "text/plain" }), "hello.txt");
-    const upload = await fetch(`http://127.0.0.1:${address.port}/file/upload/FILE`, { method: "POST", body: form }); assert.equal(upload.status, 200);
+    const upload = await fetch(`http://127.0.0.1:${address.port}/file/upload/FILE`, { method: "POST", headers: { authorization }, body: form }); assert.equal(upload.status, 200);
     const uploadData = (await upload.json() as { data: { url: string; byte: number } }).data;
     assert.equal(uploadData.byte, "seugi file".length);
     const url = uploadData.url;
     assert.equal(await (await fetch(`http://127.0.0.1:${address.port}${url}`)).text(), "seugi file");
     const legacyForm = new FormData(); legacyForm.set("file", new Blob(["legacy image"], { type: "image/png" }), "school.png");
-    const legacyUpload = await fetch(`http://127.0.0.1:${address.port}/file/upload/IMG`, { method: "POST", body: legacyForm });
+    const legacyUpload = await fetch(`http://127.0.0.1:${address.port}/file/upload/IMG`, { method: "POST", headers: { authorization }, body: legacyForm });
     assert.equal(legacyUpload.status, 200);
     const legacyData = (await legacyUpload.json() as { data: { url: string } }).data;
     assert.equal(await (await fetch(`http://127.0.0.1:${address.port}${legacyData.url}`)).text(), "legacy image");
+    const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "이미지 학교", image: legacyData.url } });
+    assert.equal(workspace.statusCode, 200);
+    assert.equal(store.workspaces.get(workspace.json().data)?.image, legacyData.url);
   } finally { await app.close(); if (previous === undefined) delete process.env.UPLOAD_DIR; else process.env.UPLOAD_DIR = previous; rmSync(directory, { recursive: true, force: true }); }
 });

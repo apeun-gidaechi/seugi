@@ -40,7 +40,7 @@ export class SeugiApi {
   workspaceCode(workspaceId: string) { return this.request<string>(`/workspace/code/${encodeURIComponent(workspaceId)}`); }
   memberInfo() { return this.request<Member>("/member/myInfo"); }
   editMember(input: { name?: string; picture?: string }) { return this.request<void>("/member/edit", { method: "PATCH", body: JSON.stringify(input) }); }
-  createWorkspace(input: { name: string; schoolCode?: string }) { return this.request<string>("/workspace", { method: "POST", body: JSON.stringify(input) }); }
+  createWorkspace(input: { name: string; schoolCode?: string; image?: string }) { return this.request<string>("/workspace", { method: "POST", body: JSON.stringify(input) }); }
   joinWorkspace(input: { code: string; role?: "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" }) { return this.request<void>("/workspace/join", { method: "POST", body: JSON.stringify(input) }); }
   workspaceMembers(workspaceId: string) { return this.request<Member[]>(`/workspace/members?workspaceId=${encodeURIComponent(workspaceId)}`); }
   workspaceNotificationPreference(workspaceId: string) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`); }
