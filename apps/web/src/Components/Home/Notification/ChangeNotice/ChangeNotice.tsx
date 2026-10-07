@@ -6,32 +6,15 @@ import { fetchingNotice } from '@/Api/Home';
 import { deleteNotice } from '@/Api/notification';
 import Cookies from 'js-cookie';
 
-interface NotificationEmoji {
-    emoji: string;
-    description?: string;
-}
-
-interface Notice {
-    id: number;
-    workspaceId: string;
-    userId: number;
-    userName: string;
-    title: string;
-    content: string;
-    emoji: NotificationEmoji[];
-    creationDate: string;
-    lastModifiedDate: string;
-}
-
 interface Props {
     onClose: () => void;
-    notificationId: number;
-    userId: number;
+    notificationId: string;
+    userId: string;
     mutateNotifications: () => void;
 }
 
 const ChangeNotice: React.FC<Props> = ({ notificationId, userId, onClose, mutateNotifications }) => {
-    const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
+    const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
     const [editMode, setEditMode] = useState<boolean>(false);
     const workspaceId = typeof window !== 'undefined' ? Cookies.get('workspaceId') : null;
 
@@ -48,7 +31,7 @@ const ChangeNotice: React.FC<Props> = ({ notificationId, userId, onClose, mutate
             const notification = NoticeIds.find((item) => String(item.id) === String(notificationId));
 
             if (notification) {
-                setCurrentUserId(Number(notification.userId ?? notification.authorId));
+                setCurrentUserId(notification.userId ?? notification.authorId);
             }
         } catch (error) {
             console.error('Failed to fetch notification data', error);

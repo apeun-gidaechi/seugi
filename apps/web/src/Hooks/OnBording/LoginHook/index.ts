@@ -36,7 +36,7 @@ const index = () => {
                 return;
             }
 
-            Cookies.set("workspaceId", checkWorkspaces[0].id);
+            Cookies.set("workspaceId", checkWorkspaces[0].workspaceId);
             navigate(paths.home);
         } catch (error) {
             console.log("Error fetching workspace:", error);

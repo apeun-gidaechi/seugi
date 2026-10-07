@@ -5,7 +5,7 @@ import CafeteriaImg from "@/Assets/image/home/cafeteria.svg";
 import NoMeal from '@/Assets/image/home/NoMeal.svg';
 
 interface MenuProps {
-    id: number;
+    id: string;
     workspaceId: string;
     mealType: "조식" | "중식" | "석식";
     menu: string[];
@@ -15,7 +15,7 @@ interface MenuProps {
 }
 
 interface Props {
-    todayMenu: MenuProps[];
+    todayMenu?: MenuProps[];
 }
 
 const Meal = ({ todayMenu }: Props) => {

@@ -7,7 +7,7 @@ import ArrowImg from "@/Assets/image/home/arrow.svg";
 import NoCalendar from '@/Assets/image/home/NoCalendar.svg';
 
 interface ScheduleItem {
-    id: number;
+    id: string;
     workspaceId: string;
     date: string;
     eventName: string;
@@ -16,7 +16,7 @@ interface ScheduleItem {
 }
 
 interface Props {
-    schedules: ScheduleItem[];
+    schedules?: ScheduleItem[];
 }
 
 const Calendar = ({ schedules = [] }: Props) => {

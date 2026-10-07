@@ -6,19 +6,19 @@ import { getTasks, getClassroomTasks } from "@/Api/Home";
 import Emoji from "@/Assets/image/home/emoji.svg";
 
 interface Task {
-  id: number;
+  id: string;
   workspaceId: string;
   title: string;
-  description: string | null;
-  dueDate: Date | null;
+  description?: string;
+  dueDate?: string;
 }
 
 interface ClassroomTask {
   id: string;
   title: string;
-  description: string | null;
-  link: string;
-  dueDate: Date | null;
+  description?: string;
+  link?: string;
+  dueDate?: string;
 }
 
 interface AssignmentProps {
@@ -69,7 +69,7 @@ const Assignment = ({ tasks = [], classroomTasks = [] }: AssignmentProps) => {
     }
   };
 
-  const calculateDaysLeft = (dueDate: Date | null) => {
+  const calculateDaysLeft = (dueDate?: string) => {
     if (!dueDate) return null;
 
     const today = new Date();
@@ -97,7 +97,7 @@ const Assignment = ({ tasks = [], classroomTasks = [] }: AssignmentProps) => {
         {localClassroomTasks.length > 0 ? (
           <ul>
             {localClassroomTasks.map((task) => (
-              <S.AssignmentButton key={task.id} onClick={() => handleClassroomTaskClick(task.link)}>
+              <S.AssignmentButton key={task.id} onClick={() => handleClassroomTaskClick(task.link ?? "")}>
                 <S.AssignmentButtonText>{task.title}</S.AssignmentButtonText>
                 <S.AssignmentDescription>
                   {task.description ? task.description : "설명 없음"}

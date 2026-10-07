@@ -13,26 +13,15 @@ import CreateNotice from '@/Components/Home/Notification/CreateNotice/CreateNoti
 import ChangeNotice from './ChangeNotice/ChangeNotice';
 import { useUserContext } from '@/Contexts/userContext';
 import Cookies from 'js-cookie';
+import type { KeyedMutator } from 'swr';
+import type { LegacyNotification } from '@seugi/contracts';
 
-interface EmojiItem {
-    emoji: string;
-    userList: string[];
-}
-
-interface NotificationItem {
-    id: number;
-    userName: string;
-    userId: number;
-    title: string;
-    content: string;
-    emoji: EmojiItem[];
-    lastModifiedDate: string;
-    createdDate: string;
-}
+type NotificationItem = LegacyNotification;
+type EmojiItem = LegacyNotification["emoji"][number];
 
 interface Props {
-    notifications: NotificationItem[];
-    mutateNotifications: (notifications?: NotificationItem[]) => void;
+    notifications?: NotificationItem[];
+    mutateNotifications: KeyedMutator<NotificationItem[]>;
 }
 
 const Notification = ({ notifications = [], mutateNotifications }: Props) => {
@@ -49,10 +38,10 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
 
     const user = useUserContext();
     const [isEmojiPickerVisible, setEmojiPickerVisible] = useState<boolean>(false);
-    const [activeNotificationId, setActiveNotificationId] = useState<number | null>(null);
+    const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
     const [isCreateNoticeVisible, setCreateNoticeVisible] = useState<boolean>(false);
     const [showAlert, setShowAlert] = useState<boolean>(false);
-    const [changeNoticeId, setChangeNoticeId] = useState<number | null>(null);
+    const [changeNoticeId, setChangeNoticeId] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 20;
     const totalPages = Math.ceil(notifications.length / itemsPerPage);
@@ -83,7 +72,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
         };
     }, [isEmojiPickerVisible]);
 
-    const handleAddEmojiClick = (notificationId: number) => {
+    const handleAddEmojiClick = (notificationId: string) => {
         if (activeNotificationId === notificationId && isEmojiPickerVisible) {
             setEmojiPickerVisible(false);
             setActiveNotificationId(null);
@@ -220,7 +209,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
     };
 
 
-    const handleActionButtonClick = (notificationId: number) => {
+    const handleActionButtonClick = (notificationId: string) => {
         setChangeNoticeId(prev => (prev === notificationId ? null : notificationId));
     };
 

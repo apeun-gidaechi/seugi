@@ -5,28 +5,11 @@ import * as S from "./ChangeSchool.style";
 import Arrow from "@/Assets/image/home/arrow.svg";
 import { paths } from "@/Constants/paths";
 import Cookies from "js-cookie";
-
-interface workspaceItem {
-  workspaceId: string;
-  workspaceName: string;
-  workspaceImageUrl: string;
-  workspaceAdmin: number
-  middleAdmin: number[];
-  teacher: number[];
-  student: number[];
-}
-
-interface pendingWorkspaceItem {
-  workspaceId: string;
-  workspaceName: string
-  workspaceImageUrl: string;
-  studentCount: string;
-  teacherCount: string;
-}
+import type { PendingWorkspaceCard, WorkspaceCard } from '@/Api/workspace';
 interface Props {
   onClose: () => void;
-  workspaces: workspaceItem[];
-  pendingWorkspaces: pendingWorkspaceItem[];
+  workspaces: WorkspaceCard[];
+  pendingWorkspaces: PendingWorkspaceCard[];
 }
 
 const Changeschool = ({ onClose, workspaces = [], pendingWorkspaces= [] }: Props) => {

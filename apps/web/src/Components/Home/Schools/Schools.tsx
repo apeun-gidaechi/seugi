@@ -6,28 +6,11 @@ import ArrowImg from "@/Assets/image/home/arrow.svg";
 import useSchools from '@/Hooks/HomeHook/Schools/index';
 import { useNavigate } from 'react-router-dom';
 import { paths } from '@/Constants/paths';
-
-interface workspaceItem {
-    workspaceId: string;
-    workspaceName: string;
-    workspaceImageUrl: string;
-    workspaceAdmin: number;
-    middleAdmin: number[];
-    teacher: number[];
-    student: number[];
-}
-
-interface pendingWorkspaceItem {
-    workspaceId: string;
-    workspaceName: string;
-    workspaceImageUrl: string;
-    studentCount: string;
-    teacherCount: string;
-}
+import type { PendingWorkspaceCard, WorkspaceCard } from '@/Api/workspace';
 
 interface Props {
-    workspaces: workspaceItem[];
-    pendingWorkspaces: pendingWorkspaceItem[];
+    workspaces: WorkspaceCard[];
+    pendingWorkspaces: PendingWorkspaceCard[];
 }
 
 const Schools = ({ workspaces, pendingWorkspaces }: Props) => {

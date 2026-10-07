@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import Cookies from "js-cookie";
 
 interface TimetableItem {
-    id: number;
+    id: string;
     workspaceId: string;
     grade: string;
     classNum: string;
@@ -21,7 +21,7 @@ interface TimetableItem {
 }
 
 interface Props {
-    timetable: TimetableItem[];
+    timetable?: TimetableItem[];
 }
 
 const DailySchedule = ({ timetable = [] }: Props) => {

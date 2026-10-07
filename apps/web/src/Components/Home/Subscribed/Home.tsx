@@ -55,15 +55,15 @@ const Home = () => {
           <S.HomeWrapper1DownContainer>
             <Notification notifications={notifications} mutateNotifications={mutateNotifications} />
             <S.RightContainer>
-              <Calendar schedules={schedule} />
+              <Calendar schedules={schedule ?? []} />
               <Assignment tasks={tasks} classroomTasks={classroomTasks} />
             </S.RightContainer>
           </S.HomeWrapper1DownContainer>
         </S.HomeWrapper1>
 
         <S.HomeWrapper2>
-          <Schools workspaces={workspaces} pendingWorkspaces={pendingWorkspaces} />
-          <Meal todayMenu={menu} />
+          <Schools workspaces={workspaces ?? []} pendingWorkspaces={pendingWorkspaces ?? []} />
+          <Meal todayMenu={menu ?? []} />
           <CatSeugi />
         </S.HomeWrapper2>
       </S.ComponentsBox>

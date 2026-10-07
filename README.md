@@ -16,7 +16,7 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 
 `@seugi/api-client` consumes those routes and contracts. Web and mobile code should call its domain methods instead of assembling endpoint URLs or request payloads locally. The client owns JSON/multipart handling, bearer tokens, one-time refresh-and-retry behavior, and typed HTTP errors (`SeugiApiError`). Keep response-envelope unwrapping in app adapters where a screen still relies on a legacy view model.
 
-Run `pnpm check` for the shared packages, API, and mobile type checks; `pnpm --filter @seugi/api test` for API and client integration tests; and `pnpm build` for all workspace builds. The legacy web application still has TypeScript diagnostics outside those workspace checks; its production Vite build is included in `pnpm build`.
+Run `pnpm check` for TypeScript checks across every workspace, `pnpm --filter @seugi/api test` for API and client integration tests, and `pnpm build` for all workspace production builds.
 
 ## Run
 

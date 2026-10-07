@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 
 interface CreateNoticeProps {
     onClose: () => void;
-    notificationId?: number;
+    notificationId?: string;
     mutateNotifications: () => void;
 }
 
@@ -21,7 +21,7 @@ const CreateNotice = ({ onClose, notificationId, mutateNotifications }: CreateNo
             try {
                 if (workspaceId) {
                     const fetching = await fetchingNotice(workspaceId);
-                    const notice = fetching.find((item: any) => item.id === notificationId);
+                    const notice = fetching.find((item) => item.id === notificationId);
                     if (notice) {
                         setTitle(notice.title);
                         setContent(notice.content);
