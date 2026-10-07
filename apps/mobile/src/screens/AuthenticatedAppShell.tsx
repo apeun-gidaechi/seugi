@@ -130,7 +130,7 @@ export function AuthenticatedAppShell({
 
   return (
     <SafeAreaView style={styles.page}>
-      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" ? <SeugiTopBar
+      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createTask" ? <SeugiTopBar
         backgroundColor={SeugiColor.Primary050}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
           <TouchableOpacity
@@ -165,7 +165,7 @@ export function AuthenticatedAppShell({
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
       {detail === "timetable" ? <TimetablePage workspace={workspace} /> : null}
       {detail === "tasks" ? <AssignmentsScreen workspace={workspace} onCreateTask={() => pushDetail("createTask")} /> : null}
-      {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => goBack()} /> : null}
+      {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => goBack()} onBack={goBack} /> : null}
       {detail === "createNotice" || detail === "editNotice" ? (
         <NoticeEditorScreen
           workspace={workspace}
