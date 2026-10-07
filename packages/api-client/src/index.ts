@@ -1,4 +1,4 @@
-import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type CreateWorkspaceInput, type JoinWorkspaceInput, type Meal, type Member, type Notification, type Profile, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -22,8 +22,8 @@ export class SeugiApi {
     return payload;
   }
   sendVerification(email: string) { return this.request<void>(`/email/send?email=${encodeURIComponent(email)}`); }
-  register(input: { email: string; password: string; name?: string; code: string }) { return this.request<Tokens>("/member/register", { method: "POST", body: JSON.stringify(input) }); }
-  login(input: { email: string; password: string; token?: string }) { return this.request<Tokens>("/member/login", { method: "POST", body: JSON.stringify(input) }); }
+  register(input: RegisterMemberInput) { return this.request<Tokens>(API_SPEC.registerMember.path, { method: API_SPEC.registerMember.method, body: JSON.stringify(input) }); }
+  login(input: LoginMemberInput) { return this.request<Tokens>(API_SPEC.loginMember.path, { method: API_SPEC.loginMember.method, body: JSON.stringify(input) }); }
   authenticateGoogle(input: { code: string; platform: "ANDROID" | "IOS"; name?: string }) { return this.request<Tokens>("/oauth/google/authenticate", { method: "POST", body: JSON.stringify(input) }); }
   authenticateApple(input: { code: string; platform: "IOS"; name?: string }) { return this.request<Tokens>("/oauth/apple/authenticate", { method: "POST", body: JSON.stringify(input) }); }
   connectGoogle(input: { code: string; platform: "ANDROID" | "IOS" }) { return this.request<void>("/oauth/google/connect", { method: "POST", body: JSON.stringify(input) }); }
@@ -39,7 +39,7 @@ export class SeugiApi {
   cancelMyWorkspaceRequest(workspaceId: string) { return this.request<void>("/workspace/cancel", { method: "DELETE", body: JSON.stringify({ workspaceId }) }); }
   workspaceCode(workspaceId: string) { return this.request<string>(`/workspace/code/${encodeURIComponent(workspaceId)}`); }
   memberInfo() { return this.request<Member>("/member/myInfo"); }
-  editMember(input: { name?: string; picture?: string }) { return this.request<void>("/member/edit", { method: "PATCH", body: JSON.stringify(input) }); }
+  editMember(input: EditMemberInput) { return this.request<void>(API_SPEC.editMember.path, { method: API_SPEC.editMember.method, body: JSON.stringify(input) }); }
   createWorkspace(input: CreateWorkspaceInput) { return this.request<string>(API_SPEC.createWorkspace.path, { method: API_SPEC.createWorkspace.method, body: JSON.stringify(input) }); }
   updateWorkspace(input: UpdateWorkspaceInput) { return this.request<void>(API_SPEC.updateWorkspace.path, { method: API_SPEC.updateWorkspace.method, body: JSON.stringify(input) }); }
   joinWorkspace(input: JoinWorkspaceInput) { return this.request<void>(API_SPEC.joinWorkspace.path, { method: API_SPEC.joinWorkspace.method, body: JSON.stringify(input) }); }
@@ -49,9 +49,9 @@ export class SeugiApi {
   setWorkspaceNotificationPreference(workspaceId: string, receivePush: boolean) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`, { method: "PATCH", body: JSON.stringify({ receivePush }) }); }
   setWorkspaceMemberRole(workspaceId: string, memberId: string, role: Role) { return this.request<void>("/workspace/permission", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId, role }) }); }
   removeWorkspaceMember(workspaceId: string, memberId: string) { return this.request<void>("/workspace/kick", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId }) }); }
-  myProfile(workspaceId: string) { return this.request<Profile>(`/profile/me?workspaceId=${encodeURIComponent(workspaceId)}`); }
-  editProfile(workspaceId: string, input: Partial<Pick<Profile, "grade" | "class" | "number" | "phone" | "status" | "nick" | "spot" | "belong" | "wire" | "location">>) { return this.request<void>(`/profile/${encodeURIComponent(workspaceId)}`, { method: "PATCH", body: JSON.stringify(input) }); }
-  editStudentNumber(workspaceId: string, input: { grade: number; class: number; number: number }) { return this.request<void>(`/profile/schidnum/${encodeURIComponent(workspaceId)}`, { method: "PATCH", body: JSON.stringify(input) }); }
+  myProfile(workspaceId: string) { return this.request<Profile>(`${API_SPEC.myProfile.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  editProfile(workspaceId: string, input: EditProfileInput) { return this.request<void>(API_SPEC.editProfile.pathFor(workspaceId), { method: API_SPEC.editProfile.method, body: JSON.stringify(input) }); }
+  editStudentNumber(workspaceId: string, input: EditStudentNumberInput) { return this.request<void>(API_SPEC.editStudentNumber.pathFor(workspaceId), { method: API_SPEC.editStudentNumber.method, body: JSON.stringify(input) }); }
   waitlist(workspaceId: string, role: Exclude<Role, "ADMIN">) { return this.request<Member[]>(`/workspace/wait-list?workspaceId=${encodeURIComponent(workspaceId)}&role=${role}`); }
   approveWorkspaceMember(workspaceId: string, memberId: string, role: Exclude<Role, "ADMIN">) { return this.request<void>("/workspace/add", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId, role }) }); }
   rejectWorkspaceMember(workspaceId: string, memberId: string, role: Exclude<Role, "ADMIN">) { return this.request<void>("/workspace/cancel", { method: "DELETE", body: JSON.stringify({ workspaceId, memberId, role }) }); }
