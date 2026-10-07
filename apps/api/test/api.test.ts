@@ -62,9 +62,12 @@ test("workspace endpoints accept and return the original desktop and Android fie
   assert.equal(listed.json().data[0].workspaceName, "호환 학교");
   assert.equal(listed.json().data[0].workspaceImageUrl, "https://example.com/school.png");
   const code = store.workspaces.get(workspaceId)?.code;
-  const searched = await app.inject({ url: `/workspace/search/${code}` });
+  assert.equal((await app.inject({ url: `/workspace/search/${code}` })).statusCode, 401);
+  const searched = await app.inject({ url: `/workspace/search/${code}`, headers });
+  assert.deepEqual(Object.keys(searched.json().data).sort(), ["studentCount", "teacherCount", "workspaceId", "workspaceImageUrl", "workspaceName"]);
   assert.equal(searched.json().data.workspaceName, "호환 학교");
   assert.equal(searched.json().data.studentCount, 0);
+  assert.equal(searched.json().data.teacherCount, 1);
   assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers, payload: { workspaceId, workspaceName: "이름 수정", workspaceImgUrl: "" } })).statusCode, 200);
   assert.equal(store.workspaces.get(workspaceId)?.name, "이름 수정");
   await app.close();
