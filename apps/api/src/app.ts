@@ -1184,6 +1184,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const type =
       message.type === "BOT"
         ? "BOT"
+        : message.type === "IMG" || message.type === "FILE"
+          ? message.type
         : message.files?.length
           ? /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(
               message.files[0],

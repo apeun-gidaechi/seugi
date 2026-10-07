@@ -3,6 +3,7 @@ import type { ChatMessage } from "./index.js";
 export interface ChatMessageInput {
   roomId: string;
   message: string;
+  type?: "MESSAGE" | "IMG" | "FILE";
   files?: string[];
   mention?: Array<string | number>;
   mentionAll?: boolean;

@@ -52,7 +52,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         .catch((error) => app.log.error(error, "realtime room leave failed"));
     });
     socket.on("chat:message", (rawInput, done) => {
-      const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), files: z.array(z.string().min(1).max(2048)).max(10).optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);
+      const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), type: z.enum(["MESSAGE", "IMG", "FILE"]).default("MESSAGE"), files: z.array(z.string().min(1).max(2048)).max(10).optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);
       if (!parsed.success) return done?.({ message: "MESSAGE_INVALID" });
       void store.withMutation(() => {
         const input = parsed.data;
@@ -60,7 +60,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         if (!room?.memberIds.includes(socket.data.userId)) return { error: "ROOM_NOT_FOUND" as const };
         const shouldReply = (input.mention ?? []).some((id) => String(id) === "-1") || input.message.includes("스기야");
         const mention = [...new Set([...(input.mention ?? []).map(String), ...(shouldReply ? ["-1"] : [])])];
-        const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: socket.data.userId, message: input.message.trim(), files: input.files, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
+        const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: socket.data.userId, message: input.message.trim(), files: input.files, type: input.type, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
         store.messages.set(message.id, message);
         const sender = store.requireMember(socket.data.userId);
         const tokens = store.pushTokensForWorkspace(room.workspaceId, room.memberIds, socket.data.userId);
@@ -70,7 +70,8 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         io.to(result.room.id).emit("chat:message", result.message);
         stomp.publishMessage(result.message);
         replyToMention(result.message);
-        void push.send(result.tokens, { title: result.room.name || "1대1 채팅", body: `${result.senderName}: ${result.message.files?.length && !result.message.message ? "파일을 보냈습니다." : result.message.message}`, imageUrl: result.senderPicture }).catch((error) => app.log.error(error, "FCM chat push failed"));
+        const preview = result.message.type === "IMG" ? "사진을 보냈습니다." : result.message.type === "FILE" || (result.message.files?.length && !result.message.message) ? "파일을 보냈습니다." : result.message.message;
+        void push.send(result.tokens, { title: result.room.name || "1대1 채팅", body: `${result.senderName}: ${preview}`, imageUrl: result.senderPicture }).catch((error) => app.log.error(error, "FCM chat push failed"));
         done?.({ message: "메시지 전송 성공", data: result.message });
       }).catch((error) => { app.log.error(error, "realtime message persistence failed"); done?.({ message: "메시지 저장에 실패했습니다" }); });
     });
@@ -88,7 +89,8 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
     socket.send(frame);
   };
   const publish = (roomId: string, message: ChatMessage) => {
-    const body = JSON.stringify({ type: message.type === "BOT" ? "BOT" : "MESSAGE", roomId, message: message.message, uuid: message.id, eventList: [], emoticon: null, mention: message.mention ?? [], mentionAll: message.mentionAll ?? false, files: message.files, userId: message.senderId === "-1" ? -1 : message.senderId, timestamp: message.createdAt });
+    const legacyType = message.type === "BOT" || message.type === "IMG" || message.type === "FILE" ? message.type : message.files?.length ? (/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(message.files[0]!) ? "IMG" : "FILE") : "MESSAGE";
+    const body = JSON.stringify({ type: legacyType, roomId, message: message.message || (message.files?.[0] ?? ""), uuid: message.id, eventList: [], emoticon: null, mention: message.mention ?? [], mentionAll: message.mentionAll ?? false, files: message.files, userId: message.senderId === "-1" ? -1 : message.senderId, timestamp: message.createdAt });
     for (const [socket, state] of clients) if (state.rooms.has(roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${roomId}`, "content-type": "application/json" }, body);
   };
   const publishEmoji = (event: MessageEmojiEvent) => {
