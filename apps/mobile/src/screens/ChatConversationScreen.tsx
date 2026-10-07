@@ -173,7 +173,6 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     }
   };
   const react = async (message: ChatMessage, emoji: string) => { const current = message.emojis[emoji] ?? []; try { if (current.includes(memberId)) await api.removeMessageEmoji(message.id, emoji); else await api.addMessageEmoji(message.id, emoji); setMessages((items) => items.map((item) => item.id !== message.id ? item : { ...item, emojis: { ...item.emojis, [emoji]: current.includes(memberId) ? current.filter((id) => id !== memberId) : [...current, memberId] } })); } catch (e) { Alert.alert("반응을 저장하지 못했습니다", e instanceof Error ? e.message : "다시 시도해 주세요"); } };
-  const removeMessage = (message: ChatMessage) => Alert.alert("메시지 삭제", "이 메시지를 대화방의 모든 구성원에게서 삭제할까요?", [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => { void api.deleteMessage(room.id, message.id).then(() => setMessages((items) => items.map((item) => item.id === message.id ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item))).catch((error) => Alert.alert("메시지를 삭제하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); } }]);
   const closeSearch = () => { setSearchMode(false); setSearchText(""); };
   const back = () => { if (searchMode) closeSearch(); else onBack(); };
   const visibleMessages = messages.filter((item) => {
@@ -213,7 +212,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
               {visibleMessage(item) && !imageUrl && !fileUrl ? <Text>{visibleMessage(item)}</Text> : null}
               {item.files?.map((url) => <TouchableOpacity key={url} onPress={() => /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? setPreviewImage({ url, name: fileNameFromUrl(url) }) : openFile(url)}><Text style={styles.link}>{/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? "이미지 미리보기" : "첨부 파일 저장/공유 ↗"}</Text></TouchableOpacity>)}
             </>}
-            <View style={styles.messageMeta}>{unreadCount ? <Text style={styles.unreadCount}>안읽음 {unreadCount}</Text> : null}<Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text>{ownMessage && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
+            <View style={styles.messageMeta}>{unreadCount ? <Text style={styles.unreadCount}>안읽음 {unreadCount}</Text> : null}<Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text></View>
             {item.messageStatus !== "DELETE" && reactions.length ? <View style={styles.reactions}>{reactions.map(([emoji, users]) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}</View> : null}
             </TouchableOpacity>
           </View>;
