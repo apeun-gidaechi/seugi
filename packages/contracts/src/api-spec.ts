@@ -5,6 +5,8 @@ import { editProfileSchema, editStudentNumberSchema } from "./profile.js";
 import { chatMemberEventSchema, chatRoomSearchSchema, createChatRoomSchema, deleteMessageSchema, chatEmojiSchema, messageHistoryQuerySchema } from "./chat.js";
 import { createNotificationSchema, notificationEmojiSchema, updateNotificationSchema } from "./notification.js";
 import { createTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, updateTimetableSchema } from "./school.js";
+import { aiPromptSchema, authenticateOAuthSchema, connectGoogleSchema, oauthProviderSchema, sendVerificationQuerySchema, uploadTypeSchema } from "./integrations.js";
+import { emailVerificationSchema } from "./member.js";
 
 /** Shared transport specification consumed by both the API server and SDK. */
 export const API_SPEC = {
@@ -49,6 +51,14 @@ export const API_SPEC = {
   resetMeals: { method: "POST", path: "/meal/reset/:workspaceId", pathFor: (workspaceId: string) => `/meal/reset/${encodeURIComponent(workspaceId)}` },
   schedules: { method: "GET", path: "/schedule/:workspaceId", pathFor: (workspaceId: string) => `/schedule/${encodeURIComponent(workspaceId)}` },
   monthSchedules: { method: "GET", path: "/schedule/month", query: monthScheduleQuerySchema },
+  sendVerification: { method: "GET", path: "/email/send", query: sendVerificationQuerySchema, pathFor: (email: string) => `/email/send?email=${encodeURIComponent(email)}` },
+  confirmVerification: { method: "POST", path: "/email/confirm", body: emailVerificationSchema },
+  authenticateOAuth: { method: "POST", path: "/oauth/:provider/authenticate", pathFor: (provider: "google" | "apple") => `/oauth/${provider}/authenticate`, params: oauthProviderSchema, body: authenticateOAuthSchema },
+  connectGoogle: { method: "POST", path: "/oauth/google/connect", body: connectGoogleSchema },
+  removeGoogleConnection: { method: "DELETE", path: "/oauth/google/remove" },
+  googleConnection: { method: "GET", path: "/oauth/google/status" },
+  askCatseugi: { method: "POST", path: "/ai", body: aiPromptSchema },
+  uploadFile: { method: "POST", path: "/file/upload/:type", pathFor: (type: "IMAGE" | "FILE" | "PROFILE") => `/file/upload/${type}`, params: uploadTypeSchema },
   createTask: {
     method: "POST",
     path: "/task",

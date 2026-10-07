@@ -1,4 +1,4 @@
-import { API_SPEC, type ApiResponse, type ChatMessage, type ChatMemberEventInput, type ClassroomTask, type CreateChatRoomInput, type CreateNotificationInput, type CreateTaskInput, type CreateTimetableInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateNotificationInput, type UpdateTimetableInput, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type AuthenticateOAuthInput, type ChatMessage, type ChatMemberEventInput, type ClassroomTask, type ConnectGoogleInput, type CreateChatRoomInput, type CreateNotificationInput, type CreateTaskInput, type CreateTimetableInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateNotificationInput, type UpdateTimetableInput, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -21,14 +21,14 @@ export class SeugiApi {
     if (!response.ok) throw new Error(payload.message);
     return payload;
   }
-  sendVerification(email: string) { return this.request<void>(`/email/send?email=${encodeURIComponent(email)}`); }
+  sendVerification(email: string) { return this.request<void>(API_SPEC.sendVerification.pathFor(email)); }
   register(input: RegisterMemberInput) { return this.request<Tokens>(API_SPEC.registerMember.path, { method: API_SPEC.registerMember.method, body: JSON.stringify(input) }); }
   login(input: LoginMemberInput) { return this.request<Tokens>(API_SPEC.loginMember.path, { method: API_SPEC.loginMember.method, body: JSON.stringify(input) }); }
-  authenticateGoogle(input: { code: string; platform: "ANDROID" | "IOS"; name?: string }) { return this.request<Tokens>("/oauth/google/authenticate", { method: "POST", body: JSON.stringify(input) }); }
-  authenticateApple(input: { code: string; platform: "IOS"; name?: string }) { return this.request<Tokens>("/oauth/apple/authenticate", { method: "POST", body: JSON.stringify(input) }); }
-  connectGoogle(input: { code: string; platform: "ANDROID" | "IOS" }) { return this.request<void>("/oauth/google/connect", { method: "POST", body: JSON.stringify(input) }); }
-  googleConnection() { return this.request<boolean>("/oauth/google/status"); }
-  removeGoogleConnection() { return this.request<void>("/oauth/google/remove", { method: "DELETE" }); }
+  authenticateGoogle(input: AuthenticateOAuthInput & { platform: "ANDROID" | "IOS" }) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("google"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
+  authenticateApple(input: AuthenticateOAuthInput & { platform: "IOS" }) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("apple"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
+  connectGoogle(input: ConnectGoogleInput & { platform: "ANDROID" | "IOS" }) { return this.request<void>(API_SPEC.connectGoogle.path, { method: API_SPEC.connectGoogle.method, body: JSON.stringify(input) }); }
+  googleConnection() { return this.request<boolean>(API_SPEC.googleConnection.path); }
+  removeGoogleConnection() { return this.request<void>(API_SPEC.removeGoogleConnection.path, { method: API_SPEC.removeGoogleConnection.method }); }
   refreshAccessToken(refreshToken: string) { return this.request<string>(`/member/refresh?token=${encodeURIComponent(refreshToken)}`, {}, false); }
   registerDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "POST", body: JSON.stringify({ token }) }); }
   removeDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "DELETE", body: JSON.stringify({ token }) }); }
@@ -63,7 +63,7 @@ export class SeugiApi {
   removeGroupMembers(roomId: string, memberIds: string[]) { const input: ChatMemberEventInput = { roomId, memberIds }; return this.request<void>(API_SPEC.removeGroupMembers.path, { method: API_SPEC.removeGroupMembers.method, body: JSON.stringify(input) }); }
   transferGroupAdmin(roomId: string, memberId: string) { const input: ChatMemberEventInput = { roomId, memberId, memberIds: [] }; return this.request<void>(API_SPEC.transferGroupAdmin.path, { method: API_SPEC.transferGroupAdmin.method, body: JSON.stringify(input) }); }
   leaveGroupRoom(roomId: string) { return this.request<void>(API_SPEC.leaveGroupRoom.pathFor(roomId), { method: API_SPEC.leaveGroupRoom.method }); }
-  uploadFile(type: "IMAGE" | "FILE" | "PROFILE", form: FormData) { return this.request<{ name: string; type: string; mimeType: string; size: number; url: string }>(`/file/upload/${type}`, { method: "POST", body: form }); }
+  uploadFile(type: "IMAGE" | "FILE" | "PROFILE", form: FormData) { return this.request<{ name: string; type: string; mimeType: string; size: number; url: string }>(API_SPEC.uploadFile.pathFor(type), { method: API_SPEC.uploadFile.method, body: form }); }
   messages(roomId: string, timestamp?: string) { const cursor = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : ""; return this.request<{ messages: ChatMessage[]; hasNext: boolean }>(`${API_SPEC.messages.pathFor(roomId)}${cursor}`); }
   addMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.addMessageEmoji.path, { method: API_SPEC.addMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
   removeMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.removeMessageEmoji.path, { method: API_SPEC.removeMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
@@ -84,5 +84,5 @@ export class SeugiApi {
   resetTimetable(workspaceId: string) { return this.request<void>(`${API_SPEC.resetTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`, { method: API_SPEC.resetTimetable.method }); }
   meals(workspaceId: string, year?: number, month?: number) { const range = year !== undefined && month !== undefined ? `&year=${year}&month=${month}` : ""; return this.request<Meal[]>(`${API_SPEC.meals.path}?workspaceId=${encodeURIComponent(workspaceId)}${range}`); }
   schedules(workspaceId: string) { return this.request<Schedule[]>(API_SPEC.schedules.pathFor(workspaceId)); }
-  askCatSeugi(message: string) { return this.request<string>("/ai", { method: "POST", body: JSON.stringify({ message }) }); }
+  askCatSeugi(message: string) { return this.request<string>(API_SPEC.askCatseugi.path, { method: API_SPEC.askCatseugi.method, body: JSON.stringify({ message }) }); }
 }
