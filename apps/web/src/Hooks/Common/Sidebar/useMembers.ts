@@ -1,40 +1,16 @@
 import { useEffect, useState } from 'react';
-import axios, { AxiosInstance } from 'axios';
+import { getWorkspaceMembers } from '@/Api/admin';
 
 interface Member {
-  id: number;
+  id: string;
   name: string;
   department: string;
 }
 
-interface RetrieveMemberResponse {
-  member: {
-    id: number;
-    nick: string;
-    spot: string;
-    belong: string;
-    phone: string;
-    wire: string;
-    location: string;
-    permission: string;
-    schGrade: number;
-    schClass: number;
-    schNumber: number;
-  };
-  workspaceId: string;
-  status: string;
-}
-
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
-
-export const SeugiCustomAxios: AxiosInstance = axios.create({
-  baseURL: SERVER_URL,
-});
-
-const useMembers = (workspaceId: string, accessToken: string | null) => {
+const useMembers = (workspaceId: string) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchResult, setSearchResult] = useState<Member[]>([]);
-  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -45,20 +21,13 @@ const useMembers = (workspaceId: string, accessToken: string | null) => {
   }, [searchTerm]);
 
   const searchMembers = async (term: string) => {
-    if (accessToken) {
+    if (workspaceId) {
       try {
-        const response = await SeugiCustomAxios.get(`/workspace/members`, {
-          params: {
-            workspaceId: workspaceId,
-          },
-          headers: {
-            "Authorization": accessToken,
-          },
-        });
+        const response = await getWorkspaceMembers(workspaceId);
 
-        const members: Member[] = (response.data.data || []).map((m: RetrieveMemberResponse) => ({
+        const members: Member[] = response.map((m) => ({
           id: m.member.id,
-          name: m.member.nick,
+          name: m.member.nick || m.member.name,
           department: m.member.belong || "",
         }));
 
@@ -78,7 +47,7 @@ const useMembers = (workspaceId: string, accessToken: string | null) => {
     setSearchTerm(value);
   };
 
-  const handleMemberClick = (id: number) => {
+  const handleMemberClick = (id: string) => {
     setSelectedMembers((prev) =>
       prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]
     );

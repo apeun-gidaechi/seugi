@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios, { AxiosInstance } from 'axios';
 import useMembers from '@/Hooks/Common/Sidebar/useMembers'; 
 import * as S from './createRoomPlus.style'; 
 import Cookies from 'js-cookie'; 
@@ -8,26 +7,18 @@ import AvatarImg from '@/Assets/image/chat-components/Avatar.svg';
 import NonClicked from '@/Assets/image/chat-components/nonClick.svg';
 import Clicked from '@/Assets/image/chat-components/clicked.svg';
 import SearchIcon from '@/Assets/image/sidebar/Findicon.svg';
+import { SeugiApiError } from '@seugi/api-client';
+import { withSeugiApi } from '@/Api/client';
 
 interface CreateRoomPlusProps {
   onClose: () => void;
   onCreateRoom: (roomInfo: { roomId: string; roomName: string }) => void;
 }
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
-
-export const SeugiCustomAxios: AxiosInstance = axios.create({
-  baseURL: SERVER_URL,
-});
-
 const CreateRoomPlus: React.FC<CreateRoomPlusProps> = ({ onClose, onCreateRoom }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null); // workspaceId 상태 추가
 
   useEffect(() => {
-    const token = Cookies.get("accessToken") || null; // 쿠키에서 accessToken 가져오기, 없으면 null로 설정
-    setAccessToken(token);
-
     // 쿠키에서 workspaceId 가져오기
     const storedWorkspaceId = Cookies.get("workspaceId") || null; // 쿠키에서 workspaceId 가져오기, 없으면 null로 설정
     setWorkspaceId(storedWorkspaceId); // workspaceId 상태 설정
@@ -40,7 +31,7 @@ const CreateRoomPlus: React.FC<CreateRoomPlusProps> = ({ onClose, onCreateRoom }
     handleMemberClick,
     combinedResults,
     selectedMembers,
-  } = useMembers(workspaceId ?? '', accessToken); // 기본값으로 빈 문자열 사용
+  } = useMembers(workspaceId ?? '');
 
   const handleContinueClick = async () => {
     if (selectedMembers.length > 1) {
@@ -51,40 +42,18 @@ const CreateRoomPlus: React.FC<CreateRoomPlusProps> = ({ onClose, onCreateRoom }
         
         const roomName = `${selectedMemberNames.join(', ')}`;
   
-        const requestData = {
-          workspaceId: workspaceId,
-          joinUsers: Array.from(selectedMembers),
-          roomName: roomName,
-          chatRoomImg: "",
-        };
-  
-        const response = await SeugiCustomAxios.post('/chat/group/create', requestData, {
-          headers: {
-            'Content-Type': 'application/json',
-            "Authorization": accessToken,
-          },
-        });
-  
-        if (response.status === 200) {
-          const result = response.data;
-          console.log("Room created successfully:", result);
-          onCreateRoom(result);
-  
-          const chatRoomInfo = {
-            roomId: result.data.roomId,
-            roomName: requestData.roomName
-          };
-  
-          onCreateRoom(chatRoomInfo);
-          onClose();
-        } else {
-          console.error(`Error creating room: ${response.data}`);
-        }
+        if (!workspaceId) return;
+        const result = await withSeugiApi((api) => api.createRoom("group", {
+          workspaceId,
+          memberIds: selectedMembers,
+          name: roomName,
+        }));
+        onCreateRoom({ roomId: result, roomName });
+        onClose();
       } catch (error) {
-        if (axios.isAxiosError(error)) {
-          if (error.response?.status === 401) {
+        if (error instanceof SeugiApiError) {
+          if (error.status === 401) {
             alert('Session expired. Please login again.');
-            setAccessToken(null); 
             Cookies.remove("accessToken"); // 쿠키에서 accessToken 제거
             return;
           }
