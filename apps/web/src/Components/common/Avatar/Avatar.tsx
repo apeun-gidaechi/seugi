@@ -6,19 +6,27 @@ import {getMyInfos} from "@/Api/profile";
 
 interface AvatarProps {
   size?: keyof typeof profileSize;
+  imageUrl?: string;
 }
 
-const Avatar = ({size = 'medium'}: AvatarProps) => {
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.origin;
+const normalizeImageUrl = (url: string) => url.startsWith('/') ? `${SERVER_URL}${url}` : url;
+
+const Avatar = ({size = 'medium', imageUrl}: AvatarProps) => {
   const [userProfileImage, setProfileImage] = useState(DefaultProfileImage);
   
   useEffect(() => {
+    if (imageUrl) {
+      setProfileImage(normalizeImageUrl(imageUrl));
+      return;
+    }
     const fetchProfileImage = async () => {
       try {
         const res = await getMyInfos();
         const fetchedImage = res.picture;
 
         if (fetchedImage) {
-          setProfileImage(fetchedImage);
+          setProfileImage(normalizeImageUrl(fetchedImage));
         } else {
           setProfileImage(DefaultProfileImage);
         }
@@ -33,7 +41,7 @@ const Avatar = ({size = 'medium'}: AvatarProps) => {
     // return () => {
     //   clearInterval(intervalId);
     // };
-  }, []);
+  }, [imageUrl]);
 
   return (
     <>

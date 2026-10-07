@@ -73,17 +73,8 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
     };
 
     const handleImageChange = async (newImageUrl: string) => {
-        const formData = new FormData();
-        formData.append('name', name);
-        formData.append('birth', "");
-        formData.append('picture', newImageUrl);
-
         try {
-            const res = await SeugiCustomAxios.patch(`/member/edit`, formData, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+            const res = await SeugiCustomAxios.patch(`/member/edit`, { name, birth, picture: newImageUrl });
             console.log('Image uploaded successfully', res.data);
         } catch (error) {
             console.error('이미지 업로드 실패', error);
@@ -158,7 +149,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
                                 id="profile-image-input"
                             />
                             <S.Label htmlFor="profile-image-input">
-                                <Avatar size="large" />
+                                <Avatar size="large" imageUrl={profileImage === ProfileImg ? undefined : profileImage} />
                                 <S.PlusButton src={PlusButtonImg} />
                             </S.Label>
                         </S.ProfileImgButton>

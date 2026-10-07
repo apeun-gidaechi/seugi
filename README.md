@@ -16,9 +16,9 @@ pnpm install
 pnpm dev
 ```
 
-The API listens on `http://localhost:8080`. Set `JWT_SECRET` in production. Development data is intentionally in memory; configure a durable repository before deployment.
+The API listens on `http://localhost:8080`; the web client is at `http://localhost:3000`. Without `DATABASE_URL`, the API uses an atomic file-backed store at `DATA_FILE`. To run the web, API, and shared PostgreSQL-backed setup locally, copy `.env.example` to `.env`, set a strong `JWT_SECRET` and `POSTGRES_PASSWORD`, then run `docker compose up --build`.
 
-For a persistent local deployment, copy `.env.example` to `.env`, set a real `JWT_SECRET`, then run `docker compose up --build`. The API persists state at `DATA_FILE` with atomic writes. This single-node adapter is suitable for local/small deployments; a shared SQL storage adapter is required before multi-instance production deployment.
+When `DATABASE_URL` is configured, the API imports the legacy `DATA_FILE` snapshot on first startup (if present) and persists to PostgreSQL. The current adapter uses one JSONB snapshot row with a transaction-scoped advisory lock, which makes API replicas share consistent state but serializes request writes; move hot domains to normalized tables before high-throughput production use. Uploaded files remain on the shared `/data` volume unless S3-compatible storage is configured.
 
 ## Migration coverage
 

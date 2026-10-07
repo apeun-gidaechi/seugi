@@ -1,15 +1,43 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-seugi}
+      POSTGRES_USER: ${POSTGRES_USER:-seugi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace-me}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seugi} -d ${POSTGRES_DB:-seugi}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - seugi-db:/var/lib/postgresql/data
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-seugi}:${POSTGRES_PASSWORD:-replace-me}@db:5432/${POSTGRES_DB:-seugi}
       DATA_FILE: /data/seugi.json
       UPLOAD_DIR: /data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
       - seugi-data:/data
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:8080}
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
 volumes:
   seugi-data:
+  seugi-db:

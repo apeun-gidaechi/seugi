@@ -4,9 +4,33 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { io } from "socket.io-client";
+import { SeugiApi } from "../../../packages/api-client/src/index.js";
 import { buildApp } from "../src/app.js";
 import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
+
+test("shared API client refreshes an expired access token once and retries the request", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; authorization: string | null }> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const authorization = new Headers(init?.headers).get("authorization");
+    calls.push({ url, authorization });
+    if (url.includes("/member/refresh?")) return new Response(JSON.stringify({ message: "갱신", data: "fresh-access" }), { status: 200, headers: { "content-type": "application/json" } });
+    if (authorization === "Bearer expired-access") return new Response(JSON.stringify({ message: "만료" }), { status: 401, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ message: "내 정보", data: { id: "member-id", email: "token@example.com", name: "토큰" } }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    const api = new SeugiApi("https://api.example.com", "expired-access", "valid-refresh");
+    const result = await api.memberInfo();
+    assert.equal(result.data?.id, "member-id");
+    assert.equal(api.accessToken(), "fresh-access");
+    assert.deepEqual(calls.map((call) => call.url.split("api.example.com")[1]), ["/member/myInfo", "/member/refresh?token=valid-refresh", "/member/myInfo"]);
+    assert.deepEqual(calls.map((call) => call.authorization), ["Bearer expired-access", "Bearer expired-access", "Bearer fresh-access"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("member can register, create a workspace, and retrieve it", async () => {
   const store = new Store(); store.emailCodes.set("student@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
@@ -15,12 +39,104 @@ test("member can register, create a workspace, and retrieve it", async () => {
   const authorization = `Bearer ${registration.json().data.accessToken}`;
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "스기고" } });
   assert.equal(workspace.statusCode, 200);
-  const task = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "수학 과제" } });
+  const task = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "수학 과제", content: "2단원 문제 풀기", dueDate: "2026-10-15T00:00:00.000Z" } });
   assert.equal(task.statusCode, 200);
   const tasks = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
   assert.equal(tasks.json().data[0].title, "수학 과제");
+  assert.equal(tasks.json().data[0].content, "2단원 문제 풀기");
+  assert.equal(tasks.json().data[0].dueDate, "2026-10-15T00:00:00.000Z");
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
+  await app.close();
+});
+
+test("workspace endpoints accept and return the original desktop and Android field names", async () => {
+  const store = new Store(); store.emailCodes.set("legacy-workspace@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-workspace@example.com", password: "password123", code: "123456" } });
+  const headers = { authorization: `Bearer ${registration.json().data.accessToken}` };
+  const created = await app.inject({ method: "POST", url: "/workspace/", headers, payload: { workspaceName: "호환 학교", workspaceImageUrl: "https://example.com/school.png" } });
+  assert.equal(created.statusCode, 200);
+  const workspaceId = created.json().data as string;
+  const listed = await app.inject({ url: "/workspace/", headers });
+  assert.equal(listed.json().data[0].workspaceId, workspaceId);
+  assert.equal(listed.json().data[0].workspaceName, "호환 학교");
+  assert.equal(listed.json().data[0].workspaceImageUrl, "https://example.com/school.png");
+  const code = store.workspaces.get(workspaceId)?.code;
+  const searched = await app.inject({ url: `/workspace/search/${code}` });
+  assert.equal(searched.json().data.workspaceName, "호환 학교");
+  assert.equal(searched.json().data.studentCount, 0);
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers, payload: { workspaceId, workspaceName: "이름 수정", workspaceImgUrl: "" } })).statusCode, 200);
+  assert.equal(store.workspaces.get(workspaceId)?.name, "이름 수정");
+  await app.close();
+});
+
+test("message history uses an exclusive timestamp cursor and reports older pages", async () => {
+  const store = new Store();
+  const memberId = "a1b11111-1111-4111-8111-111111111111";
+  const workspaceId = "a2b22222-2222-4222-8222-222222222222";
+  const roomId = "a3b33333-3333-4333-8333-333333333333";
+  store.members.set(memberId, { id: memberId, email: "history@example.com", name: "히스토리" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "HISTORY1", name: "기록고", ownerId: memberId, members: [memberId], waitlist: [] });
+  store.rooms.set(roomId, { id: roomId, workspaceId, type: "GROUP", name: "대화방", memberIds: [memberId], adminId: memberId });
+  for (let index = 0; index < 55; index += 1) {
+    const createdAt = new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString();
+    const id = `a4b44444-4444-4444-8444-${String(index).padStart(12, "0")}`;
+    store.messages.set(id, { id, roomId, senderId: memberId, message: `메시지 ${index}`, createdAt, emojis: {} });
+  }
+  const app = await buildApp(store);
+  const headers = { authorization: `Bearer ${app.jwt.sign({ sub: memberId })}` };
+  const firstPage = await app.inject({ url: `/message/search/${roomId}`, headers });
+  assert.equal(firstPage.statusCode, 200);
+  assert.equal(firstPage.json().data.messages.length, 50);
+  assert.equal(firstPage.json().data.hasNext, true);
+  const cursor = firstPage.json().data.messages.at(-1).createdAt as string;
+  const nextPage = await app.inject({ url: `/message/search/${roomId}?timestamp=${encodeURIComponent(cursor)}`, headers });
+  assert.equal(nextPage.statusCode, 200);
+  assert.equal(nextPage.json().data.messages.length, 5);
+  assert.equal(nextPage.json().data.hasNext, false);
+  assert.ok(nextPage.json().data.messages.every((message: { createdAt: string }) => message.createdAt < cursor));
+  await app.close();
+});
+
+test("meal API can serve the cached requested month and validates month ranges", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  const workspaceId = "2ca59215-e627-43f4-a5c1-4c1feb56cf22";
+  const now = new Date(); const year = now.getFullYear(); const month = now.getMonth() + 1;
+  const cached = [{ date: `${year}-${String(month).padStart(2, "0")}-01`, type: "중식", menu: ["테스트 메뉴"], calorie: "500 Kcal" }];
+  store.meals.set(workspaceId, cached);
+  const meals = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}&month=${month}` });
+  assert.equal(meals.statusCode, 200); assert.deepEqual(meals.json().data, cached);
+  const invalidRange = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}` });
+  assert.equal(invalidRange.statusCode, 400);
+  await app.close();
+});
+
+test("member profile accepts a local uploaded-image URL but rejects arbitrary relative paths", async () => {
+  const store = new Store(); store.emailCodes.set("profile-picture@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "profile-picture@example.com", password: "password123", code: "123456" } });
+  const memberId = app.jwt.decode<{ sub: string }>(registration.json().data.accessToken)?.sub; assert.ok(memberId);
+  const headers = { authorization: `Bearer ${registration.json().data.accessToken}` };
+  const imageUrl = "/uploads/c4c25038-3eed-4942-819d-4ed17813be09-avatar.png";
+  const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "프로필 학교" } })).json().data as string;
+  assert.equal((await app.inject({ method: "PATCH", url: "/member/edit", headers, payload: { name: "새 이름", birth: "2000-01-02", picture: imageUrl } })).statusCode, 200);
+  assert.equal(store.members.get(memberId)?.picture, imageUrl);
+  assert.equal(store.members.get(memberId)?.birth, "2000-01-02");
+  const profile = await app.inject({ url: `/profile/me?workspaceId=${workspaceId}`, headers });
+  assert.equal(profile.json().data.profileImage, imageUrl);
+  assert.equal(profile.json().data.birth, "2000-01-02");
+  assert.deepEqual(profile.json().data.member, { id: memberId, email: "profile-picture@example.com", birth: "2000-01-02", name: "새 이름", picture: imageUrl });
+  assert.equal((await app.inject({ method: "PATCH", url: "/member/edit", headers, payload: { picture: "/uploads/../../etc/passwd" } })).statusCode, 400);
+  await app.close();
+});
+
+test("account withdrawal invalidates outstanding access and refresh tokens", async () => {
+  const store = new Store(); store.emailCodes.set("withdraw@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "withdraw@example.com", password: "password123", code: "123456" } });
+  const tokens = registration.json().data as { accessToken: string; refreshToken: string };
+  const headers = { authorization: `Bearer ${tokens.accessToken}` };
+  assert.equal((await app.inject({ method: "DELETE", url: "/member/remove", headers })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: "/member/myInfo", headers })).statusCode, 404);
+  assert.equal((await app.inject({ method: "GET", url: `/member/refresh?token=${encodeURIComponent(tokens.refreshToken)}` })).statusCode, 401);
   await app.close();
 });
 
@@ -55,6 +171,19 @@ test("a member can register and remove a device notification token", async () =>
   await app.close();
 });
 
+test("legacy desktop logout clears its fcmToken and invalidates the refresh token", async () => {
+  const store = new Store(); store.emailCodes.set("legacy-logout@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-logout@example.com", password: "password123", code: "123456" } });
+  const tokens = registration.json().data as { accessToken: string; refreshToken: string };
+  const memberId = app.jwt.decode<{ sub: string }>(tokens.accessToken)?.sub; assert.ok(memberId);
+  store.deviceTokens.set(memberId, ["legacy-fcm-token"]);
+  const response = await app.inject({ method: "POST", url: "/member/logout", headers: { authorization: `Bearer ${tokens.accessToken}` }, payload: { fcmToken: "legacy-fcm-token" } });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(store.deviceTokens.get(memberId), []);
+  assert.equal((await app.inject({ url: `/member/refresh?token=${encodeURIComponent(tokens.refreshToken)}` })).statusCode, 401);
+  await app.close();
+});
+
 test("email login accepts the original client token field", async () => {
   const store = new Store(); store.emailCodes.set("legacy-token@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
   await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-token@example.com", password: "password123", code: "123456" } });
@@ -75,7 +204,84 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   const teacherId = app.jwt.decode<{ sub: string }>(teacher.json().data.accessToken)?.sub; assert.ok(teacherId);
   assert.equal((await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, userSet: [teacherId], role: "TEACHER" } })).statusCode, 200);
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "TEACHER");
-  assert.equal((await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/permission", headers: ownerHeaders, payload: { workspaceId, memberId: teacherId, role: "MIDDLE_ADMIN" } })).statusCode, 200);
+  assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "MIDDLE_ADMIN");
+  assert.equal((await app.inject({ method: "PATCH", url: `/profile/${workspaceId}`, headers: teacherHeaders, payload: { role: "ADMIN", nick: "별명", status: "안녕하세요", spot: "담임" } })).statusCode, 200);
+  assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "MIDDLE_ADMIN");
+  assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.nick, "별명");
+  const notification = await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } });
+  assert.equal(notification.statusCode, 200);
+  const notificationId = notification.json().data.id as string;
+  assert.equal((await app.inject({ method: "PATCH", url: "/notification", headers: teacherHeaders, payload: { id: notificationId, workspaceId, title: "시험 일정", content: "다음 주 시험입니다" } })).statusCode, 200);
+  assert.equal(store.notifications.get(notificationId)?.title, "시험 일정");
+  assert.equal((await app.inject({ method: "DELETE", url: `/notification/${workspaceId}/${notificationId}`, headers: teacherHeaders })).statusCode, 200);
+  assert.equal(store.notifications.has(notificationId), false);
+  const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "교사 방", memberIds: [teacherId] } })).json().data as string;
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/kick", headers: ownerHeaders, payload: { workspaceId, memberId: teacherId } })).statusCode, 200);
+  assert.equal(store.rooms.get(roomId)?.memberIds.includes(teacherId), false);
+  assert.equal((await app.inject({ method: "GET", url: `/chat/group/search/room/${roomId}`, headers: teacherHeaders })).statusCode, 404);
+  await app.close();
+});
+
+test("legacy desktop workspace administration response and request fields remain supported", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  for (const email of ["legacy-admin@example.com", "legacy-student@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const register = async (email: string) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } });
+  const [owner, student] = await Promise.all([register("legacy-admin@example.com"), register("legacy-student@example.com")]);
+  const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const studentHeaders = { authorization: `Bearer ${student.json().data.accessToken}` };
+  const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)?.sub; assert.ok(studentId);
+  const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "관리 호환 학교" } })).json().data as string;
+  const workspace = store.workspaces.get(workspaceId); assert.ok(workspace);
+  workspace.waitlist.push(studentId); store.waitlistRoles.set(`${workspaceId}:${studentId}`, "STUDENT");
+  const myWaitlist = await app.inject({ url: "/workspace/my/wait-list", headers: studentHeaders });
+  assert.equal(myWaitlist.statusCode, 200);
+  assert.equal(myWaitlist.json().data[0].workspaceId, workspaceId);
+  assert.equal(myWaitlist.json().data[0].workspaceName, "관리 호환 학교");
+  assert.equal(myWaitlist.json().data[0].workspaceImageUrl, "");
+  const waitlist = await app.inject({ url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders });
+  assert.equal(waitlist.json().data[0].permission, "STUDENT");
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, userSet: [studentId], role: "STUDENT" } })).statusCode, 200);
+  const members = await app.inject({ url: `/workspace/members?workspaceId=${workspaceId}`, headers: ownerHeaders });
+  const listedStudent = members.json().data.find((entry: { id: string }) => entry.id === studentId);
+  assert.equal(listedStudent.member.nick, "legacy-student");
+  assert.equal(listedStudent.permission, "STUDENT");
+  assert.equal((await app.inject({ method: "PATCH", url: `/profile/schidnum/${workspaceId}`, headers: ownerHeaders, payload: { id: studentId, schGrade: 2, schClass: 3, schNumber: 4 } })).statusCode, 200);
+  assert.deepEqual([store.profiles.get(`${workspaceId}:${studentId}`)?.grade, store.profiles.get(`${workspaceId}:${studentId}`)?.class, store.profiles.get(`${workspaceId}:${studentId}`)?.number], [2, 3, 4]);
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/permission", headers: ownerHeaders, payload: { workspaceId, memberId: studentId, workspaceRole: "MIDDLE_ADMIN" } })).statusCode, 200);
+  assert.equal(store.profiles.get(`${workspaceId}:${studentId}`)?.role, "MIDDLE_ADMIN");
+  const managedProfile = await app.inject({ url: `/profile/me?workspaceId=${workspaceId}`, headers: studentHeaders });
+  assert.equal(managedProfile.json().data.permission, "MIDDLE_ADMIN");
+  const updatedMembers = await app.inject({ url: `/workspace/members?workspaceId=${workspaceId}`, headers: ownerHeaders });
+  assert.equal(updatedMembers.json().data.find((entry: { id: string }) => entry.id === studentId).permission, "MIDDLE_ADMIN");
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/kick", headers: ownerHeaders, payload: { workspaceId, memberList: [studentId] } })).statusCode, 200);
+  assert.equal(store.workspaces.get(workspaceId)?.members.includes(studentId), false);
+  assert.equal((await app.inject({ url: `/profile/me?workspaceId=${workspaceId}`, headers: studentHeaders })).statusCode, 403);
+  await app.close();
+});
+
+test("workspace admins can approve or reject matching join requests, while members cannot reject others", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  for (const email of ["join-owner@example.com", "join-applicant@example.com", "join-outsider@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const register = async (email: string) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } });
+  const owner = await register("join-owner@example.com"); const applicant = await register("join-applicant@example.com"); const outsider = await register("join-outsider@example.com");
+  const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const applicantHeaders = { authorization: `Bearer ${applicant.json().data.accessToken}` }; const outsiderHeaders = { authorization: `Bearer ${outsider.json().data.accessToken}` };
+  const created = await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "가입 흐름 학교" } }); const workspaceId = created.json().data as string;
+  const code = (await app.inject({ method: "GET", url: `/workspace/code/${workspaceId}`, headers: ownerHeaders })).json().data as string;
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
+  const applicantId = app.jwt.decode<{ sub: string }>(applicant.json().data.accessToken)?.sub; assert.ok(applicantId);
+  const myRequests = await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders });
+  assert.equal(myRequests.json().data[0].workspaceId, workspaceId);
+  assert.equal(myRequests.json().data[0].workspaceName, "가입 흐름 학교");
+  assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: applicantHeaders, payload: { workspaceId } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders })).json().data.length, 0);
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 1);
+  assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: outsiderHeaders, payload: { workspaceId, userSet: [applicantId], role: "STUDENT" } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: ownerHeaders, payload: { workspaceId, userSet: [applicantId], role: "STUDENT" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 0);
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, memberId: applicantId, role: "STUDENT" } })).statusCode, 200);
+  assert.equal(store.workspaces.get(workspaceId)?.members.includes(applicantId), true);
   await app.close();
 });
 
@@ -85,8 +291,83 @@ test("workspace data rejects unauthenticated and non-member access with HTTP sem
   const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "owner@example.com", password: "password123", code: "123456" } });
   const other = await app.inject({ method: "POST", url: "/member/register", payload: { email: "other@example.com", password: "password123", code: "123456" } });
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { name: "권한 학교" } });
+  const ownerId = app.jwt.decode<{ sub: string }>(owner.json().data.accessToken)?.sub; assert.ok(ownerId);
+  const otherId = app.jwt.decode<{ sub: string }>(other.json().data.accessToken)?.sub; assert.ok(otherId);
+  const workspaceUrl = `/workspace/${workspace.json().data}/notifications`;
+  assert.equal((await app.inject({ method: "GET", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` } })).json().data, true);
+  assert.equal((await app.inject({ method: "PATCH", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { receivePush: false } })).json().data, false);
+  assert.equal((await app.inject({ method: "GET", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` } })).json().data, false);
+  assert.equal((await app.inject({ method: "GET", url: workspaceUrl, headers: { authorization: `Bearer ${other.json().data.accessToken}` } })).statusCode, 403);
+  store.deviceTokens.set(ownerId, ["muted-device"]);
+  assert.deepEqual(store.pushTokensForWorkspace(workspace.json().data, [ownerId]), []);
   assert.equal((await app.inject({ method: "GET", url: `/task/${workspace.json().data}` })).statusCode, 401);
   assert.equal((await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization: `Bearer ${other.json().data.accessToken}` } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "GET", url: `/profile/me?workspaceId=${workspace.json().data}`, headers: { authorization: `Bearer ${other.json().data.accessToken}` } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "PATCH", url: `/profile/schidnum/${workspace.json().data}`, headers: { authorization: `Bearer ${other.json().data.accessToken}` }, payload: { grade: 1, class: 1, number: 1 } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "GET", url: `/profile/others?workspaceId=${workspace.json().data}&memberId=${otherId}` })).statusCode, 401);
+  assert.equal((await app.inject({ method: "GET", url: `/profile/others?workspaceId=${workspace.json().data}&memberId=${otherId}`, headers: { authorization: `Bearer ${other.json().data.accessToken}` } })).statusCode, 403);
+  const notice = await app.inject({ method: "POST", url: "/notification", headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { workspaceId: workspace.json().data, title: "안내", content: "공지입니다" } });
+  assert.equal((await app.inject({ method: "PATCH", url: "/notification/emoji", headers: { authorization: `Bearer ${other.json().data.accessToken}` }, payload: { notificationId: notice.json().data.id, emoji: "👍" } })).statusCode, 403);
+  const room = await app.inject({ method: "POST", url: "/chat/group/create", headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { workspaceId: workspace.json().data, name: "비공개", memberIds: [] } });
+  const messageId = store.id(); store.messages.set(messageId, { id: messageId, roomId: room.json().data, senderId: ownerId, message: "메시지", createdAt: new Date().toISOString(), emojis: {} });
+  assert.equal((await app.inject({ method: "PUT", url: "/message/emoji", headers: { authorization: `Bearer ${other.json().data.accessToken}` }, payload: { messageId, emoji: "👍" } })).statusCode, 403);
+  await app.close();
+});
+
+test("timetable routes preserve the upstream date/class contract and protect teacher edits", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  for (const email of ["table-owner@example.com", "table-student@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const register = async (email: string) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } });
+  const owner = await register("table-owner@example.com"); const student = await register("table-student@example.com");
+  const ownerId = app.jwt.decode<{ sub: string }>(owner.json().data.accessToken)?.sub; const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)?.sub; assert.ok(ownerId); assert.ok(studentId);
+  const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const studentHeaders = { authorization: `Bearer ${student.json().data.accessToken}` };
+  const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "시간표 학교" } })).json().data as string;
+  const workspace = store.workspaces.get(workspaceId); assert.ok(workspace); workspace.members.push(studentId);
+  store.profiles.set(`${workspaceId}:${ownerId}`, { ...store.requireMember(ownerId), workspaceId, role: "TEACHER", grade: 2, class: 3 });
+  store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT", grade: 2, class: 3 });
+  const day = new Date(); const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  assert.equal((await app.inject({ method: "POST", url: "/timetable", headers: ownerHeaders, payload: { workspaceId, grade: 2, classNum: 3, time: 1, subject: "수학", date } })).statusCode, 200);
+  const id = [...store.timetables.keys()][0]; assert.ok(id);
+  assert.equal((await app.inject({ method: "PATCH", url: "/timetable", headers: studentHeaders, payload: { id, subject: "무단 변경" } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "PATCH", url: "/timetable", headers: ownerHeaders, payload: { id, subject: "대수" } })).statusCode, 200);
+  const today = await app.inject({ url: `/timetable/day?workspaceId=${workspaceId}`, headers: studentHeaders });
+  assert.deepEqual(today.json().data.map((entry: { subject: string; grade: string; classNum: string }) => [entry.subject, entry.grade, entry.classNum]), [["대수", "2", "3"]]);
+  assert.equal((await app.inject({ method: "DELETE", url: `/timetable/${id}`, headers: ownerHeaders })).statusCode, 200);
+  await app.close();
+});
+
+test("group room administration enforces membership and transfers leadership safely", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  const emails = ["room-admin@example.com", "room-member@example.com", "room-outsider@example.com"];
+  for (const email of emails) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const register = async (email: string) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } });
+  const [owner, member, outsider] = await Promise.all(emails.map(register));
+  const token = (response: typeof owner) => response.json().data.accessToken as string;
+  const ownerId = app.jwt.decode<{ sub: string }>(token(owner))?.sub;
+  const memberId = app.jwt.decode<{ sub: string }>(token(member))?.sub;
+  const outsiderHeaders = { authorization: `Bearer ${token(outsider)}` };
+  assert.ok(ownerId); assert.ok(memberId);
+  const ownerHeaders = { authorization: `Bearer ${token(owner)}` };
+  const memberHeaders = { authorization: `Bearer ${token(member)}` };
+  const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "채팅 관리 학교" } })).json().data as string;
+  store.workspaces.get(workspaceId)?.members.push(memberId);
+  const outsiderId = app.jwt.decode<{ sub: string }>(token(outsider))?.sub; assert.ok(outsiderId);
+  assert.equal((await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "잘못된 초대", memberIds: [outsiderId] } })).statusCode, 403);
+  const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "관리 테스트", memberIds: [memberId] } })).json().data as string;
+  const searchResult = await app.inject({ url: `/chat/group/search?workspace=${workspaceId}&word=${encodeURIComponent("관리")}`, headers: ownerHeaders });
+  assert.deepEqual(searchResult.json().data.map((room: { id: string }) => room.id), [roomId]);
+  const noMatch = await app.inject({ url: `/chat/group/search?workspace=${workspaceId}&word=${encodeURIComponent("없는 방")}`, headers: ownerHeaders });
+  assert.deepEqual(noMatch.json().data, []);
+
+  assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: outsiderHeaders, payload: { roomId, memberIds: [memberId] } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "POST", url: "/chat/group/member/add", headers: ownerHeaders, payload: { roomId, memberIds: ["00000000-0000-4000-8000-000000000000"] } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "PATCH", url: "/chat/group/member/toss", headers: memberHeaders, payload: { roomId, memberId: ownerId, memberIds: [] } })).statusCode, 403);
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: outsiderHeaders })).statusCode, 404);
+
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 200);
+  const room = store.rooms.get(roomId);
+  assert.deepEqual(room?.memberIds, [memberId]);
+  assert.equal(room?.adminId, memberId);
   await app.close();
 });
 
@@ -97,9 +378,10 @@ test("persistent store survives a new application instance", async () => {
     const firstStore = new Store(file); firstStore.emailCodes.set("persist@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const first = await buildApp(firstStore);
     const registered = await first.inject({ method: "POST", url: "/member/register", payload: { email: "persist@example.com", password: "password123", code: "123456" } });
     const authorization = `Bearer ${registered.json().data.accessToken}`;
-    await first.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "영속 학교" } });
+    const workspaceId = (await first.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "영속 학교" } })).json().data as string;
+    await first.inject({ method: "PATCH", url: `/workspace/${workspaceId}/notifications`, headers: { authorization }, payload: { receivePush: false } });
     await first.close();
-    const secondStore = new Store(file); secondStore.load(); const second = await buildApp(secondStore);
+    const secondStore = new Store(file); secondStore.load(); assert.equal(secondStore.workspacePushPreferences.get(`${workspaceId}:${first.jwt.decode<{ sub: string }>(registered.json().data.accessToken)?.sub}`), false); const second = await buildApp(secondStore);
     const login = await second.inject({ method: "POST", url: "/member/login", payload: { email: "persist@example.com", password: "password123" } });
     const result = await second.inject({ method: "GET", url: "/workspace", headers: { authorization: `Bearer ${login.json().data.accessToken}` } });
     assert.equal(result.json().data[0].name, "영속 학교");
@@ -124,6 +406,10 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const received = new Promise<{ message: string }>((resolve) => socket.once("chat:message", resolve));
     const acknowledged = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "안녕하세요" }, resolve));
     assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");
+    const fileMessage = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "", files: ["/uploads/demo.txt"] }, resolve));
+    assert.equal(fileMessage.message, "메시지 전송 성공");
+    const emptyMessage = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "", files: [] }, resolve));
+    assert.equal(emptyMessage.message, "MESSAGE_INVALID");
   } finally { socket.close(); await app.close(); }
 });
 
@@ -133,7 +419,14 @@ test("uploaded files are persisted and served back", async () => {
   try {
     const form = new FormData(); form.set("file", new Blob(["seugi file"], { type: "text/plain" }), "hello.txt");
     const upload = await fetch(`http://127.0.0.1:${address.port}/file/upload/FILE`, { method: "POST", body: form }); assert.equal(upload.status, 200);
-    const url = (await upload.json() as { data: { url: string } }).data.url;
+    const uploadData = (await upload.json() as { data: { url: string; byte: number } }).data;
+    assert.equal(uploadData.byte, "seugi file".length);
+    const url = uploadData.url;
     assert.equal(await (await fetch(`http://127.0.0.1:${address.port}${url}`)).text(), "seugi file");
+    const legacyForm = new FormData(); legacyForm.set("file", new Blob(["legacy image"], { type: "image/png" }), "school.png");
+    const legacyUpload = await fetch(`http://127.0.0.1:${address.port}/file/upload/IMG`, { method: "POST", body: legacyForm });
+    assert.equal(legacyUpload.status, 200);
+    const legacyData = (await legacyUpload.json() as { data: { url: string } }).data;
+    assert.equal(await (await fetch(`http://127.0.0.1:${address.port}${legacyData.url}`)).text(), "legacy image");
   } finally { await app.close(); if (previous === undefined) delete process.env.UPLOAD_DIR; else process.env.UPLOAD_DIR = previous; rmSync(directory, { recursive: true, force: true }); }
 });

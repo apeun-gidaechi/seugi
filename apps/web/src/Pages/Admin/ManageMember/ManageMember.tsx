@@ -11,7 +11,7 @@ import AdminIcon from '@/Assets/image/adminsetting/adminIcon.svg';
 import Dot from '@/Assets/image/adminsetting/Dot.svg'
 import Dialog from '@/Pages/Admin/ManageMember/Dialog/Dialog'
 
-type Permission = 'ADMIN' | 'MIDDLEADMIN' | 'TEACHER' | 'STUDENT';
+type Permission = 'ADMIN' | 'MIDDLE_ADMIN' | 'TEACHER' | 'STUDENT';
 
 const AdminGeneral = () => {
     const workspaceId = Cookies.get('workspaceId');
@@ -65,7 +65,7 @@ const AdminGeneral = () => {
             teachersList.sort((a, b) => {
                 const permissionOrder: { [key in Permission]: number } = {
                     'ADMIN': 1,
-                    'MIDDLEADMIN': 2,
+                    'MIDDLE_ADMIN': 2,
                     'TEACHER': 3,
                     'STUDENT': 4,
                 };
@@ -95,7 +95,7 @@ const AdminGeneral = () => {
     const getPermissionIcon = (permission: Permission) => {
         if (permission === 'ADMIN') {
             return <S.PermissionIcon src={AdminIcon} alt="Admin Icon" />;
-        } else if (permission === 'MIDDLEADMIN') {
+        } else if (permission === 'MIDDLE_ADMIN') {
             return <S.PermissionIcon src={MiddleAdminIcon} alt="Middle Admin Icon" />;
         } else {
             return null;

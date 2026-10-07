@@ -14,3 +14,11 @@ test("NEIS client converts school schedule rows", async () => {
   const client = new NeisClient("test-key", async () => new Response(JSON.stringify({ SchoolSchedule: [{}, { row: [{ AA_YMD: "20260302", EVENT_NM: "개학식" }] }] }))); 
   assert.deepEqual(await client.schedules(workspace, 2026), [{ workspaceId: "workspace", date: "2026-03-02", name: "개학식" }]);
 });
+
+test("NEIS client loads timetable rows from the school-type-specific endpoint", async () => {
+  let requested = "";
+  const client = new NeisClient("test-key", async (input) => { requested = String(input); return new Response(JSON.stringify({ hisTimetable: [{}, { row: [{ GRADE: "2", CLASS_NM: "3", PERIO: "1", ITRT_CNTNT: "수학", ALL_TI_YMD: "20261007" }] }] })); });
+  const timetable = await client.timetables({ ...workspace, schoolType: "HIGH" }, "20261005", "20261011");
+  assert.equal(new URL(requested).pathname, "/hub/hisTimetable");
+  assert.deepEqual(timetable, [{ id: "", workspaceId: "workspace", grade: "2", classNum: "3", time: "1", subject: "수학", date: "2026-10-07" }]);
+});

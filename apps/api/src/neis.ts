@@ -1,4 +1,4 @@
-import type { Meal, Schedule, Workspace } from "@seugi/contracts";
+import type { Meal, Schedule, Timetable, Workspace } from "@seugi/contracts";
 
 type NeisRow = Record<string, string>;
 type NeisPayload = Record<string, Array<{ row?: NeisRow[] }>>;
@@ -23,5 +23,12 @@ export class NeisClient {
   async schedules(workspace: Workspace, year: number): Promise<Schedule[]> {
     const rows = await this.rows("SchoolSchedule", { ...this.school(workspace), AA_FROM_YMD: `${year}0101`, AA_TO_YMD: `${year}1231` });
     return rows.map((row) => ({ workspaceId: workspace.id, date: `${row.AA_YMD.slice(0, 4)}-${row.AA_YMD.slice(4, 6)}-${row.AA_YMD.slice(6, 8)}`, name: row.EVENT_NM }));
+  }
+  async timetables(workspace: Workspace, from: string, to: string): Promise<Timetable[]> {
+    const kind = (workspace.schoolType ?? "").toUpperCase();
+    const endpoint = /HIGH|고등/.test(kind) ? "hisTimetable" : /MIDDLE|MID|중학/.test(kind) ? "misTimetable" : /ELEMENTARY|ELEM|초등/.test(kind) ? "elsTimetable" : undefined;
+    if (!endpoint) throw new Error("학교 유형을 시간표 조회에 사용할 수 없습니다");
+    const rows = await this.rows(endpoint, { ...this.school(workspace), TI_FROM_YMD: from, TI_TO_YMD: to });
+    return rows.filter((row) => row.ALL_TI_YMD && row.PERIO && row.ITRT_CNTNT).map((row) => ({ id: "", workspaceId: workspace.id, grade: row.GRADE ?? "", classNum: row.CLASS_NM ?? "", time: row.PERIO ?? "", subject: row.ITRT_CNTNT ?? "", date: `${row.ALL_TI_YMD!.slice(0, 4)}-${row.ALL_TI_YMD!.slice(4, 6)}-${row.ALL_TI_YMD!.slice(6, 8)}` }));
   }
 }

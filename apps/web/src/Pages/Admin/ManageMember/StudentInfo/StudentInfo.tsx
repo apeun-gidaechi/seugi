@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 interface StudentInfoProps {
     onClose: () => void;
     memberId: string;
-    permission: 'ADMIN' | 'MIDDLEADMIN' | 'TEACHER' | 'STUDENT';
+    permission: 'ADMIN' | 'MIDDLE_ADMIN' | 'TEACHER' | 'STUDENT';
 }
 
 const StudentInfo = ({ onClose, memberId, permission }: StudentInfoProps) => {

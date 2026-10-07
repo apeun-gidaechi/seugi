@@ -1,0 +1,12 @@
+.git
+.upstream
+.workspace
+.expo
+.env
+node_modules
+**/node_modules
+**/dist
+apps/mobile/ios
+apps/mobile/android
+data
+.data

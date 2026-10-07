@@ -7,7 +7,7 @@ import StudentInfo from '@/Pages/Admin/ManageMember/StudentInfo/StudentInfo';
 interface DialogProps {
     onCancel: () => void;
     memberId: string;
-    permission: 'ADMIN' | 'MIDDLEADMIN' | 'TEACHER' | 'STUDENT';
+    permission: 'ADMIN' | 'MIDDLE_ADMIN' | 'TEACHER' | 'STUDENT';
 }
 
 const Dialog = ({ onCancel, memberId, permission }: DialogProps) => {

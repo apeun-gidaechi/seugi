@@ -5,5 +5,8 @@ dist
 data
 .env
 .upstream
+.expo
+/apps/mobile/ios/
+/apps/mobile/android/
 apps/web/build
 apps/web/dist

@@ -13,8 +13,8 @@ export class OAuthProvider {
   async google(code: string, platform = "WEB"): Promise<Identity> {
     const clientId = process.env.GOOGLE_CLIENT_ID; const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) throw new Error("GOOGLE_CLIENT_ID와 GOOGLE_CLIENT_SECRET이 필요합니다");
-    const redirectUri = platform === "WEB" ? process.env.GOOGLE_WEB_REDIRECT_URI : process.env.GOOGLE_MOBILE_REDIRECT_URI;
-    if (!redirectUri) throw new Error("Google redirect URI가 설정되지 않았습니다");
+    const redirectUri = platform === "WEB" ? process.env.GOOGLE_WEB_REDIRECT_URI ?? "" : "";
+    if (platform === "WEB" && !redirectUri) throw new Error("GOOGLE_WEB_REDIRECT_URI가 설정되지 않았습니다");
     const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code" }) });
     if (!response.ok) throw new Error("Google authorization code 교환에 실패했습니다");
     const token = await response.json() as { id_token?: string; access_token?: string; refresh_token?: string }; if (!token.id_token || !token.access_token) throw new Error("Google ID token이 없습니다");
