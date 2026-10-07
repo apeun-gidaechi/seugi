@@ -13,7 +13,7 @@ export interface Room { id: string; workspaceId: string; type: RoomType; name: s
 export interface ChatMessage { id: string; roomId: string; senderId: string; message: string; createdAt: string; files?: string[]; emojis: Record<string, string[]>; messageStatus?: "ALIVE" | "DELETE"; chatRoomId?: string; type?: "MESSAGE" | "IMG" | "FILE" | "BOT"; userId?: string | number; uuid?: string; eventList?: string[]; emoticon?: string | null; emojiList?: Array<{ emojiId: number; userId: string[] }>; mention?: string[]; mentionAll?: boolean; timestamp?: string }
 export interface Notification { id: string; workspaceId: string; title: string; content: string; authorId: string; createdAt: string; updatedAt?: string; emojis: Record<string, string[]> }
 export interface Timetable { id: string; workspaceId: string; grade: string; classNum: string; time: string; subject: string; date: string }
-export interface Task { id: string; workspaceId: string; title: string; content?: string; dueDate?: string; createdAt: string }
+export interface Task { id: string; workspaceId: string; title: string; description?: string; content?: string; dueDate?: string; createdAt: string }
 export interface ClassroomTask { id: string; title: string; description?: string; link?: string; dueDate?: string }
 export interface Meal { date: string; type: string; menu: string[]; calorie?: string }
 export interface Schedule { date: string; name: string; workspaceId: string }

@@ -46,7 +46,12 @@ test("member can register, create a workspace, and retrieve it", async () => {
   const tasks = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
   assert.equal(tasks.json().data[0].title, "수학 과제");
   assert.equal(tasks.json().data[0].content, "2단원 문제 풀기");
+  assert.equal(tasks.json().data[0].description, "2단원 문제 풀기");
   assert.equal(tasks.json().data[0].dueDate, "2026-10-15T00:00:00.000Z");
+  const legacyTask = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기" } });
+  assert.equal(legacyTask.statusCode, 200);
+  const tasksWithLegacyDescription = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
+  assert.deepEqual(tasksWithLegacyDescription.json().data[1], { id: tasksWithLegacyDescription.json().data[1].id, workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기", content: "단어 암기", createdAt: tasksWithLegacyDescription.json().data[1].createdAt });
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
   await app.close();
