@@ -7,7 +7,7 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "build": "tsc --noEmit",
+    "build": "tsc --noEmit && expo export --platform android --platform ios",
     "check": "tsc --noEmit",
     "test": "tsc --noEmit"
   },
