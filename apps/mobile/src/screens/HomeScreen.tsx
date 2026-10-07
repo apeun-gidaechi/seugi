@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import {
   FlatList,
   Linking,
@@ -8,6 +9,7 @@ import {
   View,
   StyleSheet,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
 import type {
   ClassroomTask,
@@ -78,14 +80,14 @@ export function HomeScreen({
     .slice(0, 5);
 
   return (
-    <ScrollView style={styles.content}>
-      <Card title="내 학교">
+    <ScrollView style={styles.homeContent}>
+      <HomeCard title="내 학교" icon="school">
         <View style={styles.schoolRow}>
           <Text style={styles.rowTitle}>{workspace.name}</Text>
           <Button label="학교 관리" kind="secondary" onPress={onOpenWorkspace} />
         </View>
-      </Card>
-      <Card title="오늘의 시간표" onPress={onOpenTimetable}>
+      </HomeCard>
+      <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
         {todaysTimetable.length ? (
           todaysTimetable.map((item) => (
             <View key={item.id} style={styles.homeRow}>
@@ -96,8 +98,8 @@ export function HomeScreen({
         ) : (
           <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
         )}
-      </Card>
-      <Card title="오늘의 급식" onPress={onOpenMeals}>
+      </HomeCard>
+      <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
         {todaysMeals.length ? (
           todaysMeals.map((meal) => (
             <View key={`${meal.date}-${meal.type}`}>
@@ -111,8 +113,8 @@ export function HomeScreen({
         ) : (
           <Text style={styles.muted}>오늘 등록된 급식 정보가 없습니다.</Text>
         )}
-      </Card>
-      <Card title="캣스기">
+      </HomeCard>
+      <HomeCard title="캣스기" icon="cat">
         <TouchableOpacity
           accessibilityRole="button"
           onPress={onOpenCatSeugi}
@@ -121,8 +123,8 @@ export function HomeScreen({
           <Text style={styles.muted}>2학년 4반에서 아무나 한명 뽑아줘...</Text>
           <Text style={styles.link}>⌕</Text>
         </TouchableOpacity>
-      </Card>
-      <Card title="다가오는 일정">
+      </HomeCard>
+      <HomeCard title="다가오는 일정" icon="schedule">
         {upcoming.length ? (
           upcoming.map((item) => (
             <Text key={`${item.date}-${item.name}`}>
@@ -132,8 +134,8 @@ export function HomeScreen({
         ) : (
           <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
         )}
-      </Card>
-      <Card title="다가오는 과제" onPress={onOpenTasks}>
+      </HomeCard>
+      <HomeCard title="다가오는 과제" icon="task" onPress={onOpenTasks}>
         {classroomTasks.length || tasks.length ? (
           [...classroomTasks, ...tasks]
             .filter((item) => !item.dueDate || item.dueDate.slice(0, 10) >= today)
@@ -156,12 +158,32 @@ export function HomeScreen({
         ) : (
           <Text style={styles.muted}>학교를 등록하고 과제를 확인하세요</Text>
         )}
-      </Card>
+      </HomeCard>
     </ScrollView>
   );
 }
 
 export { HomeScreen as Home };
+
+type HomeCardIcon = "school" | "timetable" | "meal" | "cat" | "schedule" | "task";
+const homeCardPaths: Record<HomeCardIcon, string> = {
+  school: "M3 10 12 4l9 6v10h-6v-6H9v6H3z M7 10h2v2H7zm8 0h2v2h-2z",
+  timetable: "M4 4h16v16H4z M8 2v4m8-4v4M4 9h16M8 13h3m2 0h3m-8 3h3",
+  meal: "M4 3v7m3-7v7m-3-4h3m3-3v7m0-4h3M16 3v18m0-18c3 2 4 5 4 8h-4",
+  cat: "M4 10 3 5l5 2a11 11 0 0 1 8 0l5-2-1 5a8 8 0 1 1-16 0zm4 3h.01M16 13h.01M9 17q3 2 6 0",
+  schedule: "M4 5h16v16H4z M8 3v4m8-4v4M4 10h16M8 14h3m2 0h3m-8 3h3",
+  task: "M5 4h14v17H5z M8 9l1.5 1.5L12 8m1 2h3m-8 5 1.5 1.5L12 14m1 2h3",
+};
+
+function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void }) {
+  return <View style={styles.homeCard}>
+    <View style={styles.homeCardHeader}>
+      <View style={styles.homeCardIcon}><Svg width={24} height={24} viewBox="0 0 24 24"><Path d={homeCardPaths[icon]} fill="none" stroke={SeugiColor.Gray600} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></Svg></View>
+      {onPress ? <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.homeCardTitleButton}><Text style={styles.homeCardTitle}>{title}</Text><Text style={styles.homeCardArrow}>›</Text></TouchableOpacity> : <Text style={styles.homeCardTitle}>{title}</Text>}
+    </View>
+    <View style={styles.homeCardBody}>{children}</View>
+  </View>;
+}
 
 export function TimetableWeek({ entries }: { entries: Timetable[] }) {
   const today = new Date();
@@ -457,6 +479,14 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
 
 const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
+  homeContent: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
+  homeCard: { backgroundColor: SeugiColor.White, borderRadius: 12, paddingTop: 12, paddingBottom: 16, marginBottom: 12 },
+  homeCardHeader: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16 },
+  homeCardIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: SeugiColor.Gray100, alignItems: "center", justifyContent: "center" },
+  homeCardTitle: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
+  homeCardTitleButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  homeCardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 26 },
+  homeCardBody: { paddingHorizontal: 12, paddingTop: 12 },
   schoolRow: {
     flexDirection: "row",
     alignItems: "center",
