@@ -86,7 +86,7 @@ test("message history uses an exclusive timestamp cursor and reports older pages
   for (let index = 0; index < 55; index += 1) {
     const createdAt = new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString();
     const id = `a4b44444-4444-4444-8444-${String(index).padStart(12, "0")}`;
-    store.messages.set(id, { id, roomId, senderId: memberId, message: `메시지 ${index}`, createdAt, emojis: {} });
+    store.messages.set(id, { id, roomId, senderId: memberId, message: `메시지 ${index}`, createdAt, emojis: index === 54 ? { "👍": [memberId], "😢": [memberId] } : {} });
   }
   const app = await buildApp(store);
   const headers = { authorization: `Bearer ${app.jwt.sign({ sub: memberId })}` };
@@ -94,6 +94,10 @@ test("message history uses an exclusive timestamp cursor and reports older pages
   assert.equal(firstPage.statusCode, 200);
   assert.equal(firstPage.json().data.messages.length, 50);
   assert.equal(firstPage.json().data.hasNext, true);
+  assert.equal(firstPage.json().data.firstMessageId, firstPage.json().data.messages.at(-1).id);
+  const legacyMessage = firstPage.json().data.messages[0];
+  assert.equal(legacyMessage.chatRoomId, roomId); assert.equal(legacyMessage.userId, memberId); assert.equal(legacyMessage.uuid, legacyMessage.id);
+  assert.equal(legacyMessage.type, "MESSAGE"); assert.equal(legacyMessage.messageStatus, "ALIVE"); assert.equal(legacyMessage.emojiList[0].emojiId, 1);
   const cursor = firstPage.json().data.messages.at(-1).createdAt as string;
   const nextPage = await app.inject({ url: `/message/search/${roomId}?timestamp=${encodeURIComponent(cursor)}`, headers });
   assert.equal(nextPage.statusCode, 200);
