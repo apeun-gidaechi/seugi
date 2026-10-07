@@ -10,7 +10,7 @@ import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatM
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "./src/components/ui";
 import { API_URL, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
-import { Home, TimetableWeek } from "./src/screens/HomeScreen";
+import { Home, TimetablePage } from "./src/screens/HomeScreen";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
 import { refreshHomeWidgets } from "./src/widgets/refresh";
@@ -66,13 +66,6 @@ export default function App() {
   return <SafeAreaView style={styles.page}><View style={styles.header}><Text style={styles.title}>{workspace?.name ?? "스기"}</Text><TouchableOpacity onPress={() => load().catch((reason) => setError(String(reason)))}><Text style={styles.link}>새로고침</Text></TouchableOpacity></View>{error ? <Text style={styles.error}>{error}</Text> : null}{tab === "home" && <Home workspace={workspace!} />}{tab === "meals" && <MealCalendar workspace={workspace!} />}{tab === "timetable" && <TimetablePage workspace={workspace!} />}{tab === "tasks" && <Assignments workspace={workspace!} />}{tab === "chat" && <Chat workspace={workspace!} />}{tab === "notice" && <Notices workspace={workspace!} />}{tab === "profile" && <Profile workspaces={workspaces} workspace={workspace!} onSelect={selectWorkspace} onReload={load} onLogout={async () => { if (deviceToken) await api.removeDeviceToken(deviceToken).catch(() => undefined); api.setToken(); api.setRefreshToken(); await SecureStore.deleteItemAsync(accessTokenKey); await SecureStore.deleteItemAsync(refreshTokenKey); await SecureStore.deleteItemAsync(workspaceIdKey); setDeviceToken(undefined); setWorkspace(undefined); setAuthenticated(false); void refreshHomeWidgets().catch(() => undefined); }} />}<View style={styles.tabbar}>{tabs.map(([key, label]) => <TouchableOpacity key={key} onPress={() => setTab(key)} style={styles.tab}><Text style={tab === key ? styles.activeTab : styles.inactiveTab}>{label}</Text></TouchableOpacity>)}</View></SafeAreaView>;
 }
 
-
-function TimetablePage({ workspace }: { workspace: Workspace }) {
-  const [entries, setEntries] = useState<Timetable[]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  const refresh = useCallback(async () => { setBusy(true); setError(""); try { const result = await api.weeklyTimetable(workspace.id); setEntries(result.data ?? []); } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 불러오지 못했습니다"); } finally { setBusy(false); } }, [workspace.id]);
-  useEffect(() => { void refresh(); }, [refresh]);
-  return <ScrollView style={styles.content}><Card title="주간 시간표"><Text style={styles.muted}>월요일부터 금요일까지</Text>{busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}{error ? <Text style={styles.error}>{error}</Text> : null}<TimetableWeek entries={entries} /><Button label={busy ? "불러오는 중…" : "시간표 새로고침"} kind="secondary" onPress={() => void refresh()} disabled={busy} /></Card></ScrollView>;
-}
 
 function MealCalendar({ workspace }: { workspace: Workspace }) {
   const [month, setMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });

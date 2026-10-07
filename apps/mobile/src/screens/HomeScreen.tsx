@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Text, TextInput, View, StyleSheet } from "react-native";
+import { FlatList, ScrollView, Text, TextInput, View, StyleSheet } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Meal, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
@@ -32,6 +32,13 @@ export function TimetableWeek({ entries }: { entries: Timetable[] }) {
   </View>;
 }
 
+export function TimetablePage({ workspace }: { workspace: Workspace }) {
+  const [entries, setEntries] = useState<Timetable[]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const refresh = useCallback(async () => { setBusy(true); setError(""); try { const result = await api.weeklyTimetable(workspace.id); setEntries(result.data ?? []); } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 불러오지 못했습니다"); } finally { setBusy(false); } }, [workspace.id]);
+  useEffect(() => { void refresh(); }, [refresh]);
+  return <ScrollView style={styles.content}><Card title="주간 시간표"><Text style={styles.muted}>월요일부터 금요일까지</Text>{busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}{error ? <Text style={styles.error}>{error}</Text> : null}<TimetableWeek entries={entries} /><Button label={busy ? "불러오는 중…" : "시간표 새로고침"} kind="secondary" onPress={() => void refresh()} disabled={busy} /></Card></ScrollView>;
+}
+
 function CatSeugi() {
   const [question, setQuestion] = useState(""); const [answer, setAnswer] = useState("");
   return <Card title="캣스기"><TextInput value={question} onChangeText={setQuestion} style={styles.input} placeholder="무엇이든 물어보세요" /><Button label="질문하기" onPress={() => api.askCatSeugi(question).then((x) => setAnswer(x.data ?? "")).catch((e) => setAnswer(e.message))} />{answer ? <Text style={styles.answer}>{answer}</Text> : null}</Card>;
@@ -41,6 +48,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
+  error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
 });
