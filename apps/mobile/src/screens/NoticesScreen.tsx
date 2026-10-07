@@ -9,7 +9,6 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
   const [items, setItems] = useState<Notification[]>([]);
   const [error, setError] = useState("");
   const [memberId, setMemberId] = useState("");
-  const [canPost, setCanPost] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [emojiTarget, setEmojiTarget] = useState<Notification>();
   const [customEmoji, setCustomEmoji] = useState("");
@@ -44,7 +43,6 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
       if (!active) return;
       setMemberId(member.data?.id ?? "");
       setCanManage(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN"].includes(profile.data?.role ?? ""));
-      setCanPost(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
     }).catch(() => undefined);
     return () => { active = false; };
   }, [refresh, workspace.id, workspace.ownerId]);
@@ -89,7 +87,7 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={SeugiColor.Primary500} />}
     onEndReached={() => void loadNextPage()}
     onEndReachedThreshold={0.5}
-    ListHeaderComponent={<>{canPost ? <Card title="공지 관리"><Button label="공지 작성" onPress={onCreate} /></Card> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
+    ListHeaderComponent={error ? <Text style={styles.error}>{error}</Text> : null}
     ListFooterComponent={loadingMore ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loader} /> : hasNextPage ? <TouchableOpacity style={styles.loadMore} onPress={() => void loadNextPage()}><Text style={styles.link}>이전 공지 더 보기</Text></TouchableOpacity> : null}
     ListEmptyComponent={<Text style={styles.empty}>새 공지가 없습니다.</Text>}
     renderItem={({ item }) => <Card title={item.title}><Text>{item.content}</Text><Text style={styles.muted}>{new Date(item.createdAt).toLocaleString()}</Text>

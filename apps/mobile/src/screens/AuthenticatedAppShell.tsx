@@ -11,6 +11,7 @@ import {
 import { type Room, type Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import Svg, { Path } from "react-native-svg";
+import { api } from "../services/api";
 import { AssignmentsScreen, TaskCreateScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
 import { ChatScreen } from "./ChatScreen";
@@ -41,14 +42,14 @@ const tabs: Array<[Tab, string]> = [
   ["home", "홈"],
   ["chat", "채팅"],
   ["group", "단체"],
-  ["notice", "알림"],
+  ["notice", "공지"],
   ["profile", "프로필"],
 ];
 const tabTitles: Record<Tab, string> = {
   home: "홈",
   chat: "채팅",
   group: "단체",
-  notice: "알림",
+  notice: "공지",
   profile: "프로필",
 };
 type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
@@ -97,11 +98,21 @@ export function AuthenticatedAppShell({
   const [createdRoom, setCreatedRoom] = useState<Room>();
   const [activeConversation, setActiveConversation] = useState<Room>();
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
+  const [canCreateNotice, setCanCreateNotice] = useState(false);
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
   const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); onTabChange(next); };
   const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); onSelectWorkspace(selected); onTabChange("home"); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
+      if (!active) return;
+      setCanCreateNotice(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
+    }).catch(() => { if (active) setCanCreateNotice(false); });
+    return () => { active = false; };
+  }, [workspace.id, workspace.ownerId]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -134,6 +145,10 @@ export function AuthenticatedAppShell({
             onPress={() => void onReload().catch(() => undefined)}
           >
             <Text style={styles.link}>새로고침</Text>
+          </TouchableOpacity>
+        ) : !detail && tab === "notice" && canCreateNotice ? (
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="공지 작성" onPress={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}>
+            <Text style={styles.writeIcon}>✎</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.actionPlaceholder} />
@@ -263,6 +278,7 @@ const styles = StyleSheet.create({
   actionPlaceholder: { width: 64 },
   title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700" },
   link: { color: SeugiColor.Primary500 },
+  writeIcon: { color: SeugiColor.Gray800, fontSize: 25, paddingHorizontal: 4 },
   tabbar: {
     height: 62,
     flexDirection: "row",
