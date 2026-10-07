@@ -3,6 +3,7 @@ import { Image, Text, View, type ImageStyle, type TextStyle, type ViewStyle } fr
 type SeugiAvatarProps = {
   uri?: string | null;
   name?: string | null;
+  fallbackText?: string;
   accessibilityLabel?: string;
   imageStyle: ImageStyle;
   fallbackStyle: ViewStyle;
@@ -13,6 +14,7 @@ type SeugiAvatarProps = {
 export function SeugiAvatar({
   uri,
   name,
+  fallbackText,
   accessibilityLabel,
   imageStyle,
   fallbackStyle,
@@ -24,7 +26,7 @@ export function SeugiAvatar({
 
   return (
     <View accessibilityLabel={accessibilityLabel ?? name ?? "프로필"} style={fallbackStyle}>
-      <Text style={labelStyle}>{name?.slice(0, 1) ?? "?"}</Text>
+      <Text style={labelStyle}>{fallbackText ?? name?.slice(0, 1) ?? "?"}</Text>
     </View>
   );
 }
