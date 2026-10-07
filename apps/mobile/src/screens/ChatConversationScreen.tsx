@@ -15,7 +15,9 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
   const [hasOlderMessages, setHasOlderMessages] = useState(false); const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [previewImage, setPreviewImage] = useState<string>();
   const [imageDraft, setImageDraft] = useState<DocumentPicker.DocumentPickerAsset>();
+  const [fileDraft, setFileDraft] = useState<DocumentPicker.DocumentPickerAsset>();
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
+  const [failedOutgoing, setFailedOutgoing] = useState<Array<{ id: string; message: string; files: string[]; type: "MESSAGE" | "IMG" | "FILE" }>>([]);
   useEffect(() => { let active = true; const socket = createAuthenticatedSocket(api, API_URL, () => Alert.alert("세션 오류", "세션을 갱신할 수 없습니다. 다시 로그인해주세요.")); api.messages(room.id).then((result) => { if (!active) return; setMessages((result.data?.messages ?? []).reverse()); setHasOlderMessages(result.data?.hasNext ?? false); }).catch(() => undefined); api.memberInfo().then((result) => active && setMemberId(result.data?.id ?? "")).catch(() => undefined); socket.on("connect", () => socket.emit("room:join", room.id)); socket.on("chat:message", (message: ChatMessage) => { if (message.roomId === room.id) setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]); }); socket.on("chat:message-deleted", (event: ChatMessageDeletedEvent) => { if (event.roomId === room.id) setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item)); }); socket.on("chat:message-emoji", (event: ChatMessageEmojiEvent) => { if (event.roomId !== room.id) return; setMessages((current) => current.map((item) => { if (item.id !== event.messageId) return item; const users = item.emojis[event.emoji] ?? []; const nextUsers = event.action === "ADD" ? [...new Set([...users, event.senderId])] : users.filter((id) => id !== event.senderId); return { ...item, emojis: { ...item.emojis, [event.emoji]: nextUsers } }; })); }); return () => { active = false; socket.close(); }; }, [room.id]);
   const loadOlderMessages = async () => {
     const cursor = messages[0]?.createdAt;
@@ -33,9 +35,35 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
       Alert.alert("이전 대화를 불러오지 못했습니다", error instanceof Error ? error.message : "네트워크 연결을 확인해 주세요");
     } finally { setLoadingOlderMessages(false); }
   };
-  const deliver = (message: string, files: string[] = [], type: "MESSAGE" | "IMG" | "FILE" = "MESSAGE") => { if ((!message.trim() && !files.length) || sending) return; setSending(true); let socket: ReturnType<typeof createAuthenticatedSocket>; const finish = (result: { message: string }) => { setSending(false); socket.close(); if (result.message === "메시지 전송 성공") { setDraft(""); if (type === "IMG") setImageDraft(undefined); } else Alert.alert("전송 실패", result.message); }; socket = createAuthenticatedSocket(api, API_URL, () => finish({ message: "세션을 갱신할 수 없습니다" })); socket.once("connect_error", (error) => { if (error.message !== "UNAUTHORIZED") finish({ message: "채팅 서버에 연결하지 못했습니다" }); }); socket.once("connect", () => { socket.emit("room:join", room.id); socket.emit("chat:message", { roomId: room.id, message, files, type }, finish); }); };
+  const deliver = (message: string, files: string[] = [], type: "MESSAGE" | "IMG" | "FILE" = "MESSAGE", retryId?: string) => {
+    if ((!message.trim() && !files.length) || sending) return;
+    setSending(true);
+    let socket: ReturnType<typeof createAuthenticatedSocket>;
+    let finished = false;
+    const finish = (result: { message: string }) => {
+      if (finished) return;
+      finished = true;
+      setSending(false);
+      socket.close();
+      if (result.message === "메시지 전송 성공") {
+        setDraft("");
+        if (retryId) setFailedOutgoing((items) => items.filter((item) => item.id !== retryId));
+        if (type === "IMG") setImageDraft(undefined);
+        if (type === "FILE") setFileDraft(undefined);
+      } else {
+        setFailedOutgoing((items) => retryId
+          ? items.map((item) => item.id === retryId ? { ...item, message, files, type } : item)
+          : [...items, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, message, files, type }]);
+        Alert.alert("전송 실패", result.message);
+      }
+    };
+    socket = createAuthenticatedSocket(api, API_URL, () => finish({ message: "세션을 갱신할 수 없습니다" }));
+    socket.once("connect_error", (error) => { if (error.message !== "UNAUTHORIZED") finish({ message: "채팅 서버에 연결하지 못했습니다" }); });
+    socket.once("connect", () => { socket.emit("room:join", room.id); socket.emit("chat:message", { roomId: room.id, message, files, type }, finish); });
+  };
   const send = () => deliver(draft.trim());
-  const attachFile = async () => { setShowAttachmentOptions(false); if (uploading || sending) return; setUploading(true); try { const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false }); if (result.canceled || !result.assets[0]) return; const file = result.assets[0]; const form = new FormData(); form.append("file", { uri: file.uri, name: file.name, type: file.mimeType ?? "application/octet-stream" } as unknown as Blob); const uploaded = await api.uploadFile("FILE", form); if (!uploaded.data?.url) throw new Error("파일 업로드 응답이 올바르지 않습니다"); deliver(`${uploaded.data.url}::${file.name}::${file.size ?? uploaded.data.size}`, [], "FILE"); } catch (error) { Alert.alert("파일 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요"); } finally { setUploading(false); } };
+  const attachFile = async () => { setShowAttachmentOptions(false); if (uploading || sending) return; try { const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) setFileDraft(result.assets[0]); } catch (error) { Alert.alert("파일을 불러오지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요"); } };
+  const sendFile = async () => { if (!fileDraft || uploading || sending) return; setUploading(true); try { const form = new FormData(); form.append("file", { uri: fileDraft.uri, name: fileDraft.name, type: fileDraft.mimeType ?? "application/octet-stream" } as unknown as Blob); const uploaded = await api.uploadFile("FILE", form); if (!uploaded.data?.url) throw new Error("파일 업로드 응답이 올바르지 않습니다"); deliver(`${uploaded.data.url}::${fileDraft.name}::${fileDraft.size ?? uploaded.data.size}`, [], "FILE"); } catch (error) { Alert.alert("파일 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요"); } finally { setUploading(false); } };
   const selectImage = async () => { setShowAttachmentOptions(false); if (uploading || sending) return; try { const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) setImageDraft(result.assets[0]); } catch (error) { Alert.alert("사진을 불러오지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요"); } };
   const sendImage = async () => { if (!imageDraft || uploading || sending) return; setUploading(true); try { const form = new FormData(); form.append("file", { uri: imageDraft.uri, name: imageDraft.name, type: imageDraft.mimeType ?? "image/jpeg" } as unknown as Blob); const uploaded = await api.uploadFile("IMG", form); if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다"); deliver(`${uploaded.data.url}::${imageDraft.name}`, [], "IMG"); } catch (error) { Alert.alert("사진 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요"); } finally { setUploading(false); } };
   const openFile = (url: string) => { Linking.openURL(absoluteApiUrl(url)).catch(() => Alert.alert("파일을 열지 못했습니다", "네트워크 연결을 확인해 주세요")); };
@@ -45,6 +73,7 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
     <View style={styles.chatHeader}><TouchableOpacity onPress={onBack}><Text style={styles.link}>‹ 목록</Text></TouchableOpacity><Text style={styles.rowTitle}>{currentRoom.name}</Text>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : null}</View>
     {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} /> : <>
       <FlatList style={styles.content} data={messages} keyExtractor={(item) => item.id} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
+        ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
         renderItem={({ item }) => {
           const parts = item.message.split("::");
           const imageUrl = item.type === "IMG" ? parts[0] : undefined;
@@ -66,11 +95,13 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
     </>}
     <Modal visible={showAttachmentOptions} transparent animationType="slide" onRequestClose={() => setShowAttachmentOptions(false)}><View style={styles.sheetBackdrop}><TouchableOpacity style={styles.sheetDismiss} activeOpacity={1} onPress={() => setShowAttachmentOptions(false)} /><View style={styles.attachmentSheet}><Text style={styles.sheetTitle}>첨부하기</Text><TouchableOpacity style={styles.attachmentOption} onPress={() => void selectImage()}><Text style={styles.attachmentIcon}>▧</Text><Text style={styles.rowTitle}>사진 또는 이미지</Text></TouchableOpacity><TouchableOpacity style={styles.attachmentOption} onPress={() => void attachFile()}><Text style={styles.attachmentIcon}>↧</Text><Text style={styles.rowTitle}>파일</Text></TouchableOpacity></View></View></Modal>
     <Modal visible={!!imageDraft} transparent animationType="fade" onRequestClose={() => setImageDraft(undefined)}><View style={styles.imagePreviewBackdrop}><View style={styles.imagePreviewHeader}><TouchableOpacity onPress={() => setImageDraft(undefined)}><Text style={styles.previewButton}>취소</Text></TouchableOpacity><Text style={styles.previewTitle}>사진 미리보기</Text><TouchableOpacity onPress={() => void sendImage()} disabled={uploading || sending}><Text style={[styles.previewButton, (uploading || sending) && styles.disabledText]}>{uploading ? "전송 중…" : "전송"}</Text></TouchableOpacity></View>{imageDraft ? <Image source={{ uri: imageDraft.uri }} resizeMode="contain" style={styles.imagePreview} /> : null}</View></Modal>
+    <Modal visible={!!fileDraft} transparent animationType="fade" onRequestClose={() => setFileDraft(undefined)}><View style={styles.sheetBackdrop}><TouchableOpacity style={styles.sheetDismiss} activeOpacity={1} onPress={() => setFileDraft(undefined)} /><View style={styles.filePreviewSheet}><Text style={styles.sheetTitle}>파일 전송</Text><View style={styles.filePreviewRow}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.rowTitle}>{fileDraft?.name}</Text><Text style={styles.muted}>{fileDraft?.size ? formatFileSize(fileDraft.size) : "크기 확인 불가"}</Text></View></View><View style={styles.filePreviewActions}><Button label="취소" kind="secondary" onPress={() => setFileDraft(undefined)} disabled={uploading || sending} /><Button label={uploading ? "전송 중…" : "전송"} onPress={() => void sendFile()} disabled={uploading || sending} /></View></View></View></Modal>
     <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(undefined)}><TouchableOpacity activeOpacity={1} onPress={() => setPreviewImage(undefined)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.94)", alignItems: "center", justifyContent: "center", padding: 16 }}><Text style={{ position: "absolute", top: 56, right: 20, color: SeugiColor.White, fontSize: 18 }}>닫기 ✕</Text>{previewImage ? <Image source={{ uri: absoluteApiUrl(previewImage) }} resizeMode="contain" style={{ width: "100%", height: "82%" }} /> : null}</TouchableOpacity></Modal>
   </View>;
 }
 
 function visibleMessage(message: ChatMessage) { if (message.type !== "BOT") return message.message; try { const value = JSON.parse(message.message) as { data?: unknown }; return typeof value.data === "string" ? value.data : message.message; } catch { return message.message; } }
+function formatFileSize(size: number) { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB`; }
 
 const styles = StyleSheet.create({
   chatPage: { flex: 1 },
@@ -101,4 +132,9 @@ const styles = StyleSheet.create({
   previewTitle: { color: SeugiColor.White, fontSize: 16, fontWeight: "600" },
   disabledText: { opacity: 0.5 },
   imagePreview: { flex: 1, width: "100%", marginTop: 12 },
+  failedMessage: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Red500, borderRadius: 12, padding: 12, marginTop: 8 },
+  failedMessageText: { flex: 1, gap: 4 },
+  filePreviewSheet: { backgroundColor: SeugiColor.White, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, paddingBottom: 32, gap: 16 },
+  filePreviewRow: { flexDirection: "row", alignItems: "center", backgroundColor: SeugiColor.Gray100, borderRadius: 12, padding: 14, gap: 12 },
+  filePreviewActions: { flexDirection: "row", gap: 10, justifyContent: "flex-end" },
 });
