@@ -51,7 +51,7 @@ const tabTitles: Record<Tab, string> = {
   chat: "채팅",
   group: "단체",
   notice: "공지",
-  profile: "프로필",
+  profile: "내 프로필",
 };
 type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
