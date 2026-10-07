@@ -3,7 +3,7 @@ import { deviceTokenSchema, optionalDeviceTokenSchema } from "./device-token.js"
 
 const profileImageSchema = z.string().url().or(z.string().regex(/^\/uploads\/[0-9a-f-]{36}-[a-zA-Z0-9._%+-]+$/i));
 
-export const registerMemberSchema = z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(1).max(40).optional(), token: optionalDeviceTokenSchema, code: z.string().regex(/^\d{6}$/) });
+export const registerMemberSchema = z.object({ email: z.string().email(), password: z.string(), name: z.string().optional(), token: optionalDeviceTokenSchema, code: z.string().regex(/^\d{6}$/) });
 export const loginMemberSchema = registerMemberSchema.pick({ email: true, password: true, token: true });
 export const editMemberSchema = z.object({ name: z.string().optional(), picture: profileImageSchema.optional(), birth: z.string().max(32).optional() });
 export const memberDeviceTokenSchema = z.object({ token: deviceTokenSchema });

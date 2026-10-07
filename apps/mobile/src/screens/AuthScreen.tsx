@@ -78,7 +78,7 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
     </ScrollView>
     <View style={styles.formFooter}>
       <TouchableOpacity accessibilityRole="button" onPress={() => navigate("login")} style={styles.existingAccount}><Text style={styles.link}>이미 계정이 있으신가요?</Text></TouchableOpacity>
-      <Button label="계속하기" onPress={() => { onError(""); navigate("verification"); }} disabled={!email || !name || password.length < 8 || !confirmPassword || password !== confirmPassword || loading} />
+      <Button label="계속하기" onPress={() => { onError(""); navigate("verification"); }} disabled={!email || !name || !password || !confirmPassword || password !== confirmPassword || loading} />
     </View>
   </SafeAreaView>;
   if (screen === "verification") return <SafeAreaView style={[styles.auth, styles.formScreen]}>

@@ -195,6 +195,12 @@ test("member can register, create a workspace, and retrieve it", async () => {
   assert.equal(nativeLikeTask.statusCode, 200);
   const tasksWithNativeLikePayload = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
   assert.ok(tasksWithNativeLikePayload.json().data.some((item: { title: string; description?: string }) => item.title === nativeLikeTaskTitle && item.description === "  "));
+  store.emailCodes.set("short-password@example.com", { code: "654321", expiresAt: Date.now() + 60_000 });
+  const shortPasswordRegistration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "short-password@example.com", password: "x", name: " ".repeat(41), code: "654321" } });
+  assert.equal(shortPasswordRegistration.statusCode, 200);
+  const shortPasswordMemberId = app.jwt.decode<{ sub: string }>(shortPasswordRegistration.json().data.accessToken)?.sub;
+  assert.ok(shortPasswordMemberId);
+  assert.equal(store.requireMember(shortPasswordMemberId).name, " ".repeat(41));
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
   await app.close();
