@@ -448,6 +448,12 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const received = new Promise<{ message: string }>((resolve) => socket.once("chat:message", resolve));
     const acknowledged = await new Promise<{ message: string; data?: ChatMessage }>((resolve) => socket.emit("chat:message", { roomId, message: "안녕하세요" }, resolve));
     assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");
+    const addedEmoji = new Promise<{ roomId: string; messageId: string; senderId: string; emoji: string; action: string }>((resolve) => socket.once("chat:message-emoji", resolve));
+    await app.inject({ method: "PUT", url: "/message/emoji", headers, payload: { messageId: acknowledged.data?.id, emoji: "👍" } });
+    assert.deepEqual(await addedEmoji, { roomId, messageId: acknowledged.data?.id, senderId: app.jwt.decode<{ sub: string }>(token)?.sub, emoji: "👍", action: "ADD" });
+    const removedEmoji = new Promise<{ action: string }>((resolve) => socket.once("chat:message-emoji", resolve));
+    await app.inject({ method: "DELETE", url: "/message/emoji", headers, payload: { messageId: acknowledged.data?.id, emoji: "👍" } });
+    assert.equal((await removedEmoji).action, "REMOVE");
     const deletedEvent = new Promise<{ roomId: string; messageId: string }>((resolve) => socket.once("chat:message-deleted", resolve));
     const deleted = await app.inject({ method: "DELETE", url: "/message/delete", headers: { authorization: `Bearer ${token}` }, payload: { roomId, messageId: acknowledged.data?.id } });
     assert.equal(deleted.statusCode, 200); assert.deepEqual(await deletedEvent, { roomId, messageId: acknowledged.data?.id, senderId: app.jwt.decode<{ sub: string }>(token)?.sub });
@@ -484,6 +490,7 @@ test("original mobile clients can authenticate, subscribe, and send over STOMP",
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers, payload: { workspaceId, name: "원본 클라이언트 방", memberIds: [] } })).json().data as string;
   await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
   const socket = new WebSocket(`ws://127.0.0.1:${address.port}/stomp/chat`);
+  let migratedClient: ReturnType<typeof io> | undefined;
   try {
     const frames: string[] = []; socket.on("message", (data) => frames.push(data.toString()));
     await new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("STOMP websocket open timed out")), 2_000); socket.once("open", () => { clearTimeout(timer); resolve(); }); socket.once("error", (error) => { clearTimeout(timer); reject(error); }); });
@@ -491,11 +498,24 @@ test("original mobile clients can authenticate, subscribe, and send over STOMP",
     socket.send(`CONNECT\naccept-version:1.2\nAuthorization: Bearer ${token}\n\n\0`); await connected;
     socket.send(`SUBSCRIBE\nid:sub-0\ndestination:/exchange/chat.exchange/room.${roomId}\n\n\0`);
     await new Promise((resolve) => setTimeout(resolve, 30));
+    migratedClient = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
+    await new Promise<void>((resolve, reject) => { migratedClient!.once("connect", resolve); migratedClient!.once("connect_error", reject); });
+    migratedClient.emit("room:join", roomId);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const socketMessage = new Promise<ChatMessage>((resolve) => migratedClient.once("chat:message", resolve));
     socket.send(`SEND\ndestination:/pub/chat.message\ncontent-type:application/json\n\n${JSON.stringify({ roomId, type: "MESSAGE", message: "구형 앱 호환", uuid: "client-uuid" })}\0`);
     await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { const message = store.messages.values().next().value as ChatMessage | undefined; if (message) { clearInterval(timer); resolve(); } if (frames.some((frame) => frame.startsWith("ERROR\n"))) { clearInterval(timer); reject(new Error(frames.at(-1))); } }, 5); setTimeout(() => reject(new Error("STOMP message timed out")), 2_000); });
     const message = store.messages.values().next().value as ChatMessage; assert.equal(message.message, "구형 앱 호환");
     assert.ok(frames.some((frame) => frame.includes(`destination:/exchange/chat.exchange/room.${roomId}`) && frame.includes("구형 앱 호환")));
-  } finally { socket.close(); await app.close(); }
+    assert.equal((await socketMessage).message, "구형 앱 호환");
+    const migratedSend = new Promise<{ message: string }>((resolve) => migratedClient.emit("chat:message", { roomId, message: "Socket.IO 호환" }, resolve));
+    assert.equal((await migratedSend).message, "메시지 전송 성공");
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("Socket.IO 호환"))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("Socket.IO to STOMP message timed out")); }, 2_000); });
+    await app.inject({ method: "PUT", url: "/message/emoji", headers: { authorization: `Bearer ${token}` }, payload: { messageId: message.id, emoji: "👍" } });
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("ADD_EMOJI") && frame.includes('"emojiId":1'))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("STOMP emoji event timed out")); }, 2_000); });
+    const deleted = await app.inject({ method: "DELETE", url: "/message/delete", headers: { authorization: `Bearer ${token}` }, payload: { roomId, messageId: message.id } }); assert.equal(deleted.statusCode, 200);
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("DELETE_MESSAGE") && frame.includes(message.id))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error(`STOMP deletion event timed out: ${frames.join(" | ")}`)); }, 2_000); });
+  } finally { socket.close(); migratedClient?.close(); await app.close(); }
 });
 
 test("uploaded files are persisted and served back", async () => {

@@ -1,6 +1,7 @@
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";
 export type RoomType = "GROUP" | "PERSONAL";
+export const CHAT_EMOJIS = ["👍", "👌", "👏", "😍", "😆", "😳", "😢", "😤"] as const;
 
 export interface Tokens { accessToken: string; refreshToken: string }
 export interface Member { id: string; email: string; name: string; picture?: string; birth?: string; role?: Role }

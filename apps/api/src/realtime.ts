@@ -1,17 +1,19 @@
 import { Server } from "socket.io";
+import { CHAT_EMOJIS } from "@seugi/contracts";
 import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
-import type { Store } from "./store.js";
+import type { MessageEmojiEvent, Store } from "./store.js";
 import { PushNotifications } from "./push.js";
 import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 
 export function attachRealtime(app: FastifyInstance, store: Store) {
   const io = new Server(app.server, { cors: { origin: true } });
-  attachStompCompatibility(app, store, io);
+  const stomp = attachStompCompatibility(app, store, io);
   const push = new PushNotifications();
   const unsubscribeMessageDeleted = store.onMessageDeleted((event) => io.to(event.roomId).emit("chat:message-deleted", event));
-  app.addHook("onClose", async () => { unsubscribeMessageDeleted(); });
+  const unsubscribeMessageEmoji = store.onMessageEmoji((event) => { io.to(event.roomId).emit("chat:message-emoji", event); stomp.publishEmoji(event); });
+  app.addHook("onClose", async () => { unsubscribeMessageDeleted(); unsubscribeMessageEmoji(); });
   io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
     socket.on("room:join", (roomId: string) => {
@@ -34,7 +36,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
       }).then((result) => {
         if ("error" in result) return done?.({ message: result.error });
         io.to(result.room.id).emit("chat:message", result.message);
-        io.emit("stomp:compat-message", result.message);
+        stomp.publishMessage(result.message);
         void push.send(result.tokens, { title: result.room.name || "1대1 채팅", body: `${result.senderName}: ${result.message.files?.length && !result.message.message ? "파일을 보냈습니다." : result.message.message}`, imageUrl: result.senderPicture }).catch((error) => app.log.error(error, "FCM chat push failed"));
         done?.({ message: "메시지 전송 성공", data: result.message });
       }).catch((error) => { app.log.error(error, "realtime message persistence failed"); done?.({ message: "메시지 저장에 실패했습니다" }); });
@@ -56,8 +58,11 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
     const body = JSON.stringify({ type: "MESSAGE", roomId, message: message.message, uuid: message.id, eventList: [], emoticon: null, mention: [], mentionAll: false, files: message.files, userId: message.senderId, timestamp: message.createdAt });
     for (const [socket, state] of clients) if (state.rooms.has(roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${roomId}`, "content-type": "application/json" }, body);
   };
-  io.on("stomp:compat-message", (message: ChatMessage) => publish(message.roomId, message));
-  app.server.prependListener("upgrade", (request, socket, head) => {
+  const publishEmoji = (event: MessageEmojiEvent) => {
+    const body = JSON.stringify({ type: event.action === "ADD" ? "ADD_EMOJI" : "REMOVE_EMOJI", roomId: event.roomId, messageId: event.messageId, emojiId: CHAT_EMOJIS.indexOf(event.emoji as (typeof CHAT_EMOJIS)[number]) + 1, emoji: event.emoji, userId: event.senderId });
+    for (const [socket, state] of clients) if (state.rooms.has(event.roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${event.roomId}`, "content-type": "application/json" }, body);
+  };
+  app.server.on("upgrade", (request, socket, head) => {
     if (new URL(request.url ?? "/", "http://localhost").pathname !== "/stomp/chat") return;
     wss.handleUpgrade(request, socket, head, (client) => wss.emit("connection", client, request));
   });
@@ -98,8 +103,9 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
     socket.on("close", () => clients.delete(socket));
   });
   const unsubscribeDeleted = store.onMessageDeleted((event) => {
-    const body = JSON.stringify({ type: "DELETE", roomId: event.roomId, uuid: event.messageId, eventList: [] });
+    const body = JSON.stringify({ type: "DELETE_MESSAGE", roomId: event.roomId, messageId: event.messageId, userId: event.senderId });
     for (const [socket, state] of clients) if (state.rooms.has(event.roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${event.roomId}`, "content-type": "application/json" }, body);
   });
   app.addHook("onClose", async () => { unsubscribeDeleted(); for (const client of wss.clients) client.close(); await new Promise<void>((resolve) => wss.close(() => resolve())); });
+  return { publishMessage: (message: ChatMessage) => publish(message.roomId, message), publishEmoji };
 }
