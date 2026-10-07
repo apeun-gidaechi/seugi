@@ -94,7 +94,10 @@ export function HomeScreen({
     void refreshHome();
   }, [refreshHome, refreshToken]);
   const today = localDateKey(new Date());
-  const todaysMeals = (meals ?? []).filter((item) => item.date.slice(0, 10) === today);
+  const mealPriority = ["조식", "중식", "석식"];
+  const todaysMeals = (meals ?? [])
+    .filter((item) => item.date.slice(0, 10) === today)
+    .sort((a, b) => mealPriority.indexOf(a.type) - mealPriority.indexOf(b.type));
   const mealPages = Platform.OS === "android"
     ? ["조식", "중식", "석식"].map((type) => ({ type, meal: todaysMeals.find((item) => item.type === type) }))
     : todaysMeals.map((meal) => ({ type: meal.type, meal }));
