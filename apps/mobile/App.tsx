@@ -6,12 +6,13 @@ import * as DocumentPicker from "expo-document-picker";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { createAuthenticatedSocket } from "./src/realtime";
-import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type Member, type Notification, type Role, type Room, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type Member, type Role, type Room, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "./src/components/ui";
 import { GoogleAuthButton } from "./src/components/GoogleAuthButton";
 import { AssignmentsScreen as Assignments } from "./src/screens/AssignmentsScreen";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceSetupScreen as WorkspaceSetup } from "./src/screens/WorkspaceSetupScreen";
+import { NoticesScreen as Notices } from "./src/screens/NoticesScreen";
 import { API_URL, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
 import { Home, MealCalendar, TimetablePage } from "./src/screens/HomeScreen";
 import { api } from "./src/services/api";
@@ -105,59 +106,6 @@ function RoomMessages({ room, onBack }: { room: Room; onBack: () => void }) {
   </View>;
 }
 function RoomManagement({ room, memberId, onRoomChange, onLeave }: { room: Room; memberId: string; onRoomChange: (room: Room) => void; onLeave: () => void }) { const [workspaceMembers, setWorkspaceMembers] = useState<Member[]>([]); const [selectedIds, setSelectedIds] = useState<string[]>([]); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const isAdmin = room.adminId === memberId; const refresh = useCallback(async () => { const [updated, members] = await Promise.all([api.groupRoom(room.id), api.workspaceMembers(room.workspaceId)]); onRoomChange(updated.data ?? room); setWorkspaceMembers(members.data ?? []); }, [room.id, room.workspaceId, onRoomChange]); useEffect(() => { refresh().catch((e) => setNotice(e instanceof Error ? e.message : "구성원 정보를 불러오지 못했습니다")); }, [refresh]); const run = async (action: () => Promise<unknown>) => { if (busy) return; setBusy(true); setNotice(""); try { await action(); setSelectedIds([]); await refresh(); } catch (e) { setNotice(e instanceof Error ? e.message : "채팅방을 변경하지 못했습니다"); } finally { setBusy(false); } }; const leave = () => Alert.alert("채팅방 나가기", "이 채팅방에서 나갈까요?", [{ text: "취소", style: "cancel" }, { text: "나가기", style: "destructive", onPress: () => { void run(async () => { await api.leaveGroupRoom(room.id); onLeave(); }); } }]); const byId = new Map(workspaceMembers.map((member) => [member.id, member])); const candidates = workspaceMembers.filter((member) => !room.memberIds.includes(member.id)); return <FlatList style={styles.content} data={room.memberIds} keyExtractor={(id) => id} ListHeaderComponent={<Card title="채팅방 구성원"><Text>{room.memberIds.length}명 · {isAdmin ? "방장" : "구성원"}</Text>{isAdmin && candidates.length ? <><Text style={styles.muted}>추가할 구성원</Text>{candidates.map((member) => <TouchableOpacity key={member.id} onPress={() => setSelectedIds((current) => current.includes(member.id) ? current.filter((id) => id !== member.id) : [...current, member.id])}><Text style={selectedIds.includes(member.id) ? styles.activeTab : styles.rowTitle}>{selectedIds.includes(member.id) ? "☑ " : "☐ "}{member.name}</Text></TouchableOpacity>)}<Button label={busy ? "처리 중…" : `선택한 ${selectedIds.length}명 추가`} onPress={() => run(() => api.addGroupMembers(room.id, selectedIds))} disabled={busy || !selectedIds.length} /></> : null}{notice ? <Text style={styles.error}>{notice}</Text> : null}<Button label="채팅방 나가기" kind="secondary" onPress={leave} disabled={busy} /></Card>} renderItem={({ item: id }) => <View style={styles.row}><Text style={styles.rowTitle}>{byId.get(id)?.name ?? "구성원"}{id === room.adminId ? " · 방장" : ""}</Text>{isAdmin && id !== room.adminId ? <View style={styles.memberActions}><TouchableOpacity disabled={busy} onPress={() => run(() => api.transferGroupAdmin(room.id, id))}><Text style={styles.link}>방장 위임</Text></TouchableOpacity><TouchableOpacity disabled={busy} onPress={() => run(() => api.removeGroupMembers(room.id, [id]))}><Text style={styles.error}>내보내기</Text></TouchableOpacity></View> : null}</View>} />; }
-function Notices({ workspace }: { workspace: Workspace }) {
-  const [items, setItems] = useState<Notification[]>([]);
-  const [error, setError] = useState("");
-  const [memberId, setMemberId] = useState("");
-  const [canPost, setCanPost] = useState(false);
-  const [canManage, setCanManage] = useState(false);
-  const [editing, setEditing] = useState<Notification>();
-  const refresh = useCallback(() => api.notifications(workspace.id).then((x) => setItems(x.data ?? [])).catch((e) => setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다")), [workspace.id]);
-  useEffect(() => {
-    refresh();
-    let active = true;
-    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
-      if (!active) return;
-      setMemberId(member.data?.id ?? "");
-      setCanManage(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN"].includes(profile.data?.role ?? ""));
-      setCanPost(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
-    }).catch(() => undefined);
-    return () => { active = false; };
-  }, [refresh, workspace.id, workspace.ownerId]);
-  const react = async (item: Notification, emoji: string) => {
-    try { await api.toggleNotificationEmoji(item.id, emoji); await refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "반응을 저장하지 못했습니다"); }
-  };
-  const remove = (item: Notification) => Alert.alert("공지 삭제", `‘${item.title}’ 공지를 삭제할까요?`, [
-    { text: "취소", style: "cancel" },
-    { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
-  ]);
-  return <FlatList style={styles.content} data={items} keyExtractor={(item) => item.id}
-    ListHeaderComponent={<>{editing ? <NoticeEditor key={editing.id} workspace={workspace} initial={editing} onCancel={() => setEditing(undefined)} onSaved={async () => { setEditing(undefined); await refresh(); }} /> : canPost ? <NoticeEditor workspace={workspace} onSaved={refresh} /> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
-    ListEmptyComponent={<Text style={styles.empty}>새 공지가 없습니다.</Text>}
-    renderItem={({ item }) => <Card title={item.title}><Text>{item.content}</Text><Text style={styles.muted}>{new Date(item.createdAt).toLocaleString()}</Text>
-      {(item.authorId === memberId || canManage) ? <View style={styles.memberActions}>{item.authorId === memberId ? <TouchableOpacity onPress={() => setEditing(item)}><Text style={styles.link}>수정</Text></TouchableOpacity> : null}<TouchableOpacity onPress={() => remove(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity></View> : null}
-      <View style={styles.reactions}>{["👍", "❤️", "🎉"].map((emoji) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {(item.emojis[emoji] ?? []).length}</Text></TouchableOpacity>)}</View></Card>} />;
-}
-function NoticeEditor({ workspace, initial, onSaved, onCancel }: { workspace: Workspace; initial?: Notification; onSaved: () => Promise<void>; onCancel?: () => void }) {
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [content, setContent] = useState(initial?.content ?? "");
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
-  const submit = async () => {
-    if (!title.trim() || !content.trim() || busy) return;
-    setBusy(true); setNotice("");
-    try {
-      if (initial) await api.updateNotification({ id: initial.id, title: title.trim(), content: content.trim() });
-      else await api.createNotification({ workspaceId: workspace.id, title: title.trim(), content: content.trim() });
-      if (!initial) { setTitle(""); setContent(""); }
-      await onSaved();
-    } catch (e) { setNotice(e instanceof Error ? e.message : initial ? "공지를 수정하지 못했습니다" : "공지를 등록하지 못했습니다"); }
-    finally { setBusy(false); }
-  };
-  return <Card title={initial ? "공지 수정" : "공지 작성"}><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" /><TextInput value={content} onChangeText={setContent} style={styles.input} placeholder="공지 내용" multiline />
-    <Button label={busy ? "저장 중…" : initial ? "수정 저장" : "공지 등록"} onPress={submit} disabled={busy || !title.trim() || !content.trim()} />{onCancel ? <Button label="취소" kind="secondary" onPress={onCancel} disabled={busy} /> : null}{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card>;
-}
 function Profile({ workspaces, workspace, onSelect, onReload, onLogout }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onReload: () => Promise<void>; onLogout: () => void | Promise<void> }) {
   const [inviteCode, setInviteCode] = useState("");
   const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT");
