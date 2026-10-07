@@ -5,9 +5,8 @@ import { SeugiColor } from "@seugi/design-tokens";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
-export function CreateRoomScreen({ workspace, roomType, onBack, onCreated }: {
+export function CreateRoomScreen({ workspace, onBack, onCreated }: {
   workspace: Workspace;
-  roomType: "group" | "personal";
   onBack: () => void;
   onCreated: (room: Room) => void;
 }) {
@@ -21,7 +20,7 @@ export function CreateRoomScreen({ workspace, roomType, onBack, onCreated }: {
 
   useEffect(() => {
     let active = true;
-    api.workspaceMembers(workspace.id).then((result) => active && setMembers(result.data ?? []))
+    Promise.all([api.workspaceMembers(workspace.id), api.memberInfo()]).then(([result, current]) => active && setMembers((result.data ?? []).filter((member) => member.id !== current.data?.id)))
       .catch((reason) => active && setError(reason instanceof Error ? reason.message : "구성원을 불러오지 못했습니다"));
     return () => { active = false; };
   }, [workspace.id]);
@@ -31,8 +30,9 @@ export function CreateRoomScreen({ workspace, roomType, onBack, onCreated }: {
     setBusy(true);
     setError("");
     try {
-      const result = await api.createRoom(roomType, { workspaceId: workspace.id, name, memberIds: selectedIds });
-      const list = await api.rooms(workspace.id, roomType);
+      const actualType = selectedIds.length === 1 ? "personal" : "group";
+      const result = await api.createRoom(actualType, { workspaceId: workspace.id, name, memberIds: selectedIds });
+      const list = await api.rooms(workspace.id, actualType);
       const room = list.data?.find((item) => item.id === result.data);
       if (!room) throw new Error("생성한 채팅방을 불러오지 못했습니다");
       onCreated(room);
@@ -45,7 +45,7 @@ export function CreateRoomScreen({ workspace, roomType, onBack, onCreated }: {
 
   const next = () => {
     if (!selectedIds.length || busy) return;
-    if (roomType === "personal" || selectedMembers.length === 1) {
+    if (selectedMembers.length === 1) {
       void create(selectedMembers[0]?.name ?? "채팅");
       return;
     }

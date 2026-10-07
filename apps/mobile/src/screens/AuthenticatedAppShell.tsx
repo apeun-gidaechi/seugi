@@ -159,7 +159,6 @@ export function AuthenticatedAppShell({
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
           workspace={workspace}
-          roomType={tab === "group" ? "group" : "personal"}
           onBack={goBack}
           onCreated={(room) => { setCreatedRoom(room); goBack(); }}
         />
