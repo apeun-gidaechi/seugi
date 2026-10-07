@@ -43,6 +43,7 @@ export function HomeScreen({
   onOpenNotices,
   onCreateNotice,
   onEditNotice,
+  onCreateTimetable,
   canCreateNotice,
   canManageNotices,
 }: {
@@ -56,6 +57,7 @@ export function HomeScreen({
   onOpenNotices: () => void;
   onCreateNotice: () => void;
   onEditNotice: (notice: import("@seugi/contracts").Notification) => void;
+  onCreateTimetable: () => void;
   canCreateNotice: boolean;
   canManageNotices: boolean;
 }) {
@@ -67,6 +69,9 @@ export function HomeScreen({
   const [mealPage, setMealPage] = useState(0);
   const [mealPageWidth, setMealPageWidth] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentPeriod, setCurrentPeriod] = useState<number | null>(null);
+  const [allPeriodsOver, setAllPeriodsOver] = useState(false);
+  const [canManageTimetable, setCanManageTimetable] = useState(false);
   const refreshHome = useCallback(async () => {
     setRefreshing(true);
     const results = await Promise.allSettled([
@@ -86,6 +91,13 @@ export function HomeScreen({
   useEffect(() => {
     void refreshHome();
   }, [refreshHome, refreshToken]);
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
+      if (active) setCanManageTimetable(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
+    }).catch(() => { if (active) setCanManageTimetable(false); });
+    return () => { active = false; };
+  }, [workspace.id, workspace.ownerId]);
 
   const today = localDateKey(new Date());
   const todaysMeals = (meals ?? []).filter((item) => item.date.slice(0, 10) === today);
@@ -95,10 +107,20 @@ export function HomeScreen({
   const todaysTimetable = timetable
     .filter((item) => item.date.slice(0, 10) === today)
     .sort((a, b) => Number(a.time) - Number(b.time));
-  const selectedPeriod = Math.floor((Date.now() - new Date().setHours(8, 50, 0, 0)) / 3_600_000);
   const upcoming = schedules
     .filter((item) => item.date.slice(0, 10) >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
+
+  useEffect(() => {
+    const updatePeriod = () => {
+      const state = getCurrentTimetablePeriod(todaysTimetable);
+      setCurrentPeriod(state.period);
+      setAllPeriodsOver(state.allPeriodsOver);
+    };
+    updatePeriod();
+    const interval = setInterval(updatePeriod, 1000);
+    return () => clearInterval(interval);
+  }, [timetable]);
 
   return (
     <ScrollView
@@ -111,14 +133,14 @@ export function HomeScreen({
           <Button label="전환" kind="secondary" onPress={onOpenWorkspace} />
         </View>}
       </HomeCard>
-      <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
+      <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable} trailing={canManageTimetable ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="시간표 만들기" onPress={onCreateTimetable} style={styles.homeCardQuickAction}><Text style={styles.link}>＋</Text></TouchableOpacity> : null}>
         {todaysTimetable.length ? (
           Platform.OS === "ios" ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iosPeriods}>
               {todaysTimetable.map((item, index) => {
                 const period = Number(item.time) - 1;
-                const current = selectedPeriod === period;
-                const elapsed = selectedPeriod >= period;
+                const current = currentPeriod === period + 1;
+                const elapsed = allPeriodsOver || (currentPeriod !== null && currentPeriod > period + 1);
                 return <View key={item.id} style={styles.iosPeriod}>
                   <Text style={[styles.periodNumber, current && styles.periodNumberCurrent]}>{item.time}</Text>
                   <View style={[styles.periodSubject, elapsed && styles.periodSubjectElapsed, current && styles.periodSubjectCurrent, index === 0 && styles.periodFirst, index === todaysTimetable.length - 1 && styles.periodLast]}>
@@ -129,12 +151,12 @@ export function HomeScreen({
             </ScrollView>
           ) : (
             <View style={styles.androidPeriods}>
-              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.max(1, Math.min(100, ((selectedPeriod + 0.9) / todaysTimetable.length) * 100))}%` }]} /></View>
-              <View style={styles.periodRow}>{todaysTimetable.map((item, index) => {
-                const current = selectedPeriod === Number(item.time) - 1;
+              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${allPeriodsOver ? 100 : Math.max(1, Math.min(100, (((currentPeriod ?? 0) + 0.9) / todaysTimetable.length) * 100))}%` }]} /></View>
+              <View style={styles.periodRow}>{todaysTimetable.map((item) => {
+                const current = currentPeriod === Number(item.time);
                 return <View key={item.id} style={styles.androidPeriod}>
                   <Text style={[styles.periodNumber, current && styles.periodNumberCurrent]}>{item.time}</Text>
-                  <Text numberOfLines={1} style={[styles.periodSubjectText, current && styles.periodSubjectTextCurrent, index > selectedPeriod && styles.periodUpcoming]}>{item.subject}</Text>
+                  <Text numberOfLines={1} style={[styles.periodSubjectText, current && styles.periodSubjectTextCurrent, !allPeriodsOver && currentPeriod !== null && Number(item.time) > currentPeriod && styles.periodUpcoming]}>{item.subject}</Text>
                 </View>;
               })}</View>
             </View>
@@ -227,14 +249,41 @@ const homeCardPaths: Record<HomeCardIcon, string> = {
   task: "M5 4h14v17H5z M8 9l1.5 1.5L12 8m1 2h3m-8 5 1.5 1.5L12 14m1 2h3",
 };
 
-function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void }) {
+function HomeCard({ title, icon, children, onPress, trailing }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void; trailing?: ReactNode }) {
   return <View style={styles.homeCard}>
     <View style={styles.homeCardHeader}>
       <View style={styles.homeCardIcon}><Svg width={24} height={24} viewBox="0 0 24 24"><Path d={homeCardPaths[icon]} fill="none" stroke={SeugiColor.Gray600} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></Svg></View>
       {onPress ? <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.homeCardTitleButton}><Text style={styles.homeCardTitle}>{title}</Text><Text style={styles.homeCardArrow}>›</Text></TouchableOpacity> : <Text style={styles.homeCardTitle}>{title}</Text>}
+      {trailing}
     </View>
     <View style={styles.homeCardBody}>{children}</View>
   </View>;
+}
+
+function getCurrentTimetablePeriod(entries: Timetable[], now = new Date()) {
+  const startTime = new Date(now);
+  startTime.setHours(8, 50, 0, 0);
+  const lunchStart = new Date(now);
+  lunchStart.setHours(12, 40, 0, 0);
+  const lunchEnd = new Date(now);
+  lunchEnd.setHours(13, 30, 0, 0);
+  let lastPeriodEnd: Date | undefined;
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const periodStart = new Date(startTime.getTime() + index * 60 * 60 * 1000);
+    const periodEnd = new Date(periodStart.getTime() + 50 * 60 * 1000);
+    const breakEnd = new Date(periodEnd.getTime() + 10 * 60 * 1000);
+    if (periodStart >= lunchStart && periodStart < lunchEnd) periodStart.setTime(lunchEnd.getTime());
+    if (periodEnd >= lunchStart && periodEnd < lunchEnd) {
+      periodEnd.setTime(lunchEnd.getTime());
+      breakEnd.setTime(periodEnd.getTime() + 10 * 60 * 1000);
+    }
+    lastPeriodEnd = breakEnd;
+    if ((now >= periodStart && now < periodEnd) || (now >= periodEnd && now < breakEnd)) {
+      return { period: index + 1, allPeriodsOver: false };
+    }
+  }
+  return { period: null, allPeriodsOver: !!lastPeriodEnd && now > lastPeriodEnd };
 }
 
 export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entries: Timetable[]; onSelectCell?: (date: string, time: string) => void; onSelectEntry?: (entry: Timetable) => void }) {
@@ -313,7 +362,7 @@ export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entrie
   );
 }
 
-export function TimetablePage({ workspace }: { workspace: Workspace }) {
+export function TimetablePage({ workspace, initialCreate = false, onCreated }: { workspace: Workspace; initialCreate?: boolean; onCreated?: () => void }) {
   const [entries, setEntries] = useState<Timetable[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -323,6 +372,9 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
   const [editing, setEditing] = useState<Timetable>();
   const [draft, setDraft] = useState("");
   const [slot, setSlot] = useState<{ date: string; time: string }>();
+  useEffect(() => {
+    if (initialCreate) setSlot({ date: localDateKey(new Date()), time: "1" });
+  }, [initialCreate]);
   const refresh = useCallback(async () => {
     setBusy(true);
     setError("");
@@ -363,7 +415,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
     try {
       if (editing) await api.updateTimetable(editing.id, draft.trim());
       else if (slot) await api.createTimetable({ workspaceId: workspace.id, grade, classNum, time: slot.time, subject: draft.trim(), date: slot.date });
-      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh();
+      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh(); onCreated?.();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 저장하지 못했습니다"); }
     finally { setBusy(false); }
   };
@@ -569,6 +621,7 @@ const styles = StyleSheet.create({
   homeCardIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: SeugiColor.Gray100, alignItems: "center", justifyContent: "center" },
   homeCardTitle: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
   homeCardTitleButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  homeCardQuickAction: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   homeCardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 26 },
   homeCardBody: { paddingHorizontal: 12, paddingTop: 12 },
   mealPage: { paddingHorizontal: 4, minHeight: 72 },
