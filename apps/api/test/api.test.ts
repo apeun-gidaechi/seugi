@@ -55,6 +55,14 @@ test("a member can register and remove a device notification token", async () =>
   await app.close();
 });
 
+test("email login accepts the original client token field", async () => {
+  const store = new Store(); store.emailCodes.set("legacy-token@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-token@example.com", password: "password123", code: "123456" } });
+  const login = await app.inject({ method: "POST", url: "/member/login", payload: { email: "legacy-token@example.com", password: "password123", token: "legacy-fcm-token" } });
+  assert.equal(login.statusCode, 200); assert.deepEqual([...store.deviceTokens.values()], [["legacy-fcm-token"]]);
+  await app.close();
+});
+
 test("workspace data rejects unauthenticated and non-member access with HTTP semantics", async () => {
   const store = new Store(); const app = await buildApp(store);
   for (const email of ["owner@example.com", "other@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
