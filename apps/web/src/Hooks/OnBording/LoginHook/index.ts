@@ -39,7 +39,7 @@ const index = () => {
             Cookies.set("workspaceId", checkWorkspaces[0].workspaceId);
             navigate(paths.home);
         } catch (error) {
-            console.log("Error fetching workspace:", error);
+            console.error("워크스페이스 정보를 가져오지 못했습니다.");
             setAlertMessage("워크스페이스 정보를 가져오는 중 오류가 발생했습니다. 새로 고침 후 다시 시도해 주세요.");
             Cookies.remove('accessToken');
             Cookies.remove('refreshToken');
@@ -62,7 +62,6 @@ const index = () => {
                 "등록되지 않은 아이디이거나 아이디 또는 비밀번호를 잘못 입력했습니다"
             );
             setShowAlert(true);
-            console.log(error);
         }
     };
 
@@ -114,11 +113,10 @@ const index = () => {
                     "구글 로그인 중 오류가 발생했습니다. 다시 시도해주세요."
                 );
                 setShowAlert(true);
-                console.log(error);
             }
         },
-        onError: (errorResponse: any) => {
-            console.error(errorResponse);
+        onError: () => {
+            console.error("구글 로그인을 완료하지 못했습니다.");
         },
     });
 
@@ -147,12 +145,12 @@ const index = () => {
                 await getMyInfo();
                 await manageWorkspace();
             } catch (error) {
-                console.error("애플 로그인 처리 중 오류:", error);
+                console.error("애플 로그인 처리를 완료하지 못했습니다.");
             }
         };
 
-        const handleFailure = (error: any) => {
-            console.error("Apple login error: ", error);
+        const handleFailure = () => {
+            console.error("애플 로그인을 완료하지 못했습니다.");
             setAlertMessage("애플 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
             setShowAlert(true);
         };

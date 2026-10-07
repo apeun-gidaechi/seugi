@@ -26,14 +26,13 @@ const index = () => {
     // 인증코드 보내기 함수
     const handleSendCode = async () => {
         try {
-            console.log(email);
             if (!email) return;
             await sendVerificationCode(email);
             setTimer(300);
             setShowAlert(true);
             setIsCodeSent(true);
         } catch (error) {
-            console.error('Error sending code:', error);
+            console.error('인증 코드를 보내지 못했습니다.');
         }
     };
 
@@ -45,7 +44,6 @@ const index = () => {
     // 회원가입 정보 보내기
     const sendCode = async () => {
         const verificationCode = code.join('');
-        console.log(name, email, password, verificationCode);
         try {
             await registerMember({
                 name,
@@ -55,7 +53,7 @@ const index = () => {
             });
             navigate(paths.login);
         } catch (error) {
-            console.error('Error sending code:', error);
+            console.error('회원가입을 완료하지 못했습니다.');
         }
     };
 
