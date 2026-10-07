@@ -120,7 +120,9 @@ export default function App() {
     if (signedIn) void refreshHomeWidgets().catch(() => undefined);
     (async () => {
       if (!EAS_PROJECT_ID) {
-        setError("푸시 알림을 사용하려면 EXPO_PUBLIC_EAS_PROJECT_ID 설정이 필요합니다.");
+        console.warn(
+          "[notifications] EXPO_PUBLIC_EAS_PROJECT_ID is not configured; push registration was skipped.",
+        );
         return;
       }
       if (Platform.OS === "android")
@@ -138,7 +140,11 @@ export default function App() {
       await api.registerDeviceToken(token);
       if (active) setDeviceToken(token);
     })().catch((reason: unknown) => {
-      if (active) setError(reason instanceof Error ? `푸시 알림을 설정하지 못했습니다: ${reason.message}` : "푸시 알림을 설정하지 못했습니다.");
+      if (active)
+        console.warn(
+          "[notifications] Push registration failed.",
+          reason,
+        );
     });
     return () => {
       active = false;
