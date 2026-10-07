@@ -142,7 +142,7 @@ export function AuthenticatedAppShell({
             <Text style={styles.back}>‹</Text>
           </TouchableOpacity>
         ) : null}
-        title={!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <SeugiTextField autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" fieldStyle={styles.headerSearchField} style={styles.headerSearchInput} /> : <Text style={styles.title}>{title}</Text>}
+        title={!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <SeugiTextField autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={closeRoomSearch} returnKeyType="search" placeholder="채팅방 검색" fieldStyle={styles.headerSearchField} style={styles.headerSearchInput} /> : <Text style={styles.title}>{title}</Text>}
         trailing={!detail && tab === "home" ? (
           <TouchableOpacity
             accessibilityRole="button"
