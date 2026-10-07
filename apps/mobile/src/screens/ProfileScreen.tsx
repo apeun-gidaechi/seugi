@@ -81,7 +81,7 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
       {busy ? <Text style={styles.muted}>변경 사항을 저장하는 중…</Text> : null}
       {message ? <Text style={message.includes("변경") ? styles.answer : styles.error}>{message}</Text> : null}
     </Card>
-    <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><TextInput autoFocus value={draft} onChangeText={setDraft} style={styles.input} placeholder="이름을 입력해 주세요" maxLength={50} /><View style={styles.dialogActions}><TouchableOpacity onPress={() => setEditingName(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => void saveName()} disabled={busy || !draft.trim()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
+    <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><TextInput autoFocus value={draft} onChangeText={setDraft} style={styles.input} placeholder="이름을 입력해 주세요" maxLength={40} /><View style={styles.dialogActions}><TouchableOpacity onPress={() => setEditingName(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => void saveName()} disabled={busy || !draft.trim()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
   </>;
 }
 
