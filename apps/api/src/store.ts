@@ -20,6 +20,7 @@ export type StoreSnapshot = {
   waitlistRoles: Array<[string, "STUDENT" | "TEACHER" | "MIDDLE_ADMIN"]>;
   workspacePushPreferences: Array<[string, boolean]>;
 };
+export type MessageDeletedEvent = { roomId: string; messageId: string; senderId: string };
 
 /**
  * Domain storage with an optional atomic JSON persistence adapter. Production
@@ -41,12 +42,18 @@ export class Store {
   deviceTokens = new Map<string, string[]>();
   waitlistRoles = new Map<string, "STUDENT" | "TEACHER" | "MIDDLE_ADMIN">();
   workspacePushPreferences = new Map<string, boolean>();
+  private readonly messageDeletedListeners = new Set<(event: MessageDeletedEvent) => void>();
+  private pendingMessageDeletedEvents: MessageDeletedEvent[] = [];
   constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   pushTokensForWorkspace(workspaceId: string, memberIds: string[], excludedMemberId?: string) { return memberIds.filter((id) => id !== excludedMemberId && this.workspacePushPreferences.get(`${workspaceId}:${id}`) !== false).flatMap((id) => this.deviceTokens.get(id) ?? []); }
   requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
   requireWorkspace(id: string) { const value = this.workspaces.get(id); if (!value) throw new Error("WORKSPACE_NOT_FOUND"); return value; }
   canAccess(workspaceId: string, memberId: string) { return this.requireWorkspace(workspaceId).members.includes(memberId); }
+  onMessageDeleted(listener: (event: MessageDeletedEvent) => void) { this.messageDeletedListeners.add(listener); return () => this.messageDeletedListeners.delete(listener); }
+  queueMessageDeleted(event: MessageDeletedEvent) { this.pendingMessageDeletedEvents.push(event); }
+  flushMessageDeletedEvents() { const events = this.pendingMessageDeletedEvents; this.pendingMessageDeletedEvents = []; for (const event of events) for (const listener of this.messageDeletedListeners) listener(event); }
+  discardMessageDeletedEvents() { this.pendingMessageDeletedEvents = []; }
   load(): void | Promise<void> {
     if (!this.filePath || !existsSync(this.filePath)) return;
     const snapshot = JSON.parse(readFileSync(this.filePath, "utf8")) as StoreSnapshot;
@@ -63,15 +70,17 @@ export class Store {
     return { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals], emailCodes: [...this.emailCodes], oauth: [...this.oauth], deviceTokens: [...this.deviceTokens], waitlistRoles: [...this.waitlistRoles], workspacePushPreferences: [...this.workspacePushPreferences] };
   }
   persist(): void | Promise<void> {
-    if (!this.filePath) return;
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    const snapshot = this.snapshot();
-    const temporary = `${this.filePath}.tmp`;
-    writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
-    renameSync(temporary, this.filePath);
+    if (this.filePath) {
+      mkdirSync(dirname(this.filePath), { recursive: true });
+      const snapshot = this.snapshot();
+      const temporary = `${this.filePath}.tmp`;
+      writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
+      renameSync(temporary, this.filePath);
+    }
+    this.flushMessageDeletedEvents();
   }
   async beginRequest() {}
-  async rollbackRequest() {}
+  async rollbackRequest() { this.discardMessageDeletedEvents(); }
   async close() {}
   async withMutation<T>(operation: () => Promise<T> | T): Promise<T> {
     const result = await operation();

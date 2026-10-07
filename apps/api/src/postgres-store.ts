@@ -75,8 +75,10 @@ export class PostgresStore extends Store {
     try {
       await client.query("UPDATE seugi_state SET revision = revision + 1, payload = $1::jsonb, updated_at = NOW() WHERE id = 1", [JSON.stringify(this.snapshot())]);
       await client.query("COMMIT");
+      this.flushMessageDeletedEvents();
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
+      this.discardMessageDeletedEvents();
       throw error;
     } finally {
       this.activeRequest = undefined;
@@ -91,6 +93,7 @@ export class PostgresStore extends Store {
     if (!client) return;
     this.activeRequest = undefined;
     await client.query("ROLLBACK").catch(() => undefined);
+    this.discardMessageDeletedEvents();
     client.release();
     this.activeRelease?.();
     this.activeRelease = undefined;

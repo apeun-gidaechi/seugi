@@ -65,6 +65,7 @@ export class SeugiApi {
   messages(roomId: string, timestamp?: string) { const cursor = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : ""; return this.request<{ messages: ChatMessage[]; hasNext: boolean }>(`/message/search/${roomId}${cursor}`); }
   addMessageEmoji(messageId: string, emoji: string) { return this.request<void>("/message/emoji", { method: "PUT", body: JSON.stringify({ messageId, emoji }) }); }
   removeMessageEmoji(messageId: string, emoji: string) { return this.request<void>("/message/emoji", { method: "DELETE", body: JSON.stringify({ messageId, emoji }) }); }
+  deleteMessage(roomId: string, messageId: string) { return this.request<void>("/message/delete", { method: "DELETE", body: JSON.stringify({ roomId, messageId }) }); }
   notifications(workspaceId: string) { return this.request<Notification[]>(`/notification/${workspaceId}`); }
   createNotification(input: { workspaceId: string; title: string; content: string }) { return this.request<Notification>("/notification", { method: "POST", body: JSON.stringify(input) }); }
   updateNotification(input: { id: string; workspaceId: string; title: string; content: string }) { return this.request<void>("/notification", { method: "PATCH", body: JSON.stringify(input) }); }

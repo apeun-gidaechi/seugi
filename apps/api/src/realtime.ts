@@ -8,6 +8,8 @@ import { z } from "zod";
 export function attachRealtime(app: FastifyInstance, store: Store) {
   const io = new Server(app.server, { cors: { origin: true } });
   const push = new PushNotifications();
+  const unsubscribeMessageDeleted = store.onMessageDeleted((event) => io.to(event.roomId).emit("chat:message-deleted", event));
+  app.addHook("onClose", async () => { unsubscribeMessageDeleted(); });
   io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
     socket.on("room:join", (roomId: string) => {
