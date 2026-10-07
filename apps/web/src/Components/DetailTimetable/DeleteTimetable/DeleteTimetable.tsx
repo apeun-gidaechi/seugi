@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import * as S from './DeleteTimetable.style';
 import { getTimeTable } from '@/Api/Home';
 import Cookies from 'js-cookie';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
+import { deleteTimetableEntry } from '@/Api/timetable';
 
 interface DeleteTimetableProps {
     onCancel: () => void;
@@ -10,13 +10,13 @@ interface DeleteTimetableProps {
 
 const DeleteTimetable = ({ onCancel }: DeleteTimetableProps) => {
     const workspaceId = Cookies.get("workspaceId") || "";
-    const [id, setId] = useState<number | null>(null);
+    const [id, setId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchTimetable = async () => {
             try {
                 const data = await getTimeTable(workspaceId);
-                setId(data.id);
+                setId(data[0]?.id ?? null);
             } catch (err) {
                 console.error(err);
             }
@@ -26,7 +26,8 @@ const DeleteTimetable = ({ onCancel }: DeleteTimetableProps) => {
 
     const handleDelete = async () => {
         try {
-            await SeugiCustomAxios.delete(`/timetable/${id}`);
+            if (!id) return;
+            await deleteTimetableEntry(id);
         } catch (err) {
             console.error(err);
         }

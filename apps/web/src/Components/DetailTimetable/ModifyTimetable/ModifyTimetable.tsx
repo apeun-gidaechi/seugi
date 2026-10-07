@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import * as S from './ModifyTimetable.style';
 import CancleImg from '@/Assets/image/profile/CancleImg.svg';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import { getTimeTable } from '@/Api/Home';
+import { updateTimetableEntry } from '@/Api/timetable';
 import Cookies from 'js-cookie';
 
 const ModifyTimetable = () => {
     const workspaceId = Cookies.get("workspaceId") || "";
     const [inputValue, setInputValue] = useState("");
-    const [id, setId] = useState<number | null>(null);
+    const [id, setId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchTimetable = async () => {
             try {
                 const data = await getTimeTable(workspaceId);
-                setId(data.id);
+                setId(data[0]?.id ?? null);
             } catch (err) {
                 console.error(err);
             }
@@ -33,11 +33,7 @@ const ModifyTimetable = () => {
         }
 
         try {
-            const res = await SeugiCustomAxios.patch(`/timetable`, {
-                id,
-                subject: inputValue
-            });
-            console.log('응답:', res);
+            await updateTimetableEntry(id, inputValue);
         } catch (err) {
             console.error(err);
         }

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import * as S from './DetailTimeTable.style';
 import { addDays, format, startOfWeek } from 'date-fns';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import Cookies from 'js-cookie';
 import PopOver from '@/Components/DetailTimetable/PopOver/PopOver';
+import { getWeeklyTimetable } from '@/Api/timetable';
 
 interface TimetableData {
   period: number;
@@ -41,13 +41,13 @@ const DetailTimetable = ({ onClose }: Props) => {
 
   const handleGetWeekTimetable = async (weekStart: Date) => {
     try {
-      const res = await SeugiCustomAxios.get(`/timetable/weekend?workspaceId=${workspaceId}`);
-      console.log(res);
+      if (!workspaceId) return;
+      const timetable = await getWeeklyTimetable(workspaceId);
 
-      if (res.data && res.data.data) {
+      if (timetable) {
         const newTimetable: (TimetableData | null)[][] = Array(7).fill(null).map(() => Array(5).fill(null));
 
-        res.data.data.forEach((item: any) => {
+        timetable.forEach((item) => {
           const dayIndex = days.indexOf(format(new Date(item.date), 'eee'));
 
           const periodIndex = parseInt(item.time) - 1;

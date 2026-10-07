@@ -3,7 +3,7 @@ import * as S from './CreateTimetable.style';
 import CancleImg from '@/Assets/image/profile/CancleImg.svg';
 import MinusImg from '@/Assets/image/home/minus_line.svg';
 import PlusImg from '@/Assets/image/home/add_line.svg';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
+import { createTimetableEntry } from '@/Api/timetable';
 import CalendarImg from '@/Assets/image/home/calendar.svg';
 import Cookies from 'js-cookie';
 import DatePicker from 'react-datepicker';
@@ -37,7 +37,7 @@ const CreateTimetable = ({ date, onClose }: CreateTimetableProps) => {
         const formattedDate = selectedDate.toISOString().split('T')[0];
         console.log(formattedDate);
         try {
-            await SeugiCustomAxios.post(`/timetable`, {
+            await createTimetableEntry({
                 workspaceId,
                 grade,
                 classNum,
