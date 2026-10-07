@@ -35,6 +35,7 @@ import {
   messageHistoryQuerySchema,
   monthScheduleQuerySchema,
   notificationEmojiSchema,
+  notificationPageQuerySchema,
   oauthProviderSchema,
   otherProfileQuerySchema,
   profileWorkspaceQuerySchema,
@@ -1366,6 +1367,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       const workspaceId = workspaceParam.parse(request.params).workspaceId;
       if (!store.canAccess(workspaceId, request.user.sub))
         throw new Error("권한이 없습니다");
+      const { page, size } = query(notificationPageQuerySchema, request);
       return ok(
         "공지 조회 성공",
         [...store.notifications.values()]
@@ -1375,6 +1377,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
               b.createdAt.localeCompare(a.createdAt) ||
               b.id.localeCompare(a.id),
           )
+          .slice(page * size, (page + 1) * size)
           .map(legacyNotification),
       );
     },

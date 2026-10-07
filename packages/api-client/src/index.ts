@@ -77,7 +77,7 @@ export class SeugiApi {
   addMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.addMessageEmoji.path, { method: API_SPEC.addMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
   removeMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.removeMessageEmoji.path, { method: API_SPEC.removeMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
   deleteMessage(roomId: string, messageId: string) { return this.request<void>(API_SPEC.deleteMessage.path, { method: API_SPEC.deleteMessage.method, body: JSON.stringify({ roomId, messageId }) }); }
-  notifications(workspaceId: string) { return this.request<LegacyNotification[]>(API_SPEC.listNotifications.pathFor(workspaceId)); }
+  notifications(workspaceId: string, page = 0, size = 20) { return this.request<LegacyNotification[]>(API_SPEC.listNotifications.pathFor(workspaceId, String(page), String(size))); }
   createNotification(input: CreateNotificationInput) { return this.request<LegacyNotification>(API_SPEC.createNotification.path, { method: API_SPEC.createNotification.method, body: JSON.stringify(input) }); }
   updateNotification(input: UpdateNotificationInput) { return this.request<void>(API_SPEC.updateNotification.path, { method: API_SPEC.updateNotification.method, body: JSON.stringify(input) }); }
   deleteNotification(workspaceId: string, id: string) { return this.request<void>(API_SPEC.deleteNotification.pathFor(workspaceId, id), { method: API_SPEC.deleteNotification.method }); }

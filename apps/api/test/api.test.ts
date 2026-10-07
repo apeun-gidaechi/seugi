@@ -477,6 +477,31 @@ test("announcements are returned newest first, matching the original descending 
   } finally { await app.close(); }
 });
 
+test("announcement list follows the native page and size contract", async () => {
+  const store = new Store();
+  const memberId = "00000000-0000-4000-8000-000000000041";
+  const workspaceId = "00000000-0000-4000-8000-000000000042";
+  store.members.set(memberId, { id: memberId, email: "notice-pages@example.com", name: "페이지 사용자" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "PAGE", name: "공지 페이지", members: [memberId], waitlist: [], ownerId: memberId });
+  for (let index = 1; index <= 25; index++) {
+    const suffix = String(index).padStart(12, "0");
+    const id = `00000000-0000-4000-8000-${suffix}`;
+    store.notifications.set(id, { id, workspaceId, title: `공지 ${index}`, content: "본문", authorId: memberId, createdAt: new Date(Date.UTC(2025, 0, index)).toISOString(), emojis: {} });
+  }
+  const app = await buildApp(store);
+  const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`;
+  try {
+    const first = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: { authorization } });
+    const second = await app.inject({ method: "GET", url: `/notification/${workspaceId}?page=1&size=20`, headers: { authorization } });
+    const third = await app.inject({ method: "GET", url: `/notification/${workspaceId}?page=2&size=20`, headers: { authorization } });
+    assert.equal(first.json().data.length, 20);
+    assert.equal(first.json().data[0].title, "공지 25");
+    assert.equal(second.json().data.length, 5);
+    assert.equal(second.json().data[0].title, "공지 5");
+    assert.deepEqual(third.json().data, []);
+  } finally { await app.close(); }
+});
+
 test("legacy desktop workspace administration response and request fields remain supported", async () => {
   const store = new Store(); const app = await buildApp(store);
   for (const email of ["legacy-admin@example.com", "legacy-student@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });

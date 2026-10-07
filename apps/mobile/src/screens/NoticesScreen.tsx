@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
@@ -13,7 +13,22 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
   const [canManage, setCanManage] = useState(false);
   const [emojiTarget, setEmojiTarget] = useState<Notification>();
   const [customEmoji, setCustomEmoji] = useState("");
-  const refresh = useCallback(() => api.notifications(workspace.id).then((x) => setItems(x.data ?? [])).catch((e) => setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다")), [workspace.id]);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const currentPage = useRef(-1);
+  const loadingMoreRef = useRef(false);
+  const pageSize = 20;
+  const refresh = useCallback(async () => {
+    setError("");
+    currentPage.current = -1;
+    setHasNextPage(false);
+    try {
+      const result = await api.notifications(workspace.id, 0, pageSize);
+      setItems(result.data ?? []);
+      currentPage.current = 0;
+      setHasNextPage((result.data?.length ?? 0) === pageSize);
+    } catch (e) { setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다"); }
+  }, [workspace.id]);
   useEffect(() => {
     refresh();
     let active = true;
@@ -26,16 +41,44 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
     return () => { active = false; };
   }, [refresh, workspace.id, workspace.ownerId]);
   const react = async (item: Notification, emoji: string) => {
-    try { await api.toggleNotificationEmoji(item.id, emoji); await refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "반응을 저장하지 못했습니다"); }
+    const users = item.emojis[emoji] ?? [];
+    const selected = users.includes(memberId);
+    const nextUsers = selected ? users.filter((id) => id !== memberId) : [...users, memberId];
+    const nextEmojis = { ...item.emojis };
+    if (nextUsers.length) nextEmojis[emoji] = nextUsers;
+    else delete nextEmojis[emoji];
+    setItems((current) => current.map((notice) => notice.id === item.id ? { ...notice, emojis: nextEmojis } : notice));
+    try { await api.toggleNotificationEmoji(item.id, emoji); }
+    catch (e) { setItems((current) => current.map((notice) => notice.id === item.id ? item : notice)); setError(e instanceof Error ? e.message : "반응을 저장하지 못했습니다"); }
     finally { setEmojiTarget(undefined); }
+  };
+  const loadNextPage = async () => {
+    if (!hasNextPage || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setError("");
+    const page = currentPage.current + 1;
+    try {
+      const result = await api.notifications(workspace.id, page, pageSize);
+      const nextItems = result.data ?? [];
+      setItems((current) => {
+        const ids = new Set(current.map((item) => item.id));
+        return [...current, ...nextItems.filter((item) => !ids.has(item.id))];
+      });
+      currentPage.current = page;
+      setHasNextPage(nextItems.length === pageSize);
+    } catch (e) { setError(e instanceof Error ? e.message : "다음 공지를 불러오지 못했습니다"); }
+    finally { loadingMoreRef.current = false; setLoadingMore(false); }
   };
   const remove = (item: Notification) => Alert.alert("공지 삭제", `‘${item.title}’ 공지를 삭제할까요?`, [
     { text: "취소", style: "cancel" },
-    { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
+    { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(() => setItems((current) => current.filter((notice) => notice.id !== item.id))).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
   ]);
   return <><FlatList style={styles.content} data={items} keyExtractor={(item) => item.id}
+    onEndReached={() => void loadNextPage()}
+    onEndReachedThreshold={0.5}
     ListHeaderComponent={<>{canPost ? <Card title="공지 관리"><Button label="공지 작성" onPress={onCreate} /></Card> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
+    ListFooterComponent={loadingMore ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loader} /> : hasNextPage ? <TouchableOpacity style={styles.loadMore} onPress={() => void loadNextPage()}><Text style={styles.link}>이전 공지 더 보기</Text></TouchableOpacity> : null}
     ListEmptyComponent={<Text style={styles.empty}>새 공지가 없습니다.</Text>}
     renderItem={({ item }) => <Card title={item.title}><Text>{item.content}</Text><Text style={styles.muted}>{new Date(item.createdAt).toLocaleString()}</Text>
       {(item.authorId === memberId || canManage) ? <View style={styles.memberActions}>{item.authorId === memberId ? <TouchableOpacity onPress={() => onEdit(item)}><Text style={styles.link}>수정</Text></TouchableOpacity> : null}<TouchableOpacity onPress={() => remove(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity></View> : null}
@@ -77,6 +120,8 @@ const styles = StyleSheet.create({
   link: { color: SeugiColor.Primary500 },
   memberActions: { flexDirection: "row", gap: 14 },
   reactions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingTop: 6 },
+  loader: { padding: 16 },
+  loadMore: { alignItems: "center", paddingVertical: 18 },
   reaction: { borderWidth: 1, borderColor: SeugiColor.Gray100, backgroundColor: SeugiColor.Gray100, borderRadius: 16, paddingHorizontal: 9, paddingVertical: 5 },
   reactionSelected: { borderColor: SeugiColor.Primary500, backgroundColor: SeugiColor.Primary050 },
   addReaction: { width: 34, height: 30, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 16, alignItems: "center", justifyContent: "center" },

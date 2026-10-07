@@ -4,7 +4,7 @@ export { createWorkspaceSchema, updateWorkspaceSchema, joinWorkspaceSchema, work
 export { registerMemberSchema, loginMemberSchema, editMemberSchema, memberDeviceTokenSchema, logoutMemberSchema, emailVerificationSchema, type RegisterMemberInput, type LoginMemberInput, type EditMemberInput, type LogoutMemberInput, type EmailVerificationInput } from "./member.js";
 export { editProfileSchema, editStudentNumberSchema, profileWorkspaceQuerySchema, otherProfileQuerySchema, type EditProfileInput, type EditStudentNumberInput } from "./profile.js";
 export { createChatRoomSchema, chatMemberEventSchema, chatRoomSearchSchema, messageHistoryQuerySchema, chatEmojiSchema, deleteMessageSchema, type CreateChatRoomInput, type ChatMemberEventInput } from "./chat.js";
-export { createNotificationSchema, updateNotificationSchema, notificationEmojiSchema, type CreateNotificationInput, type UpdateNotificationInput } from "./notification.js";
+export { createNotificationSchema, updateNotificationSchema, notificationEmojiSchema, notificationPageQuerySchema, type CreateNotificationInput, type UpdateNotificationInput, type NotificationPageQuery } from "./notification.js";
 export { createTimetableSchema, updateTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, type CreateTimetableInput, type UpdateTimetableInput } from "./school.js";
 export { oauthProviderSchema, authenticateOAuthSchema, connectGoogleSchema, sendVerificationQuerySchema, aiPromptSchema, uploadTypeSchema, type AuthenticateOAuthInput, type ConnectGoogleInput } from "./integrations.js";
 export { CHAT_EMOJIS } from "./constants.js";
