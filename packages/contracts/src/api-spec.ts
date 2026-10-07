@@ -3,9 +3,10 @@
  * Request/response validation schemas live in the domain modules so browser
  * clients can consume routes without bundling server-side validators.
  */
-const route = (method: string, path: string) => ({ method, path });
-const path = <F extends (...parts: string[]) => string>(method: string, value: string, pathFor: F) => ({ method, path: value, pathFor });
-const query = <F extends (...parts: any[]) => string>(method: string, value: string, pathFor: F) => ({ method, path: value, pathFor });
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+const route = <M extends HttpMethod, P extends string>(method: M, path: P) => ({ method, path });
+const path = <M extends HttpMethod, P extends string, F extends (...parts: string[]) => string>(method: M, value: P, pathFor: F) => ({ method, path: value, pathFor });
+const query = <M extends HttpMethod, P extends string, F extends (...parts: any[]) => string>(method: M, value: P, pathFor: F) => ({ method, path: value, pathFor });
 const segment = (value: string) => encodeURIComponent(value);
 
 export const API_SPEC = {
