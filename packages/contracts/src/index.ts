@@ -5,6 +5,7 @@ export { registerMemberSchema, loginMemberSchema, editMemberSchema, memberDevice
 export { editProfileSchema, editStudentNumberSchema, profileWorkspaceQuerySchema, otherProfileQuerySchema, type EditProfileInput, type EditStudentNumberInput } from "./profile.js";
 export { createChatRoomSchema, chatMemberEventSchema, chatRoomSearchSchema, messageHistoryQuerySchema, chatEmojiSchema, deleteMessageSchema, type CreateChatRoomInput, type ChatMemberEventInput } from "./chat.js";
 export { createNotificationSchema, updateNotificationSchema, notificationEmojiSchema, type CreateNotificationInput, type UpdateNotificationInput } from "./notification.js";
+export { createTimetableSchema, updateTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, type CreateTimetableInput, type UpdateTimetableInput } from "./school.js";
 export { CHAT_EMOJIS } from "./constants.js";
 
 export type ApiResponse<T> = { message: string; data?: T };

@@ -4,6 +4,7 @@ import { editMemberSchema, loginMemberSchema, logoutMemberSchema, memberDeviceTo
 import { editProfileSchema, editStudentNumberSchema } from "./profile.js";
 import { chatMemberEventSchema, chatRoomSearchSchema, createChatRoomSchema, deleteMessageSchema, chatEmojiSchema, messageHistoryQuerySchema } from "./chat.js";
 import { createNotificationSchema, notificationEmojiSchema, updateNotificationSchema } from "./notification.js";
+import { createTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, updateTimetableSchema } from "./school.js";
 
 /** Shared transport specification consumed by both the API server and SDK. */
 export const API_SPEC = {
@@ -37,6 +38,17 @@ export const API_SPEC = {
   updateNotification: { method: "PATCH", path: "/notification", body: updateNotificationSchema },
   deleteNotification: { method: "DELETE", path: "/notification/:workspaceId/:id", pathFor: (workspaceId: string, id: string) => `/notification/${encodeURIComponent(workspaceId)}/${encodeURIComponent(id)}` },
   toggleNotificationEmoji: { method: "PATCH", path: "/notification/emoji", body: notificationEmojiSchema },
+  createTimetable: { method: "POST", path: "/timetable", body: createTimetableSchema },
+  updateTimetable: { method: "PATCH", path: "/timetable", body: updateTimetableSchema },
+  deleteTimetable: { method: "DELETE", path: "/timetable/:id", pathFor: (id: string) => `/timetable/${encodeURIComponent(id)}` },
+  resetTimetable: { method: "POST", path: "/timetable/reset" },
+  dailyTimetable: { method: "GET", path: "/timetable/day" },
+  weeklyTimetable: { method: "GET", path: "/timetable/weekend" },
+  mealForDate: { method: "GET", path: "/meal", query: mealDateQuerySchema },
+  meals: { method: "GET", path: "/meal/all", query: mealRangeQuerySchema },
+  resetMeals: { method: "POST", path: "/meal/reset/:workspaceId", pathFor: (workspaceId: string) => `/meal/reset/${encodeURIComponent(workspaceId)}` },
+  schedules: { method: "GET", path: "/schedule/:workspaceId", pathFor: (workspaceId: string) => `/schedule/${encodeURIComponent(workspaceId)}` },
+  monthSchedules: { method: "GET", path: "/schedule/month", query: monthScheduleQuerySchema },
   createTask: {
     method: "POST",
     path: "/task",

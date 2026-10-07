@@ -1,4 +1,4 @@
-import { API_SPEC, type ApiResponse, type ChatMessage, type ChatMemberEventInput, type ClassroomTask, type CreateChatRoomInput, type CreateNotificationInput, type CreateTaskInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateNotificationInput, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type ChatMessage, type ChatMemberEventInput, type ClassroomTask, type CreateChatRoomInput, type CreateNotificationInput, type CreateTaskInput, type CreateTimetableInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateNotificationInput, type UpdateTimetableInput, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -76,13 +76,13 @@ export class SeugiApi {
   tasks(workspaceId: string) { return this.request<Task[]>(API_SPEC.listTasks.pathFor(workspaceId)); }
   createTask(input: CreateTaskInput) { return this.request<void>(API_SPEC.createTask.path, { method: API_SPEC.createTask.method, body: JSON.stringify(input) }); }
   classroomTasks() { return this.request<ClassroomTask[]>("/task/classroom"); }
-  timetable(workspaceId: string) { return this.request<Timetable[]>(`/timetable/day?workspaceId=${encodeURIComponent(workspaceId)}`); }
-  weeklyTimetable(workspaceId: string) { return this.request<Timetable[]>(`/timetable/weekend?workspaceId=${encodeURIComponent(workspaceId)}`); }
-  createTimetable(input: Omit<Timetable, "id">) { return this.request<void>("/timetable", { method: "POST", body: JSON.stringify(input) }); }
-  updateTimetable(id: string, subject: string) { return this.request<void>("/timetable", { method: "PATCH", body: JSON.stringify({ id, subject }) }); }
-  deleteTimetable(id: string) { return this.request<void>(`/timetable/${encodeURIComponent(id)}`, { method: "DELETE" }); }
-  resetTimetable(workspaceId: string) { return this.request<void>(`/timetable/reset?workspaceId=${encodeURIComponent(workspaceId)}`, { method: "POST" }); }
-  meals(workspaceId: string, year?: number, month?: number) { const range = year !== undefined && month !== undefined ? `&year=${year}&month=${month}` : ""; return this.request<Meal[]>(`/meal/all?workspaceId=${encodeURIComponent(workspaceId)}${range}`); }
-  schedules(workspaceId: string) { return this.request<Schedule[]>(`/schedule/${encodeURIComponent(workspaceId)}`); }
+  timetable(workspaceId: string) { return this.request<Timetable[]>(`${API_SPEC.dailyTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  weeklyTimetable(workspaceId: string) { return this.request<Timetable[]>(`${API_SPEC.weeklyTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  createTimetable(input: CreateTimetableInput) { return this.request<void>(API_SPEC.createTimetable.path, { method: API_SPEC.createTimetable.method, body: JSON.stringify(input) }); }
+  updateTimetable(id: string, subject: string) { const input: UpdateTimetableInput = { id, subject }; return this.request<void>(API_SPEC.updateTimetable.path, { method: API_SPEC.updateTimetable.method, body: JSON.stringify(input) }); }
+  deleteTimetable(id: string) { return this.request<void>(API_SPEC.deleteTimetable.pathFor(id), { method: API_SPEC.deleteTimetable.method }); }
+  resetTimetable(workspaceId: string) { return this.request<void>(`${API_SPEC.resetTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`, { method: API_SPEC.resetTimetable.method }); }
+  meals(workspaceId: string, year?: number, month?: number) { const range = year !== undefined && month !== undefined ? `&year=${year}&month=${month}` : ""; return this.request<Meal[]>(`${API_SPEC.meals.path}?workspaceId=${encodeURIComponent(workspaceId)}${range}`); }
+  schedules(workspaceId: string) { return this.request<Schedule[]>(API_SPEC.schedules.pathFor(workspaceId)); }
   askCatSeugi(message: string) { return this.request<string>("/ai", { method: "POST", body: JSON.stringify({ message }) }); }
 }
