@@ -20,7 +20,20 @@ import {
   type HomeDetail,
 } from "./HomeScreen";
 import { NoticeEditorScreen, NoticesScreen } from "./NoticesScreen";
-import { ProfileScreen } from "./ProfileScreen";
+import {
+  ProfileScreen,
+  WorkspaceCreateScreen,
+  WorkspaceDetailScreen,
+  WorkspaceEditScreen,
+  WorkspaceInviteScreen,
+  WorkspaceJoinRequestsScreen,
+  WorkspaceJoinScreen,
+  WorkspaceMembersScreen,
+  WorkspaceNotificationsScreen,
+  WorkspaceOrganizationScreen,
+  WorkspacePendingScreen,
+  type WorkspaceSection,
+} from "./ProfileScreen";
 
 export type Tab = "home" | "chat" | "group" | "notice" | "profile";
 const tabs: Array<[Tab, string]> = [
@@ -37,16 +50,26 @@ const tabTitles: Record<Tab, string> = {
   notice: "알림",
   profile: "프로필",
 };
-type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice";
+type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
   tasks: "과제",
   catSeugi: "캣스기",
+  workspace: "학교 관리",
   createRoom: "멤버 선택",
   createTask: "과제 만들기",
   createNotice: "공지 작성",
   editNotice: "공지 수정",
+  workspaceEdit: "학교 정보 수정",
+  workspaceMembers: "구성원",
+  workspaceJoinRequests: "가입 신청 관리",
+  workspaceInvite: "초대 코드",
+  workspaceNotifications: "알림 설정",
+  workspaceOrganization: "조직도",
+  workspacePending: "가입 승인 대기",
+  workspaceCreate: "새 학교 만들기",
+  workspaceJoin: "학교 가입",
 };
 
 type AuthenticatedAppShellProps = {
@@ -70,9 +93,13 @@ export function AuthenticatedAppShell({
   onSelectWorkspace,
   onLogout,
 }: AuthenticatedAppShellProps) {
-  const [detail, setDetail] = useState<AppDetail>();
+  const [detailStack, setDetailStack] = useState<AppDetail[]>([]);
+  const detail = detailStack[detailStack.length - 1];
   const [createdRoom, setCreatedRoom] = useState<Room>();
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
+  const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
+  const goBack = () => setDetailStack((current) => current.slice(0, -1));
+  const changeTab = (next: Tab) => { setDetailStack([]); onTabChange(next); };
   const title = detail ? detailTitles[detail] : tabTitles[tab];
 
   return (
@@ -81,7 +108,7 @@ export function AuthenticatedAppShell({
         {detail ? (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => setDetail(undefined)}
+            onPress={goBack}
           >
             <Text style={styles.back}>‹</Text>
           </TouchableOpacity>
@@ -104,33 +131,43 @@ export function AuthenticatedAppShell({
 
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
       {detail === "timetable" ? <TimetablePage workspace={workspace} /> : null}
-      {detail === "tasks" ? <AssignmentsScreen workspace={workspace} onCreateTask={() => setDetail("createTask")} /> : null}
-      {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => setDetail("tasks")} /> : null}
+      {detail === "tasks" ? <AssignmentsScreen workspace={workspace} onCreateTask={() => pushDetail("createTask")} /> : null}
+      {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => goBack()} /> : null}
       {detail === "createNotice" || detail === "editNotice" ? (
         <NoticeEditorScreen
           workspace={workspace}
           initial={editingNotice}
-          onCancel={() => { setEditingNotice(undefined); setDetail(undefined); }}
-          onSaved={async () => { setEditingNotice(undefined); setDetail(undefined); }}
+          onCancel={() => { setEditingNotice(undefined); goBack(); }}
+          onSaved={async () => { setEditingNotice(undefined); goBack(); }}
         />
       ) : null}
       {detail === "catSeugi" ? <CatSeugiScreen /> : null}
+      {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={onSelectWorkspace} onNavigate={pushDetail} /> : null}
+      {detail === "workspaceEdit" ? <WorkspaceEditScreen workspace={workspace} onReload={onReload} /> : null}
+      {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}
+      {detail === "workspaceJoinRequests" ? <WorkspaceJoinRequestsScreen workspace={workspace} /> : null}
+      {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
+      {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
+      {detail === "workspaceOrganization" ? <WorkspaceOrganizationScreen workspace={workspace} /> : null}
+      {detail === "workspacePending" ? <WorkspacePendingScreen onReload={onReload} /> : null}
+      {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
+      {detail === "workspaceJoin" ? <WorkspaceJoinScreen /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
           workspace={workspace}
           roomType={tab === "group" ? "group" : "personal"}
-          onBack={() => setDetail(undefined)}
-          onCreated={(room) => { setCreatedRoom(room); setDetail(undefined); }}
+          onBack={goBack}
+          onCreated={(room) => { setCreatedRoom(room); goBack(); }}
         />
       ) : null}
       {!detail && tab === "home" ? (
         <Home
           workspace={workspace}
-          onOpenCatSeugi={() => setDetail("catSeugi")}
-          onOpenMeals={() => setDetail("meals")}
-          onOpenTimetable={() => setDetail("timetable")}
-          onOpenTasks={() => setDetail("tasks")}
-          onOpenProfile={() => onTabChange("profile")}
+          onOpenCatSeugi={() => pushDetail("catSeugi")}
+          onOpenMeals={() => pushDetail("meals")}
+          onOpenTimetable={() => pushDetail("timetable")}
+          onOpenTasks={() => pushDetail("tasks")}
+          onOpenWorkspace={() => pushDetail("workspace")}
         />
       ) : null}
       {!detail && (tab === "chat" || tab === "group") ? (
@@ -139,23 +176,20 @@ export function AuthenticatedAppShell({
           workspace={workspace}
           roomType={tab === "group" ? "group" : "personal"}
           RoomMessagesComponent={RoomMessages}
-          onCreateRoom={() => { setCreatedRoom(undefined); setDetail("createRoom"); }}
+          onCreateRoom={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}
           initialRoom={createdRoom}
         />
       ) : null}
       {!detail && tab === "notice" ? (
         <NoticesScreen
           workspace={workspace}
-          onCreate={() => { setEditingNotice(undefined); setDetail("createNotice"); }}
-          onEdit={(notice) => { setEditingNotice(notice); setDetail("editNotice"); }}
+          onCreate={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}
+          onEdit={(notice) => { setEditingNotice(notice); pushDetail("editNotice"); }}
         />
       ) : null}
       {!detail && tab === "profile" ? (
         <ProfileScreen
-          workspaces={workspaces}
           workspace={workspace}
-          onSelect={onSelectWorkspace}
-          onReload={onReload}
           onLogout={onLogout}
         />
       ) : null}
@@ -167,7 +201,7 @@ export function AuthenticatedAppShell({
               key={key}
               accessibilityRole="button"
               accessibilityState={{ selected: tab === key }}
-              onPress={() => onTabChange(key)}
+              onPress={() => changeTab(key)}
               style={styles.tab}
             >
               <Text style={tab === key ? styles.activeTab : styles.inactiveTab}>

@@ -8,18 +8,9 @@ import { CreateWorkspaceCard, PendingWorkspaceRequests } from "./WorkspaceSetupS
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
-export function ProfileScreen({ workspaces, workspace, onSelect, onReload, onLogout }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onReload: () => Promise<void>; onLogout: () => void | Promise<void> }) {
-  const [inviteCode, setInviteCode] = useState("");
-  const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT");
+export function ProfileScreen({ workspace, onLogout }: { workspace: Workspace; onLogout: () => void | Promise<void> }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const join = async () => {
-    if (!inviteCode.trim() || busy) return;
-    setBusy(true); setMessage("");
-    try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); setInviteCode(""); setMessage("가입 신청을 보냈습니다. 관리자 승인 후 목록에서 선택할 수 있습니다."); }
-    catch (e) { setMessage(e instanceof Error ? e.message : "가입 신청에 실패했습니다"); }
-    finally { setBusy(false); }
-  };
   const signOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
   const openPolicy = (url: string) => { void Linking.openURL(url).catch(() => setMessage("정책 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.")); };
   const withdraw = () => Alert.alert("회원 탈퇴", "계정과 연결된 데이터에 접근할 수 없게 됩니다. 탈퇴를 진행할까요?", [
@@ -27,18 +18,34 @@ export function ProfileScreen({ workspaces, workspace, onSelect, onReload, onLog
     { text: "탈퇴", style: "destructive", onPress: () => { void (async () => { setBusy(true); setMessage(""); try { await api.removeMember(); await onLogout(); } catch (e) { setMessage(e instanceof Error ? e.message : "회원 탈퇴에 실패했습니다"); } finally { setBusy(false); } })(); } },
   ]);
   return <ScrollView style={styles.content}><ProfileEditor workspace={workspace} />
-    <Card title="워크스페이스">{workspaces.map((item) => <TouchableOpacity key={item.id} onPress={() => onSelect(item)}><Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}</Text></TouchableOpacity>)}</Card>
-    <WorkspaceEditor workspace={workspace} onSaved={onReload} />
-    <PendingWorkspaceRequests onChanged={onReload} />
-    <WorkspaceInviteCode workspace={workspace} />
-    <JoinRequests workspace={workspace} /><WorkspaceMembers workspace={workspace} /><WorkspaceOrganizationChart workspace={workspace} /><WorkspaceNotificationSettings workspace={workspace} />
-    <CreateWorkspaceCard onCreated={onReload} />
-    <Card title="초대 코드로 가입"><TextInput value={inviteCode} onChangeText={setInviteCode} autoCapitalize="characters" style={styles.input} placeholder="초대 코드" /><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label={busy ? "처리 중…" : "가입 신청"} onPress={join} disabled={busy || !inviteCode.trim()} /></Card>
-    {message ? <Text style={styles.answer}>{message}</Text> : null}
     <Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card>
     <Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} />
     <Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />
   </ScrollView>;
+}
+
+export type WorkspaceSection = "workspaceEdit" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";
+
+export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void }) {
+  return <ScrollView style={styles.content}>
+    <Card title="가입된 학교">{workspaces.map((item) => <TouchableOpacity key={item.id} onPress={() => onSelect(item)}><Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text></TouchableOpacity>)}</Card>
+    <Card title="학교 관리"><Button label="학교 정보 수정" kind="secondary" onPress={() => onNavigate("workspaceEdit")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} /><Button label="초대 코드" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /><Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
+    <Card title="학교 추가"><Button label="가입 승인 대기" kind="secondary" onPress={() => onNavigate("workspacePending")} /><Button label="새 학교 만들기" kind="secondary" onPress={() => onNavigate("workspaceCreate")} /><Button label="초대 코드로 학교 가입" kind="secondary" onPress={() => onNavigate("workspaceJoin")} /></Card>
+  </ScrollView>;
+}
+
+export function WorkspaceEditScreen({ workspace, onReload }: { workspace: Workspace; onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><WorkspaceEditor workspace={workspace} onSaved={onReload} /></ScrollView>; }
+export function WorkspaceMembersScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceMembers workspace={workspace} /></ScrollView>; }
+export function WorkspaceJoinRequestsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><JoinRequests workspace={workspace} /></ScrollView>; }
+export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /></ScrollView>; }
+export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceNotificationSettings workspace={workspace} /></ScrollView>; }
+export function WorkspaceOrganizationScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceOrganizationChart workspace={workspace} /></ScrollView>; }
+export function WorkspacePendingScreen({ onReload }: { onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><PendingWorkspaceRequests onChanged={onReload} /></ScrollView>; }
+export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><CreateWorkspaceCard onCreated={onReload} /></ScrollView>; }
+export function WorkspaceJoinScreen() {
+  const [inviteCode, setInviteCode] = useState(""); const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT"); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
+  const join = async () => { if (!inviteCode.trim() || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); setInviteCode(""); setMessage("가입 신청을 보냈습니다. 승인 후 목록에서 확인할 수 있습니다."); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
+  return <ScrollView style={styles.content}><Card title="초대 코드로 가입"><TextInput value={inviteCode} onChangeText={setInviteCode} autoCapitalize="characters" style={styles.input} placeholder="초대 코드" /><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label={busy ? "처리 중…" : "가입 신청"} onPress={() => void join()} disabled={busy || !inviteCode.trim()} />{message ? <Text style={styles.answer}>{message}</Text> : null}</Card></ScrollView>;
 }
 
 function WorkspaceEditor({ workspace, onSaved }: { workspace: Workspace; onSaved: () => Promise<void> }) {

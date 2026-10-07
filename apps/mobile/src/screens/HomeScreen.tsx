@@ -21,7 +21,7 @@ import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
 
-export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi";
+export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspace";
 
 export function HomeScreen({
   workspace,
@@ -29,14 +29,14 @@ export function HomeScreen({
   onOpenMeals,
   onOpenTimetable,
   onOpenTasks,
-  onOpenProfile,
+  onOpenWorkspace,
 }: {
   workspace: Workspace;
   onOpenCatSeugi: () => void;
   onOpenMeals: () => void;
   onOpenTimetable: () => void;
   onOpenTasks: () => void;
-  onOpenProfile: () => void;
+  onOpenWorkspace: () => void;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
@@ -82,7 +82,7 @@ export function HomeScreen({
       <Card title="내 학교">
         <View style={styles.schoolRow}>
           <Text style={styles.rowTitle}>{workspace.name}</Text>
-          <Button label="전환" kind="secondary" onPress={onOpenProfile} />
+          <Button label="학교 관리" kind="secondary" onPress={onOpenWorkspace} />
         </View>
       </Card>
       <Card title="오늘의 시간표" onPress={onOpenTimetable}>
