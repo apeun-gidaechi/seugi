@@ -13,6 +13,7 @@ import { type Room, type Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import Svg, { Path } from "react-native-svg";
 import { api } from "../services/api";
+import { SeugiTopBar } from "../design-system/TopBar";
 import { AssignmentsScreen, TaskCreateScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
 import { ChatScreen } from "./ChatScreen";
@@ -135,8 +136,9 @@ export function AuthenticatedAppShell({
 
   return (
     <SafeAreaView style={styles.page}>
-      {!activeConversation ? <View style={styles.header}>
-        {detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
+      {!activeConversation ? <SeugiTopBar
+        backgroundColor={SeugiColor.Primary050}
+        leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={detail ? "뒤로" : "검색 닫기"}
@@ -144,11 +146,9 @@ export function AuthenticatedAppShell({
           >
             <Text style={styles.back}>‹</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.backPlaceholder} />
-        )}
-        {!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <TextInput autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" style={styles.headerSearch} /> : <Text style={styles.title}>{title}</Text>}
-        {!detail && tab === "home" ? (
+        ) : null}
+        title={!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <TextInput autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" style={styles.headerSearch} /> : <Text style={styles.title}>{title}</Text>}
+        trailing={!detail && tab === "home" ? (
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => void onReload().catch(() => undefined)}
@@ -164,10 +164,8 @@ export function AuthenticatedAppShell({
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => { setRoomSearch(""); setRoomSearchActive(true); }}><Text style={styles.headerActionIcon}>⌕</Text></TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}><Text style={styles.headerActionIcon}>＋</Text></TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.actionPlaceholder} />
-        )}
-      </View> : null}
+        ) : null}
+      /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
@@ -280,17 +278,7 @@ function RoomMessages({
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: SeugiColor.Primary050 },
-  header: {
-    height: 58,
-    backgroundColor: SeugiColor.Primary050,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   back: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
-  backPlaceholder: { width: 36 },
-  actionPlaceholder: { width: 64 },
   title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700" },
   headerSearch: { flex: 1, minWidth: 0, height: 42, fontSize: 16, paddingHorizontal: 12, backgroundColor: SeugiColor.White, borderRadius: 10 },
   headerActions: { width: 64, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 12 },
