@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BackHandler, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Member, Room, Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { SeugiTextField } from "../design-system/TextField";
@@ -7,14 +7,15 @@ import { SeugiTopBar } from "../design-system/TopBar";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
-export function CreateRoomScreen({ workspace, onBack, onCreated }: {
+export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreated }: {
   workspace: Workspace;
+  step: "members" | "name";
+  onNavigate: (route: "createGroupRoomName") => void;
   onBack: () => void;
   onCreated: (room: Room) => void;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [step, setStep] = useState<"members" | "name">("members");
   const [roomName, setRoomName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -51,25 +52,16 @@ export function CreateRoomScreen({ workspace, onBack, onCreated }: {
       void create(selectedMembers[0]?.name ?? "채팅");
       return;
     }
-    setStep("name");
+    onNavigate("createGroupRoomName");
   };
   const complete = () => {
     if (step === "members") next();
     else void create(roomName.trim() || `${selectedMembers[0]?.name ?? "멤버"} 외 ${selectedMembers.length - 1}명`);
   };
 
-  useEffect(() => {
-    if (step !== "name") return;
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      setStep("members");
-      return true;
-    });
-    return () => subscription.remove();
-  }, [step]);
-
   const topBar = <SeugiTopBar
     backgroundColor={SeugiColor.White}
-    leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={step === "name" ? () => setStep("members") : onBack}><Text style={styles.back}>‹</Text></TouchableOpacity>}
+    leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack}><Text style={styles.back}>‹</Text></TouchableOpacity>}
     title={step === "members" ? <Text style={styles.title}>멤버 선택</Text> : null}
     trailing={<TouchableOpacity accessibilityRole="button" accessibilityLabel="완료" onPress={complete} disabled={busy || (step === "members" && !selectedIds.length)}><Text style={[styles.complete, (busy || (step === "members" && !selectedIds.length)) && styles.disabled]}>{busy ? "생성 중…" : "완료"}</Text></TouchableOpacity>}
   />;

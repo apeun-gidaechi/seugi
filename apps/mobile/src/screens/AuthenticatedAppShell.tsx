@@ -47,7 +47,7 @@ const tabTitles: Record<SeugiTab, string> = {
   notice: "공지",
   profile: "내 프로필",
 };
-type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | "workspaceJoinCode" | "workspaceJoinConfirm" | "workspaceJoinWaiting" | WorkspaceSection;
+type AppDetail = HomeDetail | "createRoom" | "createGroupRoomName" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | "workspaceJoinCode" | "workspaceJoinConfirm" | "workspaceJoinWaiting" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
@@ -55,6 +55,7 @@ const detailTitles: Record<AppDetail, string> = {
   catSeugi: "캣스기",
   workspace: "학교 관리",
   createRoom: "멤버 선택",
+  createGroupRoomName: "채팅방 이름",
   createTask: "과제 만들기",
   createNotice: "공지 작성",
   editNotice: "공지 수정",
@@ -134,7 +135,7 @@ export function AuthenticatedAppShell({
 
   return (
     <SafeAreaView style={styles.page}>
-      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createTask" && !workspaceJoinRoute ? <SeugiTopBar
+      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createGroupRoomName" && detail !== "createTask" && !workspaceJoinRoute ? <SeugiTopBar
         backgroundColor={tab === "chat" || tab === "group" ? SeugiColor.White : SeugiColor.Primary050}
         shadow={tab === "chat" || tab === "group"}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
@@ -194,9 +195,11 @@ export function AuthenticatedAppShell({
         onDone={() => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange("home"); }}
       /> : null}
       {detail === "accountSettings" ? <AccountSettingsScreen workspace={workspace} onLogout={onLogout} /> : null}
-      {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
+      {(detail === "createRoom" || detail === "createGroupRoomName") && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
           workspace={workspace}
+          step={detail === "createRoom" ? "members" : "name"}
+          onNavigate={(next) => pushDetail(next)}
           onBack={goBack}
           onCreated={(room) => { setCreatedRoom(room); goBack(); }}
         />
