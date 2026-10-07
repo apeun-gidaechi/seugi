@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import * as AppleAuthentication from "expo-apple-authentication";
@@ -55,6 +55,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [deviceToken, setDeviceToken] = useState<string>();
+  const [notificationPermissionChecked, setNotificationPermissionChecked] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const signedIn = authenticated && !!workspace;
   const load = useCallback(async () => {
@@ -116,7 +117,51 @@ export default function App() {
     };
   }, [load]);
   useEffect(() => {
-    if (!authenticated || Platform.OS === "web") return;
+    if (Platform.OS === "web") {
+      setNotificationPermissionChecked(true);
+      return;
+    }
+    let active = true;
+    const finish = () => { if (active) setNotificationPermissionChecked(true); };
+    const requestPermission = async () => {
+      try {
+        await Notifications.requestPermissionsAsync();
+      } finally {
+        finish();
+      }
+    };
+    (async () => {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "기본",
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
+      }
+      const current = await Notifications.getPermissionsAsync();
+      if (current.status === "granted") {
+        finish();
+        return;
+      }
+      if (Platform.OS === "android") {
+        Alert.alert(
+          "스기 알람 설정",
+          "스기의 알람 기능을 이용하기 위해선 권한을 허용해야합니다.",
+          [{ text: "확인", onPress: () => { void requestPermission().catch(() => undefined); } }],
+          { cancelable: false },
+        );
+        return;
+      }
+      await requestPermission();
+    })().catch((reason: unknown) => {
+      if (active) {
+        console.warn("[notifications] Permission check failed.", reason);
+        finish();
+      }
+    });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!authenticated || !notificationPermissionChecked || Platform.OS === "web") return;
     let active = true;
     if (signedIn) void refreshHomeWidgets().catch(() => undefined);
     (async () => {
@@ -126,17 +171,8 @@ export default function App() {
         );
         return;
       }
-      if (Platform.OS === "android")
-        await Notifications.setNotificationChannelAsync("default", {
-          name: "기본",
-          importance: Notifications.AndroidImportance.DEFAULT,
-        });
       const current = await Notifications.getPermissionsAsync();
-      const permission =
-        current.status === "granted"
-          ? current
-          : await Notifications.requestPermissionsAsync();
-      if (permission.status !== "granted") return;
+      if (current.status !== "granted") return;
       const token = (await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID })).data;
       await api.registerDeviceToken(token);
       if (active) setDeviceToken(token);
@@ -150,7 +186,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [authenticated, signedIn]);
+  }, [authenticated, signedIn, notificationPermissionChecked]);
   const persistSession = useCallback(
     async (token?: string, refreshToken?: string) => {
       if (!token) throw new Error("액세스 토큰을 받지 못했습니다");
