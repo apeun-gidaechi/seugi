@@ -92,11 +92,11 @@ export function HomeScreen({
 
   return (
     <ScrollView style={styles.homeContent}>
-      <HomeCard title="내 학교" icon="school">
-        <View style={styles.schoolRow}>
+      <HomeCard title="내 학교" icon="school" onPress={Platform.OS === "ios" ? onOpenWorkspace : undefined}>
+        {Platform.OS === "ios" ? <Text style={styles.workspaceName}>{workspace.name}</Text> : <View style={styles.schoolRow}>
           <Text style={styles.rowTitle}>{workspace.name}</Text>
-          <Button label="학교 관리" kind="secondary" onPress={onOpenWorkspace} />
-        </View>
+          <Button label="전환" kind="secondary" onPress={onOpenWorkspace} />
+        </View>}
       </HomeCard>
       <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
         {todaysTimetable.length ? (
@@ -563,6 +563,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  workspaceName: { color: SeugiColor.Gray600, fontSize: 16, fontWeight: "600", paddingVertical: 6.5 },
   homeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
