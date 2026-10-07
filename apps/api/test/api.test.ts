@@ -458,7 +458,7 @@ test("timetable routes preserve the upstream date/class contract and protect tea
   await app.close();
 });
 
-test("group room administration enforces membership and transfers leadership safely", async () => {
+test("group room administration enforces membership and requires leadership transfer before leaving", async () => {
   const store = new Store(); const app = await buildApp(store);
   const emails = ["room-admin@example.com", "room-member@example.com", "room-outsider@example.com"];
   for (const email of emails) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
@@ -486,10 +486,22 @@ test("group room administration enforces membership and transfers leadership saf
   assert.equal((await app.inject({ method: "PATCH", url: "/chat/group/member/toss", headers: memberHeaders, payload: { roomId, memberId: ownerId, memberIds: [] } })).statusCode, 403);
   assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: outsiderHeaders })).statusCode, 404);
 
-  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 400);
   const room = store.rooms.get(roomId);
+  assert.deepEqual(room?.memberIds, [ownerId, memberId]);
+  assert.equal(room?.adminId, ownerId);
+  assert.equal((await app.inject({ method: "PATCH", url: "/chat/group/member/toss", headers: ownerHeaders, payload: { roomId, memberId, memberIds: [] } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${roomId}`, headers: ownerHeaders })).statusCode, 200);
   assert.deepEqual(room?.memberIds, [memberId]);
   assert.equal(room?.adminId, memberId);
+
+  const singleRoomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "마지막 구성원", memberIds: [] } })).json().data as string;
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${singleRoomId}`, headers: ownerHeaders })).statusCode, 200);
+  assert.equal(store.rooms.get(singleRoomId)?.status, "DELETE");
+  assert.deepEqual((await app.inject({ url: `/chat/group/search/${workspaceId}`, headers: memberHeaders })).json().data.map((item: { id: string }) => item.id), [roomId]);
+  assert.equal((await app.inject({ url: `/chat/group/search/room/${singleRoomId}`, headers: ownerHeaders })).statusCode, 404);
+  const personalRoomId = (await app.inject({ method: "POST", url: "/chat/personal/create", headers: ownerHeaders, payload: { workspaceId, name: "개인 대화", memberIds: [memberId] } })).json().data as string;
+  assert.equal((await app.inject({ method: "PATCH", url: `/chat/group/left/${personalRoomId}`, headers: ownerHeaders })).statusCode, 400);
   await app.close();
 });
 
