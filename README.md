@@ -6,8 +6,17 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 | --- | --- |
 | `apps/web` | Existing React/Vite desktop web client, retained and migrated into the workspace |
 | `apps/api` | TypeScript Fastify API and Socket.IO real-time service |
-| `packages/contracts` | Shared API domain types and response envelope |
+| `packages/contracts` | Shared API route registry, domain schemas, and DTO types |
+| `packages/api-client` | Shared typed HTTP client, token refresh, and domain operations |
 | `apps/mobile` | React Native/Expo client (migration target for Android and iOS) |
+
+## Shared API modules
+
+`@seugi/contracts` is the source of truth for route paths and request validation. `src/api-spec.ts` intentionally contains only HTTP methods, paths, and URL builders; domain request schemas stay in modules such as `member.ts`, `workspace.ts`, `chat.ts`, and `school.ts`. Keeping runtime validators out of the route registry lets browser clients share paths without pulling validation code into their bundles.
+
+`@seugi/api-client` consumes those routes and contracts. Web and mobile code should call its domain methods instead of assembling endpoint URLs or request payloads locally. The client owns JSON/multipart handling, bearer tokens, one-time refresh-and-retry behavior, and typed HTTP errors (`SeugiApiError`). Keep response-envelope unwrapping in app adapters where a screen still relies on a legacy view model.
+
+Run `pnpm check` for the shared packages, API, and mobile type checks; `pnpm --filter @seugi/api test` for API and client integration tests; and `pnpm build` for all workspace builds. The legacy web application still has TypeScript diagnostics outside those workspace checks; its production Vite build is included in `pnpm build`.
 
 ## Run
 
