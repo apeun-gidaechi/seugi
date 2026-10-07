@@ -5,6 +5,7 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
+import { SeugiTopBar } from "../design-system/TopBar";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
@@ -164,24 +165,22 @@ export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<vo
 export function WorkspaceJoinScreen({ onReload, onDone }: { onReload: () => Promise<void>; onDone: () => void }) {
   const [step, setStep] = useState<"role" | "code" | "confirm" | "waiting">("role");
   const [inviteCode, setInviteCode] = useState(""); const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT"); const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
+  const back = () => { if (step === "waiting") setStep("confirm"); else if (step === "confirm") setStep("code"); else if (step === "code") setStep("role"); else onDone(); };
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (step === "role") return false;
-      if (step === "waiting") { onDone(); return true; }
-      setStep((current) => current === "confirm" ? "code" : current === "code" ? "role" : "role");
+      back();
       return true;
     });
     return () => subscription.remove();
   }, [step, onDone]);
   const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); setStep("confirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
   const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); setStep("waiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
-  if (step === "role") return <WorkspaceRoleSelection value={joinRole} onChange={setJoinRole} onContinue={() => setStep("code")} />;
-  if (step === "confirm" && workspace) return <WorkspaceJoinConfirmation workspace={workspace} busy={busy} error={message} onContinue={() => void join()} />;
-  return <ScrollView style={styles.content}>
-    {step === "code" ? <Card title="초대 코드 입력"><SeugiCodeTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.inputSpacing} /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card> : null}
+  return <View style={styles.joinScreen}><SeugiTopBar backgroundColor={SeugiColor.White} leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={back}><Text style={styles.joinBack}>‹</Text></TouchableOpacity>} title={<Text style={styles.joinTitle}>학교 가입</Text>} trailing={null} />
+    {step === "role" ? <WorkspaceRoleSelection value={joinRole} onChange={setJoinRole} onContinue={() => setStep("code")} /> : null}
+    {step === "confirm" && workspace ? <WorkspaceJoinConfirmation workspace={workspace} busy={busy} error={message} onContinue={() => void join()} /> : null}
     {step === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={onDone} /> : null}
-    {message ? <Text style={styles.error}>{message}</Text> : null}
-  </ScrollView>;
+    {step === "code" ? <ScrollView style={styles.content}><Card title="초대 코드 입력"><SeugiCodeTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.inputSpacing} /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card>{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView> : null}
+  </View>;
 }
 
 function WorkspaceEditor({ workspace, onSaved }: { workspace: Workspace; onSaved: () => Promise<void> }) {
@@ -250,6 +249,9 @@ function JoinRequests({ workspace }: { workspace: Workspace }) { type RequestRol
 
 const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
+  joinScreen: { flex: 1, backgroundColor: SeugiColor.White },
+  joinBack: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
+  joinTitle: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700" },
   notificationScreen: { flex: 1, backgroundColor: SeugiColor.White },
   notificationSettings: { flex: 1, paddingTop: 6 },
   notificationRow: { minHeight: 56, paddingHorizontal: 20, paddingVertical: 12, flexDirection: "row", alignItems: "center" },

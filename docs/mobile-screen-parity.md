@@ -24,8 +24,8 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace notification settings | `WorkspaceNotificationsScreen` | Replaced generic settings card/button with the native single-row “전체 알림 허용” toggle layout; device QA pending |
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
-| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; shared illustrated `WorkspaceRoleSelection` and dedicated `WorkspaceJoinConfirmation` | role and confirmation layouts aligned to Android source structure; device QA pending |
-| Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | device QA pending |
+| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; shared illustrated `WorkspaceRoleSelection` and dedicated `WorkspaceJoinConfirmation` | Added in-flow top bar; top-bar/system back now follows role → code → confirmation stack behavior; device QA pending |
+| Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | Waiting screen now has native-style top bar and returns to confirmation on back; explicit “완료” still exits to the parent; device QA pending |
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |

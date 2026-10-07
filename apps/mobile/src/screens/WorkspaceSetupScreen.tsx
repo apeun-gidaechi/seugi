@@ -21,10 +21,10 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     const timer = setInterval(() => { void onCreated().catch(() => undefined); }, 10_000);
     return () => clearInterval(timer);
   }, [screen, onCreated]);
-  const back = () => setScreen((current) => current === "confirm" ? "code" : current === "code" ? "role" : current === "role" || current === "create" ? "start" : "start");
+  const back = () => setScreen((current) => current === "waiting" ? "confirm" : current === "confirm" ? "code" : current === "code" ? "role" : current === "role" || current === "create" ? "start" : "start");
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (screen === "start" || screen === "waiting") return false;
+      if (screen === "start") return false;
       back();
       return true;
     });
@@ -50,11 +50,11 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
       <WorkspaceJoinConfirmation workspace={workspace} busy={busy} error={message} onContinue={() => void join()} />
     </SafeAreaView>;
   }
-  const joinFlow = screen === "role" || screen === "code" || screen === "confirm";
+  const joinFlow = screen === "role" || screen === "code" || screen === "confirm" || screen === "waiting";
   return <SafeAreaView style={joinFlow ? styles.joinFlowPage : styles.auth}>
     {joinFlow ? <View style={styles.joinFlowTopBar}><TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={back} style={styles.joinFlowBack}><Text style={styles.link}>‹</Text></TouchableOpacity><Text style={styles.joinFlowTitle}>학교 가입</Text><View style={styles.joinFlowBack} /></View> : null}
     {screen === "start" ? <Text style={styles.logo}>스기</Text> : null}
-    {!joinFlow && screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
+    {!joinFlow && screen !== "start" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
     {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="가입 신청 내역" kind="secondary" onPress={() => setScreen("requests")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
