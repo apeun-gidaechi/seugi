@@ -338,7 +338,8 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
     };
   }, [workspace.id, year, monthNumber]);
   const daysInMonth = new Date(year, monthNumber, 0).getDate();
-  const leadingBlanks = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7;
+  // The native iOS and Android date pickers use a Sunday-first calendar.
+  const leadingBlanks = new Date(year, monthNumber - 1, 1).getDay();
   const slots: Array<string | undefined> = [
     ...Array(leadingBlanks).fill(undefined),
     ...Array.from(
@@ -375,7 +376,7 @@ export function MealCalendar({ workspace }: { workspace: Workspace }) {
               </TouchableOpacity>
             </View>
             <View style={{ flexDirection: "row" }}>
-              {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
+              {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
                 <Text
                   key={day}
                   style={{
