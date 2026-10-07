@@ -58,8 +58,15 @@ const iosWidgetConfig = {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const iosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
+  const easProjectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
   return {
     ...config,
+    extra: {
+      ...config.extra,
+      ...(easProjectId
+        ? { eas: { ...config.extra?.eas, projectId: easProjectId } }
+        : {}),
+    },
     plugins: [
       ["expo-secure-store", { configureAndroidBackup: false }],
       "expo-apple-authentication",

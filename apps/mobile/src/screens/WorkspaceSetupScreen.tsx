@@ -6,7 +6,7 @@ import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
 import { api } from "../services/api";
 
-export function WorkspaceSetupScreen({ onCreated, onLogout }: { onCreated: () => Promise<void>; onLogout: () => Promise<void> }) {
+export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
   const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting">("start");
   const [role, setRole] = useState<WorkspaceJoinRole>("STUDENT");
   const [code, setCode] = useState("");
@@ -36,6 +36,7 @@ export function WorkspaceSetupScreen({ onCreated, onLogout }: { onCreated: () =>
   return <SafeAreaView style={styles.auth}>
     {screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
     <Text style={styles.logo}>스기</Text>
+    {error ? <Text style={styles.error}>{error}</Text> : null}
     {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
     {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}

@@ -6,7 +6,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { type Workspace } from "@seugi/contracts";
 import { WorkspaceSetupScreen as WorkspaceSetup } from "./src/screens/WorkspaceSetupScreen";
-import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
+import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import {
   AuthenticatedAppShell,
@@ -115,10 +115,14 @@ export default function App() {
     };
   }, [load]);
   useEffect(() => {
-    if (!signedIn) return;
+    if (!authenticated || Platform.OS === "web") return;
     let active = true;
-    void refreshHomeWidgets().catch(() => undefined);
+    if (signedIn) void refreshHomeWidgets().catch(() => undefined);
     (async () => {
+      if (!EAS_PROJECT_ID) {
+        setError("푸시 알림을 사용하려면 EXPO_PUBLIC_EAS_PROJECT_ID 설정이 필요합니다.");
+        return;
+      }
       if (Platform.OS === "android")
         await Notifications.setNotificationChannelAsync("default", {
           name: "기본",
@@ -130,14 +134,16 @@ export default function App() {
           ? current
           : await Notifications.requestPermissionsAsync();
       if (permission.status !== "granted") return;
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      const token = (await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID })).data;
       await api.registerDeviceToken(token);
       if (active) setDeviceToken(token);
-    })().catch(() => undefined);
+    })().catch((reason: unknown) => {
+      if (active) setError(reason instanceof Error ? `푸시 알림을 설정하지 못했습니다: ${reason.message}` : "푸시 알림을 설정하지 못했습니다.");
+    });
     return () => {
       active = false;
     };
-  }, [signedIn]);
+  }, [authenticated, signedIn]);
   const persistSession = useCallback(
     async (token?: string, refreshToken?: string) => {
       if (!token) throw new Error("액세스 토큰을 받지 못했습니다");
@@ -286,6 +292,7 @@ export default function App() {
   if (!workspace)
     return (
       <WorkspaceSetup
+        error={error}
         onCreated={load}
         onLogout={async () => {
           api.setToken();
