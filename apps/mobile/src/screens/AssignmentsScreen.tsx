@@ -45,11 +45,11 @@ function CreateTask({ workspace, onCreated, onBack }: { workspace: Workspace; on
   const canCreate = useCanCreateTask(workspace);
   const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [dueDate, setDueDate] = useState(() => localDateKey(new Date())); const [calendarSelection, setCalendarSelection] = useState(dueDate); const [calendarMonth, setCalendarMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); }); const [calendarOpen, setCalendarOpen] = useState(false); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
   const create = async () => {
-    if (busy || !title.trim()) return;
+    if (busy) return;
     setBusy(true); setNotice("");
     try {
       const normalizedDueDate = new Date(`${dueDate}T00:00:00.000Z`).toISOString();
-      await api.createTask({ workspaceId: workspace.id, title: title.trim(), content: content.trim() || undefined, dueDate: normalizedDueDate });
+      await api.createTask({ workspaceId: workspace.id, title, description: content, dueDate: normalizedDueDate });
       setTitle(""); setContent(""); setDueDate(""); setNotice("과제를 만들었습니다."); await onCreated();
     } catch (error) { setNotice(error instanceof Error ? error.message : "과제를 만들지 못했습니다"); }
     finally { setBusy(false); }
@@ -64,11 +64,11 @@ function CreateTask({ workspace, onCreated, onBack }: { workspace: Workspace; on
     <SeugiTopBar backgroundColor={SeugiColor.Primary050}
       leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack} disabled={busy}><Text style={styles.editorBack}>‹</Text></TouchableOpacity>}
       title={<Text style={styles.editorTitle}>과제 만들기</Text>}
-      trailing={<TouchableOpacity accessibilityRole="button" accessibilityLabel="과제 만들기 완료" onPress={() => void create()} disabled={busy || !title.trim()}><Text style={[styles.createAction, (busy || !title.trim()) && styles.createActionDisabled]}>{busy ? "만드는 중…" : "만들기"}</Text></TouchableOpacity>}
+      trailing={<TouchableOpacity accessibilityRole="button" accessibilityLabel="과제 만들기 완료" onPress={() => void create()} disabled={busy}><Text style={[styles.createAction, busy && styles.createActionDisabled]}>{busy ? "만드는 중…" : "만들기"}</Text></TouchableOpacity>}
     />
     <ScrollView style={styles.taskForm} keyboardShouldPersistTaps="handled">
       <Text style={styles.taskTitleLabel}>제목</Text>
-      <SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} maxLength={120} editable={!busy} />
+      <SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} editable={!busy} />
       <SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} fieldStyle={styles.descriptionField} style={styles.descriptionInput} multiline textAlignVertical="top" editable={!busy} />
       <TouchableOpacity accessibilityRole="button" onPress={() => { setCalendarSelection(dueDate); setCalendarOpen(true); }} style={styles.dateButton} disabled={busy}><Text style={styles.dateText}>{Number(dueDate.slice(5, 7))}월 {Number(dueDate.slice(8, 10))}일까지</Text><Text style={styles.calendarIcon}>▦</Text></TouchableOpacity>
       {notice ? <Text accessibilityRole="alert" style={notice.includes("만들었") ? styles.answer : styles.error}>{notice}</Text> : null}

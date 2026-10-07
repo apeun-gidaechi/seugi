@@ -185,6 +185,11 @@ test("member can register, create a workspace, and retrieve it", async () => {
   assert.equal(legacyTask.statusCode, 200);
   const tasksWithLegacyDescription = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
   assert.deepEqual(tasksWithLegacyDescription.json().data[1], { id: tasksWithLegacyDescription.json().data[1].id, workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기", content: "단어 암기", createdAt: tasksWithLegacyDescription.json().data[1].createdAt });
+  const nativeLikeTaskTitle = " ".repeat(121);
+  const nativeLikeTask = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: nativeLikeTaskTitle, description: "  " } });
+  assert.equal(nativeLikeTask.statusCode, 200);
+  const tasksWithNativeLikePayload = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
+  assert.ok(tasksWithNativeLikePayload.json().data.some((item: { title: string; description?: string }) => item.title === nativeLikeTaskTitle && item.description === "  "));
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
   await app.close();
