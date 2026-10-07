@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, T
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Member, Role, Room, Workspace } from "@seugi/contracts";
 import { Button } from "../components/ui";
+import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 import { StudentInfoScreen } from "./StudentInfoScreen";
@@ -18,6 +19,7 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
   const [openingChat, setOpeningChat] = useState(false);
   const [canManageMembers, setCanManageMembers] = useState(false);
   const [editingStudentInfo, setEditingStudentInfo] = useState(false);
+  const [search, setSearch] = useState("");
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -31,7 +33,10 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
   }, [workspace.id, workspace.ownerId]);
   useEffect(() => { refresh().catch((error) => setNotice(error instanceof Error ? error.message : "구성원 목록을 불러오지 못했습니다")); }, [refresh]);
 
-  const visibleMembers = members.filter((member) => tab === "STUDENT" ? member.role === "STUDENT" : member.role !== "STUDENT");
+  const visibleMembers = members.filter((member) =>
+    (tab === "STUDENT" ? member.role === "STUDENT" : member.role !== "STUDENT") &&
+    member.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   const roleLabel = (role?: Role) => role === "ADMIN" ? "관리자" : role === "MIDDLE_ADMIN" ? "중간관리자" : role === "TEACHER" ? "교사" : "학생";
   const openProfile = async (member: Member) => {
     setNotice("");
@@ -69,9 +74,10 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
 
   return <View style={styles.screen}>
     <View style={styles.tabs}>{(["TEACHER", "STUDENT"] as const).map((value) => <TouchableOpacity key={value} accessibilityRole="tab" accessibilityState={{ selected: tab === value }} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><Text style={tab === value ? styles.tabLabelSelected : styles.tabLabel}>{value === "TEACHER" ? "선생님" : "학생"}</Text></TouchableOpacity>)}</View>
+    <SeugiTextField accessibilityLabel="멤버 검색" value={search} onChangeText={setSearch} placeholder="멤버 검색" containerStyle={styles.search} fieldStyle={styles.searchField} />
     <ScrollView contentContainerStyle={styles.list}>
       {loading ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loading} /> : null}
-      {!loading && !notice && members.length === 0 ? <Text style={styles.empty}>멤버가 없어요</Text> : null}
+      {!loading && !notice && visibleMembers.length === 0 ? <Text style={styles.empty}>{search.trim() ? "검색 결과가 없어요" : "멤버가 없어요"}</Text> : null}
       {!loading ? visibleMembers.map((member) => <View key={member.id} style={styles.member}>
         <TouchableOpacity accessibilityRole="button" onPress={() => void openProfile(member)} style={styles.identity}>
           {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Text style={styles.avatarInitial}>{member.name.slice(0, 1)}</Text></View>}
@@ -107,6 +113,8 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: SeugiColor.White },
   tabs: { height: 48, marginHorizontal: 20, marginTop: 6, padding: 4, borderRadius: 12, flexDirection: "row", backgroundColor: SeugiColor.Gray100 },
+  search: { marginHorizontal: 20, marginTop: 12 },
+  searchField: { minHeight: 44, height: 44, borderRadius: 12 },
   tab: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 9 },
   tabSelected: { backgroundColor: SeugiColor.White },
   tabLabel: { color: SeugiColor.Gray500, fontSize: 14 },

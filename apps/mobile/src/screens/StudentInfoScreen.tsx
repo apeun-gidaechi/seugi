@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { LegacyProfile, Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
@@ -19,6 +19,14 @@ export function StudentInfoScreen({ visible, workspace, profile, onClose }: Stud
   const [number, setNumber] = useState(profile.schNumber ?? profile.number ?? 1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!visible) return;
+    setGrade(profile.schGrade ?? profile.grade ?? 1);
+    setClassNum(profile.schClass ?? profile.class ?? 1);
+    setNumber(profile.schNumber ?? profile.number ?? 1);
+    setError("");
+  }, [visible, profile.member.id, profile.schGrade, profile.grade, profile.schClass, profile.class, profile.schNumber, profile.number]);
 
   const save = async () => {
     if (busy) return;
