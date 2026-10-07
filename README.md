@@ -12,7 +12,7 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 
 ## Shared API modules
 
-`@seugi/contracts` is the source of truth for route paths, request validation, and Socket.IO event payloads. `src/api-spec.ts` intentionally contains only HTTP methods, paths, and URL builders; domain request schemas stay in modules such as `member.ts`, `workspace.ts`, `chat.ts`, and `school.ts`, while realtime events live in `realtime.ts`. Keeping runtime validators out of the route registry lets browser clients share paths without pulling validation code into their bundles.
+`@seugi/contracts` is the source of truth for route paths, request validation, and Socket.IO event payloads. `src/api-spec.ts` is the stable barrel for the runtime-safe `API_SPEC`; route definitions and URL builders are split by domain under `src/api/`. Request schemas stay in modules such as `member.ts`, `workspace.ts`, `chat.ts`, and `school.ts`, while realtime events live in `realtime.ts`. Keeping runtime validators out of the route registry lets browser clients share paths without pulling validation code into their bundles.
 
 `@seugi/api-client` consumes those routes and contracts. Web and mobile code should call its domain methods instead of assembling endpoint URLs or request payloads locally. The client owns JSON/multipart handling, bearer tokens, one-time refresh-and-retry behavior, and typed HTTP errors (`SeugiApiError`). Keep response-envelope unwrapping in app adapters where a screen still relies on a legacy view model.
 
