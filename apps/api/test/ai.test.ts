@@ -3,10 +3,11 @@ import test from "node:test";
 import { answerSchoolQuestion, answerWithCatseugi } from "../src/ai.js";
 
 test("Catseugi answers meal, timetable, and notice questions from school records", () => {
-  assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [{ date: "2026-10-07", type: "중식", menu: ["김치볶음밥", "미역국"] }] }), "중식\n김치볶음밥\n미역국");
-  assert.equal(answerSchoolQuestion("오늘 시간표 알려줘", { timetable: [{ id: "p1", workspaceId: "w1", grade: "2", classNum: "4", time: "1", subject: "수학", date: "2026-10-07" }] }), "1교시 · 수학");
+  assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [{ date: "2026-10-07", type: "중식", menu: ["김치볶음밥", "미역국"] }] }), "- 오늘의 중식\n김치볶음밥\n미역국");
+  assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [{ date: "2026-10-07", type: "조식", menu: ["죽"] }, { date: "2026-10-07", type: "석식", menu: ["덮밥"] }] }), "- 오늘의 조식\n죽\n\n- 오늘의 석식\n덮밥");
+  assert.equal(answerSchoolQuestion("오늘 시간표 알려줘", { timetable: [{ id: "p1", workspaceId: "w1", grade: "2", classNum: "4", time: "1", subject: "수학", date: "2026-10-07" }] }), "오늘의 시간표에요\n1교시 : 수학");
   assert.equal(answerSchoolQuestion("최근 공지 알려줘", { notifications: [{ id: "n1", workspaceId: "w1", title: "체육대회", content: "금요일", authorId: "m1", createdAt: "2026-10-07T00:00:00.000Z", emojis: {} }] }), "체육대회\n금요일");
-  assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [] }), "오늘 등록된 급식 정보가 없습니다.");
+  assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [] }), "오늘의 급식 없습니다.");
 });
 
 test("Catseugi picks real participants and forms balanced teams", () => {

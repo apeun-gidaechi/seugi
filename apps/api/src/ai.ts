@@ -29,14 +29,22 @@ export function answerSchoolQuestion(message: string, context: CatseugiSchoolCon
   const intent = schoolQuestionIntent(message);
   if (intent === "MEAL") {
     const meals = context.meals ?? [];
+    const category = (type: string) => {
+      switch (type.toLocaleUpperCase("ko-KR")) {
+        case "조식": case "아침": case "BREAKFAST": return "조식";
+        case "중식": case "점심": case "LUNCH": return "중식";
+        case "석식": case "저녁": case "DINNER": return "석식";
+        default: return type;
+      }
+    };
     return meals.length
-      ? meals.map((meal) => `${meal.type}${meal.calorie ? ` (${meal.calorie})` : ""}\n${meal.menu.join("\n")}`).join("\n\n")
-      : "오늘 등록된 급식 정보가 없습니다.";
+      ? meals.map((meal) => `- 오늘의 ${category(meal.type)}\n${meal.menu.join("\n")}`).join("\n\n")
+      : "오늘의 급식 없습니다.";
   }
   if (intent === "TIMETABLE") {
     const periods = context.timetable ?? [];
     return periods.length
-      ? periods.map((period) => `${period.time}교시 · ${period.subject}`).join("\n")
+      ? `오늘의 시간표에요\n${periods.map((period) => `${period.time}교시 : ${period.subject}`).join("\n")}`
       : "오늘 확인할 수 있는 시간표가 없습니다. 프로필의 학년과 반 정보가 등록되어 있는지 확인해 주세요.";
   }
   if (intent === "NOTICE") {
