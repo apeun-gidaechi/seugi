@@ -8,6 +8,7 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 | `apps/api` | TypeScript Fastify API and Socket.IO real-time service |
 | `packages/contracts` | Shared API route registry, domain schemas, and DTO types |
 | `packages/api-client` | Shared typed HTTP client, token refresh, and domain operations |
+| `packages/design-tokens` | Shared canonical Seugi colors and typography values |
 | `apps/mobile` | React Native/Expo client (migration target for Android and iOS) |
 
 ## Shared API modules
