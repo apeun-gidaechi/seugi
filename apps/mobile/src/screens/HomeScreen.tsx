@@ -53,6 +53,8 @@ export function HomeScreen({
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [meals, setMeals] = useState<Meal[]>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleError, setScheduleError] = useState(false);
   const [mealPage, setMealPage] = useState(0);
   const [mealPageWidth, setMealPageWidth] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,18 +65,21 @@ export function HomeScreen({
   const refreshHome = useCallback(async () => {
     setRefreshing(true);
     setAssignmentsLoading(true);
+    setScheduleLoading(true);
     const results = await Promise.allSettled([
       api.tasks(workspace.id),
       api.classroomTasks(),
       api.weeklyTimetable(workspace.id),
       api.meals(workspace.id),
-      api.schedules(workspace.id),
+      api.schedulesForMonth(workspace.id, new Date().getMonth() + 1),
     ]);
     if (results[0].status === "fulfilled") setTasks(results[0].value.data ?? []);
     if (results[1].status === "fulfilled") setClassroomTasks(results[1].value.data ?? []);
     if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
     if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
     if (results[4].status === "fulfilled") setSchedules(results[4].value.data ?? []);
+    setScheduleError(results[4].status === "rejected");
+    setScheduleLoading(false);
     setAssignmentError(Platform.OS === "ios"
       ? results[0].status === "rejected"
       : results[0].status === "rejected" && results[1].status === "rejected");
@@ -93,8 +98,11 @@ export function HomeScreen({
     .filter((item) => item.date.slice(0, 10) === today)
     .sort((a, b) => Number(a.time) - Number(b.time));
   const upcoming = schedules
-    .filter((item) => item.date.slice(0, 10) >= today)
+    .filter((item) => Platform.OS === "ios"
+      ? item.date.slice(0, 10) > today
+      : Number(item.date.slice(8, 10)) >= new Date().getDate())
     .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, Platform.OS === "android" ? 3 : undefined);
 
   useEffect(() => {
     const updatePeriod = () => {
@@ -174,7 +182,7 @@ export function HomeScreen({
         </TouchableOpacity>
       </HomeCard>
       <HomeCard title="다가오는 일정" icon="schedule">
-        {upcoming.length ? (
+        {scheduleLoading ? <ActivityIndicator color={SeugiColor.Primary500} /> : upcoming.length ? (
           <View style={styles.homeList}>{upcoming.map((item) => {
             const days = daysUntil(today, item.date);
             return <View key={`${item.date}-${item.name}`} style={styles.homeCalendarRow}>
@@ -184,7 +192,7 @@ export function HomeScreen({
             </View>;
           })}</View>
         ) : (
-          <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
+          <Text style={styles.muted}>{scheduleError && Platform.OS === "ios" ? "학교를 등록하고 일정을 확인하세요" : "일정이 없어요"}</Text>
         )}
       </HomeCard>
       <HomeAssignmentsCard tasks={tasks} classroomTasks={classroomTasks} loading={assignmentsLoading} error={assignmentError} onOpen={onOpenTasks} />
