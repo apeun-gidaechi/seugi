@@ -467,6 +467,7 @@ test("persistent store survives a new application instance", async () => {
 
 test("authenticated room members receive Socket.IO messages", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
+  const oldApiKey = process.env.OPENAI_API_KEY; const oldFetch = globalThis.fetch;
   store.emailCodes.set("chat@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "chat@example.com", password: "password123", code: "123456" } });
   const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
   const workspaceResponse = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "채팅 학교" } });
@@ -495,7 +496,15 @@ test("authenticated room members receive Socket.IO messages", async () => {
     assert.equal(fileMessage.message, "메시지 전송 성공");
     const emptyMessage = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "", files: [] }, resolve));
     assert.equal(emptyMessage.message, "MESSAGE_INVALID");
-  } finally { socket.close(); await app.close(); }
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = (async () => new Response(JSON.stringify({ output: [{ type: "message", content: [{ type: "output_text", text: "안녕! 무엇을 도와드릴까요?" }] }] }), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+    const botReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT") { clearTimeout(timer); resolve(message); } }); });
+    const botRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 안녕", mention: [-1] }, resolve));
+    assert.equal(botRequest.message, "메시지 전송 성공");
+    const reply = await botReply;
+    assert.equal(reply.senderId, "-1"); assert.deepEqual(JSON.parse(reply.message), { keyword: "기타", data: "안녕! 무엇을 도와드릴까요?" });
+    assert.ok([...store.messages.values()].some((message) => message.id === reply.id && message.type === "BOT"));
+  } finally { if (oldApiKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = oldApiKey; globalThis.fetch = oldFetch; socket.close(); await app.close(); }
 });
 
 test("withdrawn members cannot reconnect to Socket.IO or legacy STOMP with an old token", async () => {
