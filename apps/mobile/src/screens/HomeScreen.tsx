@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   StyleSheet,
@@ -23,6 +22,7 @@ import type {
   Workspace,
 } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
+import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
 
@@ -328,7 +328,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
         <Text style={styles.muted}>월요일부터 금요일까지</Text>
         {busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {canEdit ? <View style={styles.manageRow}><TextInput value={grade} onChangeText={(value) => setGrade(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><TextInput value={classNum} onChangeText={(value) => setClassNum(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
+        {canEdit ? <View style={styles.manageRow}><SeugiTextField value={grade} onChangeText={(value) => setGrade(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" fieldStyle={styles.classField} style={styles.classInputText} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><SeugiTextField value={classNum} onChangeText={(value) => setClassNum(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" fieldStyle={styles.classField} style={styles.classInputText} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
         <TimetableWeek entries={entries.filter((entry) => !canEdit || (entry.grade === grade && entry.classNum === classNum))} onSelectCell={canEdit ? (date, time) => { setSlot({ date, time }); setDraft(""); } : undefined} onSelectEntry={canEdit ? (entry) => { Alert.alert(entry.subject, `${entry.date} · ${entry.time}교시`, [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => removeEntry(entry) }, { text: "수정", onPress: () => { setEditing(entry); setDraft(entry.subject); } }]); } : undefined} />
         <Button
           label={busy ? "불러오는 중…" : "시간표 새로고침"}
@@ -337,7 +337,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
           disabled={busy}
         />
       </Card>
-      <Modal visible={!!slot || !!editing} transparent animationType="fade" onRequestClose={() => { setSlot(undefined); setEditing(undefined); }}><View style={styles.timetableModal}><View style={styles.timetableDialog}><Text style={styles.dialogTitle}>{editing ? "시간표 수정" : "시간표 만들기"}</Text><Text style={styles.muted}>{editing ? `${editing.date} · ${editing.time}교시` : slot ? `${slot.date} · ${slot.time}교시 · ${grade}학년 ${classNum}반` : ""}</Text><TextInput value={draft} onChangeText={setDraft} style={styles.subjectInput} placeholder="과목 이름" maxLength={120} /><View style={styles.modalActions}><Button label="취소" kind="secondary" onPress={() => { setSlot(undefined); setEditing(undefined); }} /><Button label={busy ? "저장 중…" : "완료"} onPress={() => void saveSubject()} disabled={busy || !draft.trim()} />{editing ? <Button label="삭제" kind="secondary" onPress={() => { removeEntry(editing); setEditing(undefined); }} /> : null}</View></View></View></Modal>
+      <Modal visible={!!slot || !!editing} transparent animationType="fade" onRequestClose={() => { setSlot(undefined); setEditing(undefined); }}><View style={styles.timetableModal}><View style={styles.timetableDialog}><Text style={styles.dialogTitle}>{editing ? "시간표 수정" : "시간표 만들기"}</Text><Text style={styles.muted}>{editing ? `${editing.date} · ${editing.time}교시` : slot ? `${slot.date} · ${slot.time}교시 · ${grade}학년 ${classNum}반` : ""}</Text><SeugiTextField value={draft} onChangeText={setDraft} fieldStyle={styles.subjectField} placeholder="과목 이름" maxLength={120} /><View style={styles.modalActions}><Button label="취소" kind="secondary" onPress={() => { setSlot(undefined); setEditing(undefined); }} /><Button label={busy ? "저장 중…" : "완료"} onPress={() => void saveSubject()} disabled={busy || !draft.trim()} />{editing ? <Button label="삭제" kind="secondary" onPress={() => { removeEntry(editing); setEditing(undefined); }} /> : null}</View></View></View></Modal>
     </ScrollView>
   );
 }
@@ -545,11 +545,12 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   manageRow: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 10 },
-  classInput: { width: 42, textAlign: "center", borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 8, padding: 6 },
+  classField: { width: 42, minHeight: 40, height: 40, paddingHorizontal: 0, borderRadius: 8 },
+  classInputText: { minHeight: 36, height: 36, paddingHorizontal: 4, paddingVertical: 4, textAlign: "center" },
   timetableModal: { flex: 1, justifyContent: "center", padding: 22, backgroundColor: "rgba(0,0,0,0.38)" },
   timetableDialog: { backgroundColor: SeugiColor.White, padding: 20, borderRadius: 16, gap: 12 },
   dialogTitle: { color: SeugiColor.Gray800, fontWeight: "700", fontSize: 18 },
-  subjectInput: { borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 12 },
+  subjectField: { borderColor: SeugiColor.Gray300, borderRadius: 10 },
   modalActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   mealPanel: { backgroundColor: SeugiColor.White, borderRadius: 18, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, marginTop: 8 },

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, BackHandler, FlatList, Image, Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, BackHandler, FlatList, Image, Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { SeugiColor } from "@seugi/design-tokens";
 import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type LegacyProfile, type Room } from "@seugi/contracts";
 import { Button } from "../components/ui";
+import { SeugiTextField } from "../design-system/TextField";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { ChatRoomManagement } from "../components/ChatRoomManagement";
 import { api } from "../services/api";
@@ -118,7 +119,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     return [item.message, ...(item.files ?? [])].some((part) => part.toLocaleLowerCase().includes(query));
   });
   return <View style={styles.chatPage}>
-    <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <TextInput autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : <TouchableOpacity accessibilityRole="button" onPress={() => void openOtherProfile()}><Text style={styles.link}>프로필</Text></TouchableOpacity>}</>}</View>
+    <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <SeugiTextField autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" fieldStyle={styles.searchField} style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : <TouchableOpacity accessibilityRole="button" onPress={() => void openOtherProfile()}><Text style={styles.link}>프로필</Text></TouchableOpacity>}</>}</View>
     {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} onOpenPersonalChat={(nextRoom) => { setManageMembers(false); onOpenRoom(nextRoom); }} /> : <>
       <FlatList style={styles.content} data={visibleMessages} keyExtractor={(item) => item.id} ListEmptyComponent={searchText.trim() ? <Text style={styles.emptySearch}>검색 결과가 없습니다.</Text> : null} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
         ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
@@ -158,7 +159,8 @@ const styles = StyleSheet.create({
   chatPage: { flex: 1 },
   chatHeader: { backgroundColor: SeugiColor.White, padding: 16, flexDirection: "row", gap: 16, alignItems: "center" },
   chatTitle: { flex: 1 },
-  searchInput: { flex: 1, minWidth: 0, paddingVertical: 8, color: SeugiColor.Gray800 },
+  searchField: { flex: 1, minWidth: 0, minHeight: 40, height: 40, borderWidth: 0, borderRadius: 8 },
+  searchInput: { paddingVertical: 8, color: SeugiColor.Gray800 },
   emptySearch: { textAlign: "center", color: SeugiColor.Gray500, padding: 28 },
   content: { flex: 1, padding: 16 },
   link: { color: SeugiColor.Primary500 },

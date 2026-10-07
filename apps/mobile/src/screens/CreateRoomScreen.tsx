@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Member, Room, Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button, Card } from "../components/ui";
+import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 
 export function CreateRoomScreen({ workspace, onBack, onCreated }: {
@@ -55,7 +56,7 @@ export function CreateRoomScreen({ workspace, onBack, onCreated }: {
   if (step === "name") return <View style={styles.content}>
     <Card title="채팅방 이름">
       <View style={styles.avatar}><Text style={styles.avatarText}>{selectedMembers[0]?.name.slice(0, 1) ?? "채"}</Text></View>
-      <TextInput value={roomName} onChangeText={setRoomName} style={styles.input} placeholder={selectedMembers[0] ? `${selectedMembers[0].name} 외 ${selectedMembers.length - 1}명` : "채팅방 이름"} maxLength={60} autoFocus />
+      <SeugiTextField value={roomName} onChangeText={setRoomName} containerStyle={styles.inputSpacing} placeholder={selectedMembers[0] ? `${selectedMembers[0].name} 외 ${selectedMembers.length - 1}명` : "채팅방 이름"} maxLength={60} autoFocus />
       <Button label={busy ? "만드는 중…" : "완료"} onPress={() => void create(roomName.trim() || `${selectedMembers[0]?.name ?? "멤버"} 외 ${selectedMembers.length - 1}명`)} disabled={busy} />
       <Button label="이전" kind="secondary" onPress={() => setStep("members")} disabled={busy} />
     </Card>
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
   check: { color: SeugiColor.Primary500, fontSize: 22, width: 26 },
   memberName: { color: SeugiColor.Gray800, fontSize: 15 },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
-  input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
+  inputSpacing: { marginBottom: 10 },
   avatar: { alignSelf: "center", width: 76, height: 76, borderRadius: 38, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center", marginVertical: 16 },
   avatarText: { color: SeugiColor.Primary500, fontSize: 30, fontWeight: "700" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },

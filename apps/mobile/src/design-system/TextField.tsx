@@ -21,6 +21,7 @@ type SeugiTextFieldProps = TextInputProps & {
   onClear?: () => void;
   trailing?: ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
+  fieldStyle?: StyleProp<ViewStyle>;
 };
 
 /** Seugi's standard 52pt field with animated-focus-equivalent state colors. */
@@ -30,6 +31,7 @@ export function SeugiTextField({
   onClear,
   trailing,
   containerStyle,
+  fieldStyle,
   style,
   onFocus,
   onBlur,
@@ -45,6 +47,7 @@ export function SeugiTextField({
       <View
         style={[
           styles.field,
+          fieldStyle,
           focused && styles.focused,
           disabled && styles.disabled,
           !!error && styles.invalid,

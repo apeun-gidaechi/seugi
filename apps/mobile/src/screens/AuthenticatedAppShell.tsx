@@ -4,7 +4,6 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -14,6 +13,7 @@ import Svg, { Path } from "react-native-svg";
 import { api } from "../services/api";
 import { SeugiTopBar } from "../design-system/TopBar";
 import { SeugiBottomNavigation, type SeugiTab } from "../design-system/BottomNavigation";
+import { SeugiTextField } from "../design-system/TextField";
 export type Tab = SeugiTab;
 import { AssignmentsScreen, TaskCreateScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
@@ -140,7 +140,7 @@ export function AuthenticatedAppShell({
             <Text style={styles.back}>‹</Text>
           </TouchableOpacity>
         ) : null}
-        title={!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <TextInput autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" style={styles.headerSearch} /> : <Text style={styles.title}>{title}</Text>}
+        title={!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <SeugiTextField autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" fieldStyle={styles.headerSearchField} style={styles.headerSearchInput} /> : <Text style={styles.title}>{title}</Text>}
         trailing={!detail && tab === "home" ? (
           <TouchableOpacity
             accessibilityRole="button"
@@ -258,7 +258,8 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: SeugiColor.Primary050 },
   back: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
   title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700" },
-  headerSearch: { flex: 1, minWidth: 0, height: 42, fontSize: 16, paddingHorizontal: 12, backgroundColor: SeugiColor.White, borderRadius: 10 },
+  headerSearchField: { flex: 1, minWidth: 0, height: 42, minHeight: 42, borderWidth: 0, borderRadius: 10 },
+  headerSearchInput: { fontSize: 16, paddingHorizontal: 12 },
   headerActions: { width: 64, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 12 },
   headerActionIcon: { color: SeugiColor.Gray800, fontSize: 28, lineHeight: 32 },
   link: { color: SeugiColor.Primary500 },

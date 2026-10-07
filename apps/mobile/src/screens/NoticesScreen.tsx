@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
@@ -96,7 +96,7 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
       <View style={styles.reactions}>{Object.entries(item.emojis).filter(([, users]) => users.length > 0).map(([emoji, users]) => <TouchableOpacity key={emoji} accessibilityRole="button" accessibilityState={{ selected: users.includes(memberId) }} style={[styles.reaction, users.includes(memberId) && styles.reactionSelected]} onPress={() => void react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}<TouchableOpacity accessibilityRole="button" style={styles.addReaction} onPress={() => { setCustomEmoji(""); setEmojiTarget(item); }}><Text style={styles.addReactionText}>＋</Text></TouchableOpacity></View></Card>}
     />
     <Modal visible={!!emojiTarget} transparent animationType="slide" onRequestClose={() => setEmojiTarget(undefined)}>
-      <View style={styles.modalBackdrop}><TouchableOpacity style={styles.modalDismiss} activeOpacity={1} onPress={() => setEmojiTarget(undefined)} /><View style={styles.emojiSheet}><View style={styles.sheetHandle} /><Text style={styles.sheetTitle}>반응 추가</Text><Text style={styles.muted}>이모지를 선택하거나 직접 입력하세요.</Text><ScrollView contentContainerStyle={styles.emojiGrid}>{NOTICE_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" style={styles.emojiOption} onPress={() => emojiTarget && void react(emojiTarget, emoji)}><Text style={styles.emojiText}>{emoji}</Text></TouchableOpacity>)}</ScrollView><View style={styles.customEmojiRow}><TextInput value={customEmoji} onChangeText={setCustomEmoji} style={[styles.input, styles.customEmojiInput]} placeholder="다른 이모지 입력" maxLength={16} /><Button label="추가" onPress={() => emojiTarget && customEmoji.trim() && void react(emojiTarget, customEmoji.trim())} disabled={!customEmoji.trim()} /></View></View></View>
+      <View style={styles.modalBackdrop}><TouchableOpacity style={styles.modalDismiss} activeOpacity={1} onPress={() => setEmojiTarget(undefined)} /><View style={styles.emojiSheet}><View style={styles.sheetHandle} /><Text style={styles.sheetTitle}>반응 추가</Text><Text style={styles.muted}>이모지를 선택하거나 직접 입력하세요.</Text><ScrollView contentContainerStyle={styles.emojiGrid}>{NOTICE_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" style={styles.emojiOption} onPress={() => emojiTarget && void react(emojiTarget, emoji)}><Text style={styles.emojiText}>{emoji}</Text></TouchableOpacity>)}</ScrollView><View style={styles.customEmojiRow}><SeugiTextField value={customEmoji} onChangeText={setCustomEmoji} fieldStyle={styles.customEmojiField} style={styles.customEmojiInput} placeholder="다른 이모지 입력" maxLength={16} /><Button label="추가" onPress={() => emojiTarget && customEmoji.trim() && void react(emojiTarget, customEmoji.trim())} disabled={!customEmoji.trim()} /></View></View></View>
     </Modal></>;
 }
 
@@ -127,7 +127,6 @@ const styles = StyleSheet.create({
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
-  input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
   editorField: { marginBottom: 10 },
   noticeBodyInput: { minHeight: 120, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
   link: { color: SeugiColor.Primary500 },
@@ -148,5 +147,6 @@ const styles = StyleSheet.create({
   emojiOption: { width: "12.5%", aspectRatio: 1, alignItems: "center", justifyContent: "center" },
   emojiText: { fontSize: 26 },
   customEmojiRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  customEmojiInput: { flex: 1, marginBottom: 0 },
+  customEmojiField: { flex: 1, minHeight: 42, height: 42, borderRadius: 10 },
+  customEmojiInput: { paddingHorizontal: 12 },
 });
