@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import * as S from './StudentInfo.style';
 import Dropdown from '@/Pages/Admin/ManageMember/DropDown/DropDown';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import Cookies from 'js-cookie';
+import { updateStudentNumber } from '@/Api/admin';
 
 interface StudentInfoProps {
     onClose: () => void;
@@ -32,17 +32,9 @@ const StudentInfo = ({ onClose, memberId, permission }: StudentInfoProps) => {
         const numberInt = parseInt(number.replace('번', ''));
 
         try {
-            const res = await SeugiCustomAxios.patch(`/profile/schidnum/${workspaceId}`,
-                {
-                    id: memberId,
-                    schGrade: gradeInt, 
-                    schClass: classNumInt, 
-                    schNumber: numberInt, 
-                }
-            );
+            await updateStudentNumber(workspaceId, { id: memberId, schGrade: gradeInt, schClass: classNumInt, schNumber: numberInt });
             alert('학생 정보가 성공적으로 수정되었습니다.');
             onClose();
-            console.log(res.data);
         } catch (err) {
             console.error('학생 정보 수정 실패:', err);
             alert('학생 정보 수정에 실패했습니다.');

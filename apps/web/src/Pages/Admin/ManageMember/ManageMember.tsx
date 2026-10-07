@@ -3,8 +3,8 @@ import * as S from './ManageMember.style';
 import Setting from '@/Pages/Admin/Setting/Setting';
 import SettingHeader from '@/Pages/Admin/SettingHeader/SettingHeader';
 import SearchImg from '@/Assets/image/adminsetting/search_line.svg';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import Cookies from 'js-cookie';
+import { getWorkspaceMembers } from '@/Api/admin';
 import Avatar from '@/Assets/image/adminsetting/Avatar.svg';
 import MiddleAdminIcon from '@/Assets/image/adminsetting/middleAdmin.svg';
 import AdminIcon from '@/Assets/image/adminsetting/adminIcon.svg';
@@ -33,18 +33,13 @@ const AdminGeneral = () => {
 
     const handleGetMembers = async () => {
         try {
-            const res = await SeugiCustomAxios.get('/workspace/members', {
-                params: {
-                    workspaceId,
-                },
-            });
-
-            const allMembers = res.data.data;
+            if (!workspaceId) return;
+            const allMembers = await getWorkspaceMembers(workspaceId);
 
             const studentsList: { id: string, name: string, picture: string, permission: Permission }[] = [];
             const teachersList: { id: string, name: string, picture: string, permission: Permission }[] = [];
 
-            allMembers.forEach((member: any) => {
+            allMembers.forEach((member) => {
                 const { id, name, picture } = member.member;
                 const { permission } = member;
 

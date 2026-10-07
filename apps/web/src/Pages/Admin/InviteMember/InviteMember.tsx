@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import * as S from './InviteMember.style';
 import Setting from '@/Pages/Admin/Setting/Setting';
 import SettingHeader from '@/Pages/Admin/SettingHeader/SettingHeader';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import Cookies from 'js-cookie';
+import { approveWorkspaceMembers, getWorkspaceCode, getWorkspaceWaitlist, rejectWorkspaceMembers } from '@/Api/admin';
 import Code from '@/Pages/Admin/InviteMember/Code/Code';
 import CheckImg from '@/Assets/image/adminsetting/checkbox.svg';
 import NotCheckImg from '@/Assets/image/adminsetting/notcheckbox.svg';
@@ -12,11 +12,11 @@ const InviteMember = () => {
     const workspaceId = Cookies.get('workspaceId');
     const userRole = Cookies.get('userRole');
     const [selectedOption, setSelectedOption] = useState<'TEACHER' | 'STUDENT'>('TEACHER');
-    const [teachers, setTeachers] = useState<{ id: number, name: string; picture: string; permission: string }[]>([]);
-    const [students, setStudents] = useState<{ id: number, name: string; picture: string; permission: string }[]>([]);
+    const [teachers, setTeachers] = useState<{ id: string; name: string; picture?: string; permission?: string }[]>([]);
+    const [students, setStudents] = useState<{ id: string; name: string; picture?: string; permission?: string }[]>([]);
     const [workspaceCode, setWorkspaceCode] = useState<string | null>(null);
     const [isCodeVisible, setIsCodeVisible] = useState<boolean>(false);
-    const [selectedIds, setSelectedIds] = useState<number[]>([]); // 선택된 ID 배열
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchWaitingMembers = async () => {
@@ -26,18 +26,13 @@ const InviteMember = () => {
                     return;
                 }
 
-                const res = await SeugiCustomAxios.get(`/workspace/wait-list`, {
-                    params: {
-                        workspaceId,
-                        role: selectedOption,
-                    },
-                });
-                console.log(res.data.data);
+                if (!workspaceId) return;
+                const members = await getWorkspaceWaitlist(workspaceId, selectedOption);
 
                 if (selectedOption === 'TEACHER') {
-                    setTeachers(res?.data?.data || []);
+                    setTeachers(members);
                 } else if (selectedOption === 'STUDENT') {
-                    setStudents(res?.data?.data || []);
+                    setStudents(members);
                 }
             } catch (err) {
                 console.error("Can't find Waiting Member", err);
@@ -57,9 +52,10 @@ const InviteMember = () => {
 
     const handleCheckCode = async () => {
         try {
-            const res = await SeugiCustomAxios.get(`/workspace/code/${workspaceId}`);
-            if (res?.data?.data) {
-                setWorkspaceCode(res.data.data);
+            if (!workspaceId) return;
+            const code = await getWorkspaceCode(workspaceId);
+            if (code) {
+                setWorkspaceCode(code);
                 setIsCodeVisible(true);
             } else {
                 console.error('No code received');
@@ -73,7 +69,7 @@ const InviteMember = () => {
         setIsCodeVisible(false);
     };
 
-    const toggleSelection = (id: number) => {
+    const toggleSelection = (id: string) => {
         setSelectedIds((prev) =>
             prev.includes(id) ? prev.filter((selectedId) => selectedId !== id) : [...prev, id]
         );
@@ -81,11 +77,8 @@ const InviteMember = () => {
 
     const handleAddMember = async () => {
         try {
-            await SeugiCustomAxios.patch(`/workspace/add`, {
-                role: selectedOption,
-                userSet: selectedIds,
-                workspaceId
-            });
+            if (!workspaceId) return;
+            await approveWorkspaceMembers(workspaceId, selectedIds, selectedOption);
 
             console.log('성공적으로 승인되었습니다!');
 
@@ -107,13 +100,8 @@ const InviteMember = () => {
 
     const handleDeleteMember = async () => {
         try {
-            await SeugiCustomAxios.delete(`/workspace/cancel`, {
-                data: {
-                    role: selectedOption,
-                    userSet: selectedIds,
-                    workspaceId
-                }
-            });
+            if (!workspaceId) return;
+            await rejectWorkspaceMembers(workspaceId, selectedIds, selectedOption);
 
             console.log('성공적으로 거절되었습니다!');
 

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import * as S from './Dialog.style';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import Cookies from 'js-cookie';
 import StudentInfo from '@/Pages/Admin/ManageMember/StudentInfo/StudentInfo';
+import { kickWorkspaceMember, updateWorkspaceMemberRole } from '@/Api/admin';
 
 interface DialogProps {
     onCancel: () => void;
@@ -26,11 +26,8 @@ const Dialog = ({ onCancel, memberId, permission }: DialogProps) => {
             return;
         }
         try {
-            await SeugiCustomAxios.patch(`/workspace/permission`, {
-                memberId,
-                workspaceId,
-                workspaceRole,
-            });
+            if (!workspaceId) return;
+            await updateWorkspaceMemberRole(workspaceId, memberId, workspaceRole);
             onCancel();
         } catch (err) {
             console.error('권한 변경 오류:', err);
@@ -43,10 +40,8 @@ const Dialog = ({ onCancel, memberId, permission }: DialogProps) => {
             return;
         }
         try {
-            await SeugiCustomAxios.patch(`/workspace/kick`, {
-                memberList: [memberId],
-                workspaceId,
-            });
+            if (!workspaceId) return;
+            await kickWorkspaceMember(workspaceId, memberId);
             console.log('멤버 내보내기 성공');
             onCancel();
         } catch (err) {
