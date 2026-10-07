@@ -129,7 +129,7 @@ export function AuthenticatedAppShell({
 
   return (
     <SafeAreaView style={styles.page}>
-      {!activeConversation ? <SeugiTopBar
+      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" ? <SeugiTopBar
         backgroundColor={SeugiColor.Primary050}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
           <TouchableOpacity

@@ -5,6 +5,7 @@ import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 import { SeugiTextField } from "../design-system/TextField";
+import { SeugiTopBar } from "../design-system/TopBar";
 
 export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Workspace; onCreate: () => void; onEdit: (notice: Notification) => void }) {
   const [items, setItems] = useState<Notification[]>([]);
@@ -118,17 +119,35 @@ export function NoticeEditorScreen({ workspace, initial, onSaved, onCancel }: { 
     } catch (e) { setNotice(e instanceof Error ? e.message : initial ? "공지를 수정하지 못했습니다" : "공지를 등록하지 못했습니다"); }
     finally { setBusy(false); }
   };
-  return <View style={styles.content}><Card title={initial ? "공지 수정" : "공지 작성"}><SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목" /><SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} style={styles.noticeBodyInput} placeholder="공지 내용" multiline />
-    <Button label={busy ? "저장 중…" : initial ? "수정 저장" : "공지 등록"} onPress={submit} disabled={busy || !title.trim() || !content.trim()} /><Button label="취소" kind="secondary" onPress={onCancel} disabled={busy} />{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card></View>;
+  return <View style={styles.editorScreen}>
+    <SeugiTopBar
+      leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onCancel} disabled={busy}><Text style={styles.editorBack}>‹</Text></TouchableOpacity>}
+      title={<Text style={styles.editorTitle}>{initial ? "공지 수정" : "새 공지 작성"}</Text>}
+      trailing={<TouchableOpacity accessibilityRole="button" onPress={() => void submit()} disabled={busy || !title.trim() || !content.trim()}><Text style={[styles.editorDone, (busy || !title.trim() || !content.trim()) && styles.editorDoneDisabled]}>{busy ? "저장 중…" : "완료"}</Text></TouchableOpacity>}
+    />
+    <ScrollView style={styles.editorScroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.editorFields}>
+      <SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목을 입력해 주세요" editable={!busy} returnKeyType="next" />
+      <SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} fieldStyle={styles.noticeBodyField} style={styles.noticeBodyInput} placeholder="내용을 입력해 주세요" multiline editable={!busy} />
+      {notice ? <Text style={styles.error}>{notice}</Text> : null}
+    </ScrollView>
+  </View>;
 }
 
 const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
+  editorScreen: { flex: 1, backgroundColor: SeugiColor.White },
+  editorScroll: { flex: 1 },
+  editorFields: { paddingHorizontal: 20, paddingTop: 6 },
+  editorTitle: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700" },
+  editorBack: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
+  editorDone: { color: SeugiColor.Gray800, fontSize: 14, paddingVertical: 9, paddingHorizontal: 12 },
+  editorDoneDisabled: { color: SeugiColor.Gray300 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   editorField: { marginBottom: 10 },
-  noticeBodyInput: { minHeight: 120, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
+  noticeBodyField: { minHeight: 360, height: undefined, alignItems: "flex-start" },
+  noticeBodyInput: { minHeight: 360, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
   link: { color: SeugiColor.Primary500 },
   memberActions: { flexDirection: "row", gap: 14 },
   reactions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingTop: 6 },
