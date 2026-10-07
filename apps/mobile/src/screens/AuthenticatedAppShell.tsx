@@ -63,7 +63,7 @@ const detailTitles: Record<AppDetail, string> = {
   workspaceMembers: "구성원",
   workspaceInvite: "초대 코드",
   workspaceNotifications: "알림 설정",
-  workspaceCreate: "새 학교 만들기",
+  workspaceCreate: "새 학교 등록",
   workspaceJoin: "학교 가입",
 };
 

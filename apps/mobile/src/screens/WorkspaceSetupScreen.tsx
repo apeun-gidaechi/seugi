@@ -69,7 +69,7 @@ export function WorkspaceApprovalScreen({ workspace, onDone }: { workspace: Work
   </View>;
 }
 
-export function CreateWorkspaceCard({ onCreated }: { onCreated: () => Promise<void> }) {
+export function CreateWorkspaceCard({ onCreated, presentation = "card" }: { onCreated: () => Promise<void>; presentation?: "card" | "screen" }) {
   const [name, setName] = useState(""); const [image, setImage] = useState<{ uri: string; name: string; mimeType?: string }>(); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
   const pickImage = async () => { try { const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) { const asset = result.assets[0]; setImage({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? undefined }); setNotice(""); } } catch (error) { setNotice(error instanceof Error ? error.message : "학교 이미지를 선택하지 못했습니다"); } };
   const create = async () => {
@@ -82,7 +82,11 @@ export function CreateWorkspaceCard({ onCreated }: { onCreated: () => Promise<vo
     } catch (error) { setNotice(error instanceof Error ? error.message : "워크스페이스 생성에 실패했습니다"); }
     finally { setBusy(false); }
   };
-  return <Card title="새 학교 등록"><TouchableOpacity onPress={() => void pickImage()} disabled={busy} style={{ alignItems: "center", paddingVertical: 8 }}>{image ? <Image source={{ uri: image.uri }} style={{ width: 72, height: 72, borderRadius: 36 }} /> : <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" }}><Text style={styles.link}>＋</Text></View>}<Text style={styles.link}>{image ? "이미지 변경" : "학교 이미지 추가 (선택)"}</Text></TouchableOpacity><SeugiTextField value={name} onChangeText={setName} containerStyle={styles.fieldSpacing} placeholder="학교 이름을 입력해 주세요" maxLength={80} /><Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || !name.trim()} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
+  const imagePicker = <TouchableOpacity accessibilityRole="button" accessibilityLabel="학교 이미지 추가 (선택)" onPress={() => void pickImage()} disabled={busy} style={styles.workspaceImagePicker}>{image ? <Image source={{ uri: image.uri }} style={styles.workspaceCreateImage} /> : <View style={styles.workspaceCreateImageEmpty}><Text style={styles.link}>＋</Text></View>}<Text style={styles.link}>{image ? "이미지 변경" : "학교 이미지 추가 (선택)"}</Text></TouchableOpacity>;
+  const nameField = <SeugiTextField label={presentation === "screen" ? "학교 이름" : undefined} value={name} onChangeText={setName} containerStyle={styles.fieldSpacing} placeholder="학교 이름을 입력해 주세요" maxLength={80} editable={!busy} />;
+  const createButton = <Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || !name.trim()} />;
+  if (presentation === "screen") return <View style={styles.createWorkspacePage}>{imagePicker}<View style={styles.createWorkspaceNameField}>{nameField}</View><View style={styles.createWorkspaceSpacer} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}{createButton}</View>;
+  return <Card title="새 학교 등록">{imagePicker}{nameField}{createButton}{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
 }
 
 export function PendingWorkspaceRequests({ onChanged }: { onChanged?: () => Promise<void> }) {
@@ -98,6 +102,12 @@ const styles = StyleSheet.create({
   logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" },
   subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 },
   fieldSpacing: { marginBottom: 10 },
+  createWorkspacePage: { flex: 1, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: SeugiColor.White },
+  workspaceImagePicker: { alignItems: "center", paddingVertical: 16 },
+  workspaceCreateImage: { width: 72, height: 72, borderRadius: 36 },
+  workspaceCreateImageEmpty: { width: 72, height: 72, borderRadius: 36, backgroundColor: SeugiColor.Gray100, alignItems: "center", justifyContent: "center" },
+  createWorkspaceNameField: { paddingHorizontal: 0 },
+  createWorkspaceSpacer: { flex: 1 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   link: { color: SeugiColor.Primary500 },
