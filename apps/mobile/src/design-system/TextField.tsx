@@ -98,6 +98,7 @@ export function SeugiCodeTextField({
   limit = 6,
   error,
   containerStyle,
+  keyboardType = "number-pad",
   ...props
 }: Omit<TextInputProps, "value" | "onChangeText" | "maxLength"> & {
   value: string;
@@ -125,7 +126,7 @@ export function SeugiCodeTextField({
         onChangeText={(next) => onChangeText(next.slice(0, limit))}
         onFocus={(event) => { setFocused(true); props.onFocus?.(event); }}
         onBlur={(event) => { setFocused(false); props.onBlur?.(event); }}
-        keyboardType="number-pad"
+        keyboardType={keyboardType}
         maxLength={limit}
         selectionColor={SeugiColor.Primary500}
         style={styles.codeInput}

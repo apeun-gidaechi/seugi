@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
 import bcrypt from "bcryptjs";
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 import {
   API_SPEC,
@@ -72,6 +73,10 @@ import { fetchClassroomTasks } from "./classroom.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
+
+const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const createWorkspaceCode = () =>
+  Array.from({ length: 6 }, () => workspaceCodeAlphabet[randomInt(workspaceCodeAlphabet.length)]).join("");
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" {
@@ -419,9 +424,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       const input = normalizeWorkspaceInput(
         body(createWorkspaceSchema, request),
       );
+      let code = createWorkspaceCode();
+      while ([...store.workspaces.values()].some((workspace) => workspace.code === code)) {
+        code = createWorkspaceCode();
+      }
       const workspace = {
         id: store.id(),
-        code: store.id().slice(0, 8).toUpperCase(),
+        code,
         ownerId: request.user.sub,
         members: [request.user.sub],
         waitlist: [],

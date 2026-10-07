@@ -5,7 +5,7 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
 import { api } from "../services/api";
-import { SeugiTextField } from "../design-system/TextField";
+import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
 
 export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
   const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting" | "requests">("start");
@@ -50,7 +50,7 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
     {screen === "requests" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>가입 신청 내역</Text><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView> : null}
     {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
-    {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} containerStyle={styles.fieldSpacing} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
+    {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiCodeTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.codeSpacing} />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
     {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
     {screen === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={() => setScreen("start")} /> : null}
   </SafeAreaView>;
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
   logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" },
   subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 },
   fieldSpacing: { marginBottom: 10 },
+  codeSpacing: { marginVertical: 8 },
   createWorkspacePage: { flex: 1, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: SeugiColor.White },
   workspaceImagePicker: { alignItems: "center", paddingVertical: 16 },
   workspaceCreateImage: { width: 72, height: 72, borderRadius: 36 },

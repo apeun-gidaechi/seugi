@@ -172,6 +172,8 @@ test("member can register, create a workspace, and retrieve it", async () => {
   const authorization = `Bearer ${registration.json().data.accessToken}`;
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "스기고" } });
   assert.equal(workspace.statusCode, 200);
+  const workspaceCode = await app.inject({ method: "GET", url: `/workspace/code/${workspace.json().data}`, headers: { authorization } });
+  assert.match(workspaceCode.json().data, /^[A-Z0-9]{6}$/);
   const task = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "수학 과제", content: "2단원 문제 풀기", dueDate: "2026-10-15T00:00:00.000Z" } });
   assert.equal(task.statusCode, 200);
   const tasks = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
