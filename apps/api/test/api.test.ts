@@ -454,6 +454,23 @@ test("authenticated room members receive Socket.IO messages", async () => {
   } finally { socket.close(); await app.close(); }
 });
 
+test("chat room API accepts original Android/iOS request names and exposes legacy response fields", async () => {
+  const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000011"; const peerId = "00000000-0000-4000-8000-000000000012"; const workspaceId = "00000000-0000-4000-8000-000000000013";
+  store.members.set(ownerId, { id: ownerId, email: "owner@rooms.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@rooms.test", name: "친구" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "ROOMTEST", name: "방 호환 학교", members: [ownerId, peerId], waitlist: [], ownerId });
+  const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: ownerId })}`;
+  try {
+    const created = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "", joinUsers: [peerId], chatRoomImg: "" } });
+    assert.equal(created.statusCode, 200); const roomId = created.json().data as string; const room = store.rooms.get(roomId); assert.equal(room?.name, "친구");
+    const fetched = await app.inject({ method: "GET", url: `/chat/personal/search/room/${roomId}`, headers: { authorization } }); const data = fetched.json().data;
+    assert.equal(data.chatName, "친구"); assert.equal(data.roomAdmin, ownerId); assert.equal(data.chatRoomImg, ""); assert.equal(data.joinUserInfo.length, 2); assert.equal(data.notReadCnt, 0);
+    const repeated = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "", joinUsers: [peerId], chatRoomImg: "" } });
+    assert.equal(repeated.json().data, roomId);
+    const invalid = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "잘못된 개인방", joinUsers: [], chatRoomImg: "" } });
+    assert.equal(invalid.statusCode, 400);
+  } finally { await app.close(); }
+});
+
 test("original mobile clients can authenticate, subscribe, and send over STOMP", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
   store.emailCodes.set("stomp@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
