@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Alert,
+  ActivityIndicator,
   FlatList,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -46,8 +48,10 @@ export function HomeScreen({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [meals, setMeals] = useState<Meal[]>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [mealPage, setMealPage] = useState(0);
+  const [mealPageWidth, setMealPageWidth] = useState(0);
   const refreshTasks = useCallback(async () => {
     const result = await api.tasks(workspace.id);
     setTasks(result.data ?? []);
@@ -65,7 +69,7 @@ export function HomeScreen({
     api
       .meals(workspace.id)
       .then((result) => setMeals(result.data ?? []))
-      .catch(() => undefined);
+      .catch(() => setMeals([]));
     api
       .schedules(workspace.id)
       .then((result) => setSchedules(result.data ?? []))
@@ -73,10 +77,14 @@ export function HomeScreen({
   }, [workspace.id, refreshTasks]);
 
   const today = localDateKey(new Date());
-  const todaysMeals = meals.filter((item) => item.date.slice(0, 10) === today);
+  const todaysMeals = (meals ?? []).filter((item) => item.date.slice(0, 10) === today);
+  const mealPages = Platform.OS === "android"
+    ? ["조식", "중식", "석식"].map((type) => ({ type, meal: todaysMeals.find((item) => item.type === type) }))
+    : todaysMeals.map((meal) => ({ type: meal.type, meal }));
   const todaysTimetable = timetable
     .filter((item) => item.date.slice(0, 10) === today)
     .sort((a, b) => Number(a.time) - Number(b.time));
+  const selectedPeriod = Math.floor((Date.now() - new Date().setHours(8, 50, 0, 0)) / 3_600_000);
   const upcoming = schedules
     .filter((item) => item.date.slice(0, 10) >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -92,30 +100,48 @@ export function HomeScreen({
       </HomeCard>
       <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
         {todaysTimetable.length ? (
-          todaysTimetable.map((item) => (
-            <View key={item.id} style={styles.homeRow}>
-              <Text style={styles.muted}>{item.time}교시</Text>
-              <Text style={styles.rowTitle}>{item.subject}</Text>
+          Platform.OS === "ios" ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iosPeriods}>
+              {todaysTimetable.map((item, index) => {
+                const period = Number(item.time) - 1;
+                const current = selectedPeriod === period;
+                const elapsed = selectedPeriod >= period;
+                return <View key={item.id} style={styles.iosPeriod}>
+                  <Text style={[styles.periodNumber, current && styles.periodNumberCurrent]}>{item.time}</Text>
+                  <View style={[styles.periodSubject, elapsed && styles.periodSubjectElapsed, current && styles.periodSubjectCurrent, index === 0 && styles.periodFirst, index === todaysTimetable.length - 1 && styles.periodLast]}>
+                    <Text numberOfLines={1} style={[styles.periodSubjectText, elapsed && styles.periodSubjectTextElapsed, current && styles.periodSubjectTextCurrent]}>{item.subject}</Text>
+                  </View>
+                </View>;
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.androidPeriods}>
+              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.max(1, Math.min(100, ((selectedPeriod + 0.9) / todaysTimetable.length) * 100))}%` }]} /></View>
+              <View style={styles.periodRow}>{todaysTimetable.map((item, index) => {
+                const current = selectedPeriod === Number(item.time) - 1;
+                return <View key={item.id} style={styles.androidPeriod}>
+                  <Text style={[styles.periodNumber, current && styles.periodNumberCurrent]}>{item.time}</Text>
+                  <Text numberOfLines={1} style={[styles.periodSubjectText, current && styles.periodSubjectTextCurrent, index > selectedPeriod && styles.periodUpcoming]}>{item.subject}</Text>
+                </View>;
+              })}</View>
             </View>
-          ))
+          )
         ) : (
           <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
         )}
       </HomeCard>
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
-        {todaysMeals.length ? (
-          todaysMeals.map((meal) => (
-            <View key={`${meal.date}-${meal.type}`}>
-              <Text style={styles.rowTitle}>
-                {meal.type}
-                {meal.calorie ? ` · ${meal.calorie}` : ""}
-              </Text>
-              <Text>{meal.menu.join(" · ")}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.muted}>오늘 등록된 급식 정보가 없습니다.</Text>
-        )}
+        {meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
+          {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
+            {mealPages.map(({ type, meal }, index) => <View key={`${today}-${type}`} style={[styles.mealPage, { width: mealPageWidth }]}>
+              {meal ? <>
+                <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{Platform.OS === "android" ? type === "조식" ? "아침" : type === "중식" ? "점심" : type === "석식" ? "저녁" : type : type}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
+                {Platform.OS === "android" ? Array.from({ length: Math.ceil(meal.menu.length / 2) }, (_, row) => <View key={row} style={styles.mealMenuRow}><Text style={styles.mealMenuColumn}>{meal.menu[row * 2]}</Text><Text style={styles.mealMenuColumn}>{meal.menu[row * 2 + 1] ?? ""}</Text></View>) : meal.menu.map((dish, dishIndex) => <Text key={`${dishIndex}-${dish}`} style={styles.mealMenuLine}>{dish}</Text>)}
+              </> : <View style={styles.mealEmpty}><Text style={styles.mealSad}>☹</Text><Text style={styles.rowTitle}>급식이 없어요</Text></View>}
+            </View>)}
+          </ScrollView> : null}
+          <View style={styles.mealPageTrack}><View style={[styles.mealPageIndicator, { width: Platform.OS === "android" ? 16 : 36 / mealPages.length, transform: [{ translateX: mealPage * (Platform.OS === "android" ? 10 : 36 / mealPages.length) }] }]} /></View>
+        </View> : <Text style={styles.muted}>급식이 없어요</Text>}
       </HomeCard>
       <HomeCard title="캣스기" icon="cat">
         <TouchableOpacity
@@ -522,6 +548,16 @@ const styles = StyleSheet.create({
   homeCardTitleButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   homeCardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 26 },
   homeCardBody: { paddingHorizontal: 12, paddingTop: 12 },
+  mealPage: { paddingHorizontal: 4, minHeight: 72 },
+  mealCardHeading: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  mealTypeBadge: { color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, fontSize: 12 },
+  mealMenuRow: { flexDirection: "row" },
+  mealMenuColumn: { flex: 1, color: SeugiColor.Gray700, fontSize: 14, paddingVertical: 2 },
+  mealMenuLine: { color: SeugiColor.Gray700, fontSize: 14 },
+  mealEmpty: { minHeight: 72, alignItems: "center", justifyContent: "center", gap: 8 },
+  mealSad: { color: SeugiColor.Gray500, fontSize: 28 },
+  mealPageTrack: { width: 36, height: 6, borderRadius: 3, backgroundColor: SeugiColor.Gray300, alignSelf: "center", marginTop: 12, overflow: "hidden" },
+  mealPageIndicator: { height: 6, borderRadius: 3, backgroundColor: SeugiColor.Primary500 },
   schoolRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -532,6 +568,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 6,
   },
+  iosPeriods: { paddingRight: 8 },
+  iosPeriod: { width: 80 },
+  periodNumber: { color: SeugiColor.Primary300, fontSize: 14, textAlign: "center", paddingVertical: 8 },
+  periodNumberCurrent: { color: SeugiColor.Primary500 },
+  periodSubject: { height: 34, justifyContent: "center", paddingHorizontal: 8, backgroundColor: SeugiColor.Primary100 },
+  periodSubjectElapsed: { backgroundColor: SeugiColor.Primary500 },
+  periodSubjectCurrent: { borderTopRightRadius: 16, borderBottomRightRadius: 16 },
+  periodFirst: { borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },
+  periodLast: { borderTopRightRadius: 16, borderBottomRightRadius: 16 },
+  periodSubjectText: { color: SeugiColor.Primary300, fontSize: 13, textAlign: "center" },
+  periodSubjectTextElapsed: { color: SeugiColor.Primary200 },
+  periodSubjectTextCurrent: { color: SeugiColor.White },
+  periodUpcoming: { color: SeugiColor.Primary300 },
+  androidPeriods: { minHeight: 52, justifyContent: "flex-end" },
+  progressTrack: { position: "absolute", bottom: 0, left: 0, right: 0, height: 34, borderRadius: 23, backgroundColor: SeugiColor.Primary100, overflow: "hidden" },
+  progressFill: { height: 34, borderRadius: 23, backgroundColor: SeugiColor.Primary500 },
+  periodRow: { flexDirection: "row" },
+  androidPeriod: { flex: 1, alignItems: "center" },
   catPrompt: {
     minHeight: 52,
     borderWidth: 1.5,
