@@ -24,7 +24,6 @@ import type {
   Workspace,
 } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
-import { HomeNoticesCard } from "../components/HomeNoticesCard";
 import { HomeAssignmentsCard } from "../components/HomeAssignmentsCard";
 import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
@@ -40,12 +39,6 @@ export function HomeScreen({
   onOpenTimetable,
   onOpenTasks,
   onOpenWorkspace,
-  onOpenNotices,
-  onCreateNotice,
-  onEditNotice,
-  onCreateTimetable,
-  canCreateNotice,
-  canManageNotices,
 }: {
   workspace: Workspace;
   refreshToken?: number;
@@ -54,12 +47,6 @@ export function HomeScreen({
   onOpenTimetable: () => void;
   onOpenTasks: () => void;
   onOpenWorkspace: () => void;
-  onOpenNotices: () => void;
-  onCreateNotice: () => void;
-  onEditNotice: (notice: import("@seugi/contracts").Notification) => void;
-  onCreateTimetable: () => void;
-  canCreateNotice: boolean;
-  canManageNotices: boolean;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
@@ -69,11 +56,13 @@ export function HomeScreen({
   const [mealPage, setMealPage] = useState(0);
   const [mealPageWidth, setMealPageWidth] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+  const [assignmentError, setAssignmentError] = useState(false);
   const [currentPeriod, setCurrentPeriod] = useState<number | null>(null);
   const [allPeriodsOver, setAllPeriodsOver] = useState(false);
-  const [canManageTimetable, setCanManageTimetable] = useState(false);
   const refreshHome = useCallback(async () => {
     setRefreshing(true);
+    setAssignmentsLoading(true);
     const results = await Promise.allSettled([
       api.tasks(workspace.id),
       api.classroomTasks(),
@@ -86,19 +75,15 @@ export function HomeScreen({
     if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
     if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
     if (results[4].status === "fulfilled") setSchedules(results[4].value.data ?? []);
+    setAssignmentError(Platform.OS === "ios"
+      ? results[0].status === "rejected"
+      : results[0].status === "rejected" && results[1].status === "rejected");
+    setAssignmentsLoading(false);
     setRefreshing(false);
   }, [workspace.id]);
   useEffect(() => {
     void refreshHome();
   }, [refreshHome, refreshToken]);
-  useEffect(() => {
-    let active = true;
-    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
-      if (active) setCanManageTimetable(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
-    }).catch(() => { if (active) setCanManageTimetable(false); });
-    return () => { active = false; };
-  }, [workspace.id, workspace.ownerId]);
-
   const today = localDateKey(new Date());
   const todaysMeals = (meals ?? []).filter((item) => item.date.slice(0, 10) === today);
   const mealPages = Platform.OS === "android"
@@ -133,7 +118,7 @@ export function HomeScreen({
           <Button label="전환" kind="secondary" onPress={onOpenWorkspace} />
         </View>}
       </HomeCard>
-      <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable} trailing={canManageTimetable ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="시간표 만들기" onPress={onCreateTimetable} style={styles.homeCardQuickAction}><Text style={styles.link}>＋</Text></TouchableOpacity> : null}>
+      <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
         {todaysTimetable.length ? (
           Platform.OS === "ios" ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iosPeriods}>
@@ -165,7 +150,6 @@ export function HomeScreen({
           <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
         )}
       </HomeCard>
-      <HomeNoticesCard workspace={workspace} canCreate={canCreateNotice} canManage={canManageNotices} onOpen={onOpenNotices} onCreate={onCreateNotice} onEdit={onEditNotice} />
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
         {meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
           {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
@@ -203,7 +187,7 @@ export function HomeScreen({
           <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
         )}
       </HomeCard>
-      <HomeAssignmentsCard tasks={tasks} classroomTasks={classroomTasks} onOpen={onOpenTasks} />
+      <HomeAssignmentsCard tasks={tasks} classroomTasks={classroomTasks} loading={assignmentsLoading} error={assignmentError} onOpen={onOpenTasks} />
     </ScrollView>
   );
 }
@@ -231,12 +215,11 @@ const homeCardPaths: Record<HomeCardIcon, string> = {
   task: "M5 4h14v17H5z M8 9l1.5 1.5L12 8m1 2h3m-8 5 1.5 1.5L12 14m1 2h3",
 };
 
-function HomeCard({ title, icon, children, onPress, trailing }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void; trailing?: ReactNode }) {
+function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void }) {
   return <View style={styles.homeCard}>
     <View style={styles.homeCardHeader}>
       <View style={styles.homeCardIcon}><Svg width={24} height={24} viewBox="0 0 24 24"><Path d={homeCardPaths[icon]} fill="none" stroke={SeugiColor.Gray600} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></Svg></View>
       {onPress ? <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.homeCardTitleButton}><Text style={styles.homeCardTitle}>{title}</Text><Text style={styles.homeCardArrow}>›</Text></TouchableOpacity> : <Text style={styles.homeCardTitle}>{title}</Text>}
-      {trailing}
     </View>
     <View style={styles.homeCardBody}>{children}</View>
   </View>;
@@ -344,7 +327,7 @@ export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entrie
   );
 }
 
-export function TimetablePage({ workspace, initialCreate = false, onCreated }: { workspace: Workspace; initialCreate?: boolean; onCreated?: () => void }) {
+export function TimetablePage({ workspace }: { workspace: Workspace }) {
   const [entries, setEntries] = useState<Timetable[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -354,9 +337,6 @@ export function TimetablePage({ workspace, initialCreate = false, onCreated }: {
   const [editing, setEditing] = useState<Timetable>();
   const [draft, setDraft] = useState("");
   const [slot, setSlot] = useState<{ date: string; time: string }>();
-  useEffect(() => {
-    if (initialCreate) setSlot({ date: localDateKey(new Date()), time: "1" });
-  }, [initialCreate]);
   const refresh = useCallback(async () => {
     setBusy(true);
     setError("");
@@ -397,7 +377,7 @@ export function TimetablePage({ workspace, initialCreate = false, onCreated }: {
     try {
       if (editing) await api.updateTimetable(editing.id, draft.trim());
       else if (slot) await api.createTimetable({ workspaceId: workspace.id, grade, classNum, time: slot.time, subject: draft.trim(), date: slot.date });
-      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh(); onCreated?.();
+      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 저장하지 못했습니다"); }
     finally { setBusy(false); }
   };
@@ -603,7 +583,6 @@ const styles = StyleSheet.create({
   homeCardIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: SeugiColor.Gray100, alignItems: "center", justifyContent: "center" },
   homeCardTitle: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
   homeCardTitleButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  homeCardQuickAction: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   homeCardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 26 },
   homeCardBody: { paddingHorizontal: 12, paddingTop: 12 },
   mealPage: { paddingHorizontal: 4, minHeight: 72 },

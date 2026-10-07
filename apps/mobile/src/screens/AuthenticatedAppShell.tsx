@@ -47,7 +47,7 @@ const tabTitles: Record<SeugiTab, string> = {
   notice: "공지",
   profile: "내 프로필",
 };
-type AppDetail = HomeDetail | "createRoom" | "createTask" | "createTimetable" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
+type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
@@ -56,7 +56,6 @@ const detailTitles: Record<AppDetail, string> = {
   workspace: "학교 관리",
   createRoom: "멤버 선택",
   createTask: "과제 만들기",
-  createTimetable: "시간표 만들기",
   createNotice: "공지 작성",
   editNotice: "공지 수정",
   accountSettings: "설정",
@@ -97,7 +96,6 @@ export function AuthenticatedAppShell({
   const [roomSearch, setRoomSearch] = useState("");
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const [canCreateNotice, setCanCreateNotice] = useState(false);
-  const [canManageNotices, setCanManageNotices] = useState(false);
   const [homeRefreshToken, setHomeRefreshToken] = useState(0);
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
@@ -111,8 +109,7 @@ export function AuthenticatedAppShell({
     Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
       if (!active) return;
       setCanCreateNotice(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
-      setCanManageNotices(workspace.ownerId === member.data?.id || profile.data?.role === "ADMIN" || profile.data?.role === "MIDDLE_ADMIN");
-    }).catch(() => { if (active) { setCanCreateNotice(false); setCanManageNotices(false); } });
+    }).catch(() => { if (active) setCanCreateNotice(false); });
     return () => { active = false; };
   }, [workspace.id, workspace.ownerId]);
 
@@ -168,7 +165,6 @@ export function AuthenticatedAppShell({
 
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
       {detail === "timetable" ? <TimetablePage workspace={workspace} /> : null}
-      {detail === "createTimetable" ? <TimetablePage workspace={workspace} initialCreate onCreated={goBack} /> : null}
       {detail === "tasks" ? <AssignmentsScreen workspace={workspace} onCreateTask={() => pushDetail("createTask")} /> : null}
       {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => goBack()} onBack={goBack} /> : null}
       {detail === "createNotice" || detail === "editNotice" ? (
@@ -202,14 +198,8 @@ export function AuthenticatedAppShell({
           onOpenCatSeugi={() => pushDetail("catSeugi")}
           onOpenMeals={() => pushDetail("meals")}
           onOpenTimetable={() => pushDetail("timetable")}
-          onCreateTimetable={() => pushDetail("createTimetable")}
           onOpenTasks={() => pushDetail("tasks")}
           onOpenWorkspace={() => pushDetail("workspace")}
-          onOpenNotices={() => changeTab("notice")}
-          onCreateNotice={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}
-          onEditNotice={(notice) => { setEditingNotice(notice); pushDetail("editNotice"); }}
-          canCreateNotice={canCreateNotice}
-          canManageNotices={canManageNotices}
         />
       ) : null}
       {!detail && (tab === "chat" || tab === "group") ? (

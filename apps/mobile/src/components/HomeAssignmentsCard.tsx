@@ -1,54 +1,54 @@
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { ClassroomTask, Task } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 
-export function HomeAssignmentsCard({ tasks, classroomTasks, onOpen }: {
+export function HomeAssignmentsCard({ tasks, classroomTasks, loading, error, onOpen }: {
   tasks: Task[];
   classroomTasks: ClassroomTask[];
+  loading: boolean;
+  error: boolean;
   onOpen: () => void;
 }) {
-  const now = new Date();
-  const visibleTasks = partitionUpcoming(tasks, now);
-  const visibleClassroomTasks = partitionUpcoming(classroomTasks, now);
+  const rows = Platform.OS === "ios"
+    ? tasks.slice().sort((a, b) => {
+      if (!a.dueDate) return b.dueDate ? 1 : 0;
+      if (!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    })
+    : [...classroomTasks, ...tasks]
+      .filter((task) => task.dueDate && new Date(task.dueDate) > new Date())
+      .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))
+      .slice(0, 3);
 
   return <View style={styles.card}>
     <TouchableOpacity accessibilityRole="button" onPress={onOpen} style={styles.header}><Text style={styles.title}>다가오는 과제</Text><Text style={styles.arrow}>›</Text></TouchableOpacity>
-    <AssignmentGroup title="구글 클래스룸 과제" tasks={visibleClassroomTasks} empty="과제가 없습니다" onTaskPress={(task) => { if (task.link) void Linking.openURL(task.link).catch(() => undefined); }} classroom />
-    <AssignmentGroup title="일반 과제" tasks={visibleTasks} empty="과제가 없습니다" />
+    {loading ? <Text style={styles.loading}>불러오는 중…</Text> : error ? <Text style={styles.empty}>{Platform.OS === "ios" ? "과제를 불러올 수 없어요" : "구글 계정을 등록하고 과제를 확인하세요"}</Text> : rows.length === 0 ? <Text style={styles.empty}>과제가 없어요</Text> : <View style={styles.list}>
+      {rows.map((task, index) => {
+        const dueDate = task.dueDate;
+        const day = dueDate ? dayDifference(dueDate) : undefined;
+        const dateLabel = dueDate ? formatMonthDay(dueDate) : "기한없음";
+        const dDayLabel = day === undefined ? "기한없음" : day > 0 ? `D-${day}` : day < 0 ? `D+${Math.abs(day)}` : Platform.OS === "ios" ? "D-0" : "D-Day";
+        return <View key={`${"link" in task ? "classroom" : "workspace"}-${task.id}-${index}`} style={styles.row}>
+          <Text style={styles.date}>{dateLabel}</Text>
+          <Text numberOfLines={1} style={styles.task}>{task.title}</Text>
+          <Text style={styles.dDay}>{dDayLabel}</Text>
+        </View>;
+      })}
+    </View>}
   </View>;
 }
 
-function partitionUpcoming<T extends Task | ClassroomTask>(tasks: T[], now: Date): T[] {
-  const upcoming = tasks.filter((task) => task.dueDate && new Date(task.dueDate) >= now);
-  const noDeadline = tasks.filter((task) => !task.dueDate);
-  return [...upcoming, ...noDeadline];
+function dayDifference(value: string) {
+  const date = new Date(value);
+  const due = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
 }
 
-function AssignmentGroup({ title, tasks, empty, classroom = false, onTaskPress }: {
-  title: string;
-  tasks: Array<Task | ClassroomTask>;
-  empty: string;
-  classroom?: boolean;
-  onTaskPress?: (task: ClassroomTask) => void;
-}) {
-  return <View style={styles.group}>
-    <Text style={styles.groupTitle}>{title}</Text>
-    {tasks.length === 0 ? <Text style={styles.empty}>{empty}</Text> : tasks.map((task) => {
-      const body = <>
-        <Text style={styles.taskTitle}>{task.title}</Text>
-        <Text style={styles.description}>{task.description || "설명 없음"}</Text>
-        <View style={styles.dateRow}><Text style={styles.date}>{task.dueDate ? new Date(task.dueDate).toLocaleString() : "기한 없음"}</Text>{!classroom && task.dueDate ? <Text style={styles.daysLeft}>{daysLeft(task.dueDate)}</Text> : null}</View>
-      </>;
-      return classroom
-        ? <TouchableOpacity key={task.id} accessibilityRole="button" onPress={() => onTaskPress?.(task as ClassroomTask)} style={styles.task}>{body}{(task as ClassroomTask).link ? <Text style={styles.link}>과제 열기 ↗</Text> : null}</TouchableOpacity>
-        : <View key={task.id} style={styles.task}>{body}</View>;
-    })}
-  </View>;
-}
-
-function daysLeft(dueDate: string) {
-  const difference = Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86_400_000);
-  return difference > 0 ? `D-${difference}` : difference === 0 ? "D-Day" : `D+${Math.abs(difference)}`;
+function formatMonthDay(value: string) {
+  const date = new Date(value);
+  return `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, "0")}`;
 }
 
 const styles = StyleSheet.create({
@@ -56,14 +56,11 @@ const styles = StyleSheet.create({
   header: { minHeight: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { color: SeugiColor.Gray800, fontSize: 17, fontWeight: "700" },
   arrow: { color: SeugiColor.Gray500, fontSize: 22, lineHeight: 24 },
-  group: { gap: 8, borderTopWidth: 1, borderTopColor: SeugiColor.Gray100, paddingTop: 10 },
-  groupTitle: { color: SeugiColor.Gray700, fontSize: 14, fontWeight: "600" },
-  empty: { color: SeugiColor.Gray500, fontSize: 13, paddingVertical: 10 },
-  task: { gap: 4, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
-  taskTitle: { color: SeugiColor.Gray800, fontSize: 14, fontWeight: "600" },
-  description: { color: SeugiColor.Gray600, fontSize: 13 },
-  dateRow: { flexDirection: "row", justifyContent: "space-between", gap: 8, marginTop: 4 },
-  date: { color: SeugiColor.Gray500, fontSize: 12, flex: 1 },
-  daysLeft: { color: SeugiColor.Gray600, fontSize: 12 },
-  link: { color: SeugiColor.Primary500, fontSize: 13, alignSelf: "flex-end", paddingTop: 2 },
+  list: { gap: 16 },
+  row: { minHeight: 30, flexDirection: "row", alignItems: "center", gap: 10 },
+  date: { color: SeugiColor.Primary500, fontSize: 14 },
+  task: { flex: 1, minWidth: 0, color: SeugiColor.Gray800, fontSize: 14 },
+  dDay: { color: SeugiColor.Gray600, fontSize: 13 },
+  loading: { color: SeugiColor.Gray500, textAlign: "center", paddingVertical: 12 },
+  empty: { color: SeugiColor.Gray500, textAlign: "center", paddingVertical: 12 },
 });
