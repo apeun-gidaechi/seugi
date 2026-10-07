@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, FlatList, Image, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, BackHandler, FlatList, Image, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatMessageEmojiEvent, type Room } from "@seugi/contracts";
@@ -17,7 +17,14 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
   const [imageDraft, setImageDraft] = useState<DocumentPicker.DocumentPickerAsset>();
   const [fileDraft, setFileDraft] = useState<DocumentPicker.DocumentPickerAsset>();
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const [failedOutgoing, setFailedOutgoing] = useState<Array<{ id: string; message: string; files: string[]; type: "MESSAGE" | "IMG" | "FILE" }>>([]);
+  useEffect(() => {
+    if (!searchMode) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => { setSearchMode(false); setSearchText(""); return true; });
+    return () => subscription.remove();
+  }, [searchMode]);
   useEffect(() => { let active = true; const socket = createAuthenticatedSocket(api, API_URL, () => Alert.alert("세션 오류", "세션을 갱신할 수 없습니다. 다시 로그인해주세요.")); api.messages(room.id).then((result) => { if (!active) return; setMessages((result.data?.messages ?? []).reverse()); setHasOlderMessages(result.data?.hasNext ?? false); }).catch(() => undefined); api.memberInfo().then((result) => active && setMemberId(result.data?.id ?? "")).catch(() => undefined); socket.on("connect", () => socket.emit("room:join", room.id)); socket.on("chat:message", (message: ChatMessage) => { if (message.roomId === room.id) setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]); }); socket.on("chat:message-deleted", (event: ChatMessageDeletedEvent) => { if (event.roomId === room.id) setMessages((current) => current.map((item) => item.id === event.messageId ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item)); }); socket.on("chat:message-emoji", (event: ChatMessageEmojiEvent) => { if (event.roomId !== room.id) return; setMessages((current) => current.map((item) => { if (item.id !== event.messageId) return item; const users = item.emojis[event.emoji] ?? []; const nextUsers = event.action === "ADD" ? [...new Set([...users, event.senderId])] : users.filter((id) => id !== event.senderId); return { ...item, emojis: { ...item.emojis, [event.emoji]: nextUsers } }; })); }); return () => { active = false; socket.close(); }; }, [room.id]);
   const loadOlderMessages = async () => {
     const cursor = messages[0]?.createdAt;
@@ -69,10 +76,18 @@ export function ChatConversationScreen({ room, onBack }: { room: Room; onBack: (
   const openFile = (url: string) => { Linking.openURL(absoluteApiUrl(url)).catch(() => Alert.alert("파일을 열지 못했습니다", "네트워크 연결을 확인해 주세요")); };
   const react = async (message: ChatMessage, emoji: string) => { const current = message.emojis[emoji] ?? []; try { if (current.includes(memberId)) await api.removeMessageEmoji(message.id, emoji); else await api.addMessageEmoji(message.id, emoji); setMessages((items) => items.map((item) => item.id !== message.id ? item : { ...item, emojis: { ...item.emojis, [emoji]: current.includes(memberId) ? current.filter((id) => id !== memberId) : [...current, memberId] } })); } catch (e) { Alert.alert("반응을 저장하지 못했습니다", e instanceof Error ? e.message : "다시 시도해 주세요"); } };
   const removeMessage = (message: ChatMessage) => Alert.alert("메시지 삭제", "이 메시지를 대화방의 모든 구성원에게서 삭제할까요?", [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => { void api.deleteMessage(room.id, message.id).then(() => setMessages((items) => items.map((item) => item.id === message.id ? { ...item, message: "", files: undefined, messageStatus: "DELETE" } : item))).catch((error) => Alert.alert("메시지를 삭제하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); } }]);
+  const closeSearch = () => { setSearchMode(false); setSearchText(""); };
+  const back = () => { if (searchMode) closeSearch(); else onBack(); };
+  const visibleMessages = messages.filter((item) => {
+    if (!searchText.trim()) return true;
+    if (item.messageStatus === "DELETE") return false;
+    const query = searchText.trim().toLocaleLowerCase();
+    return [item.message, ...(item.files ?? [])].some((part) => part.toLocaleLowerCase().includes(query));
+  });
   return <View style={styles.chatPage}>
-    <View style={styles.chatHeader}><TouchableOpacity onPress={onBack}><Text style={styles.link}>‹ 목록</Text></TouchableOpacity><Text style={styles.rowTitle}>{currentRoom.name}</Text>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : null}</View>
+    <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <TextInput autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : null}</>}</View>
     {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} /> : <>
-      <FlatList style={styles.content} data={messages} keyExtractor={(item) => item.id} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
+      <FlatList style={styles.content} data={visibleMessages} keyExtractor={(item) => item.id} ListEmptyComponent={searchText.trim() ? <Text style={styles.emptySearch}>검색 결과가 없습니다.</Text> : null} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
         ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
         renderItem={({ item }) => {
           const parts = item.message.split("::");
@@ -106,6 +121,9 @@ function formatFileSize(size: number) { if (size < 1024) return `${size} B`; if 
 const styles = StyleSheet.create({
   chatPage: { flex: 1 },
   chatHeader: { backgroundColor: SeugiColor.White, padding: 16, flexDirection: "row", gap: 16, alignItems: "center" },
+  chatTitle: { flex: 1 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 8, color: SeugiColor.Gray800 },
+  emptySearch: { textAlign: "center", color: SeugiColor.Gray500, padding: 28 },
   content: { flex: 1, padding: 16 },
   link: { color: SeugiColor.Primary500 },
   rowTitle: { fontWeight: "600" },
