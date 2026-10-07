@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
+import type { Workspace } from "@seugi/contracts";
 import { Button } from "../components/ui";
 import { api } from "../services/api";
 
@@ -17,7 +18,7 @@ type ChatMessage = { id: string; role: "assistant" | "user"; content: string };
 
 const suggestions = ["오늘 급식 뭐야?", "오늘의 시간표 알려줘"];
 
-export function CatSeugiScreen() {
+export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -41,7 +42,7 @@ export function CatSeugiScreen() {
     ]);
     setBusy(true);
     try {
-      const result = await api.askCatSeugi(text);
+      const result = await api.askCatSeugi(text, workspace.id);
       setMessages((current) => [
         ...current,
         {

@@ -146,7 +146,7 @@ export function AuthenticatedAppShell({
           onSaved={async () => { setEditingNotice(undefined); goBack(); }}
         />
       ) : null}
-      {detail === "catSeugi" ? <CatSeugiScreen /> : null}
+      {detail === "catSeugi" ? <CatSeugiScreen workspace={workspace} /> : null}
       {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={onSelectWorkspace} onNavigate={pushDetail} /> : null}
       {detail === "workspaceEdit" ? <WorkspaceEditScreen workspace={workspace} onReload={onReload} /> : null}
       {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}

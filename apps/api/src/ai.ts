@@ -1,6 +1,46 @@
+import type { Meal, Notification, Timetable } from "@seugi/contracts";
+
 type ResponsePayload = {
   output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
 };
+
+export type CatseugiSchoolContext = {
+  meals?: Meal[];
+  timetable?: Timetable[];
+  notifications?: Notification[];
+};
+
+export type CatseugiSchoolIntent = "MEAL" | "TIMETABLE" | "NOTICE";
+
+export function schoolQuestionIntent(message: string): CatseugiSchoolIntent | undefined {
+  const question = message.toLocaleLowerCase("ko-KR");
+  if (/급식|메뉴|점심|저녁|아침/.test(question)) return "MEAL";
+  if (/시간표|몇\s*교시|수업.{0,8}(?:뭐|어때|알려|있)/.test(question)) return "TIMETABLE";
+  if (/공지|학교 행사|학교 소식/.test(question)) return "NOTICE";
+  return undefined;
+}
+
+/** Resolve source-supported school-data intents without allowing the model to invent records. */
+export function answerSchoolQuestion(message: string, context: CatseugiSchoolContext) {
+  const intent = schoolQuestionIntent(message);
+  if (intent === "MEAL") {
+    const meals = context.meals ?? [];
+    return meals.length
+      ? meals.map((meal) => `${meal.type}${meal.calorie ? ` (${meal.calorie})` : ""}\n${meal.menu.join("\n")}`).join("\n\n")
+      : "오늘 등록된 급식 정보가 없습니다.";
+  }
+  if (intent === "TIMETABLE") {
+    const periods = context.timetable ?? [];
+    return periods.length
+      ? periods.map((period) => `${period.time}교시 · ${period.subject}`).join("\n")
+      : "오늘 확인할 수 있는 시간표가 없습니다. 프로필의 학년과 반 정보가 등록되어 있는지 확인해 주세요.";
+  }
+  if (intent === "NOTICE") {
+    const latest = context.notifications?.[0];
+    return latest ? `${latest.title}\n${latest.content}` : "등록된 공지가 없습니다.";
+  }
+  return undefined;
+}
 
 /** Calls the Responses API without retaining a student's prompt on the provider. */
 export async function answerWithCatseugi(message: string, fetcher: typeof fetch = fetch) {

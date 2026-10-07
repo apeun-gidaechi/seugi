@@ -68,7 +68,7 @@ import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { sendVerificationEmail } from "./mailer.js";
 import { fetchClassroomTasks } from "./classroom.js";
-import { answerWithCatseugi } from "./ai.js";
+import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 
@@ -1846,7 +1846,27 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   );
   app.post(API_SPEC.askCatseugi.path, { preHandler: auth }, async (request) => {
     const input = body(aiPromptSchema, request);
-    return ok("캣스기답변", await answerWithCatseugi(input.message));
+    if (!input.workspaceId) return ok("캣스기답변", await answerWithCatseugi(input.message));
+    if (!store.canAccess(input.workspaceId, request.user.sub))
+      throw new Error("권한이 없습니다");
+    const intent = schoolQuestionIntent(input.message);
+    const needsMeals = intent === "MEAL";
+    const needsTimetable = intent === "TIMETABLE";
+    const today = localDateString(new Date());
+    let meals = store.meals.get(input.workspaceId) ?? [];
+    if (needsMeals && !store.meals.has(input.workspaceId)) {
+      try { meals = await resetMeals(input.workspaceId); } catch { meals = []; }
+    }
+    const timetable = needsTimetable ? await timetableForMember(input.workspaceId, request.user.sub, false) : [];
+    const notifications = [...store.notifications.values()]
+      .filter((item) => item.workspaceId === input.workspaceId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const schoolAnswer = answerSchoolQuestion(input.message, {
+      meals: meals.filter((item) => item.date.slice(0, 10) === today),
+      timetable,
+      notifications,
+    });
+    return ok("캣스기답변", schoolAnswer ?? await answerWithCatseugi(input.message));
   });
   app.post(API_SPEC.uploadFile.path, { preHandler: auth }, async (request) => {
     const file = await request.file();

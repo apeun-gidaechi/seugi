@@ -96,7 +96,7 @@ export class SeugiApi {
   resetMeals(workspaceId: string) { return this.request<void>(API_SPEC.resetMeals.pathFor(workspaceId), { method: API_SPEC.resetMeals.method }); }
   schedules(workspaceId: string) { return this.request<Schedule[]>(API_SPEC.schedules.pathFor(workspaceId)); }
   schedulesForMonth(workspaceId: string, month: number) { return this.request<Schedule[]>(API_SPEC.monthSchedules.pathFor(workspaceId, month)); }
-  askCatSeugi(message: string) { return this.request<string>(API_SPEC.askCatseugi.path, { method: API_SPEC.askCatseugi.method, body: JSON.stringify({ message }) }); }
+  askCatSeugi(message: string, workspaceId?: string) { return this.request<string>(API_SPEC.askCatseugi.path, { method: API_SPEC.askCatseugi.method, body: JSON.stringify({ message, ...(workspaceId ? { workspaceId } : {}) }) }); }
 }
 
 export class SeugiApiError extends Error {

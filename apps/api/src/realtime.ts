@@ -5,7 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
 import type { MessageEmojiEvent, Store } from "./store.js";
 import { PushNotifications } from "./push.js";
-import { answerWithCatseugi } from "./ai.js";
+import { answerSchoolQuestion, answerWithCatseugi } from "./ai.js";
 import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 
@@ -15,7 +15,19 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
   const push = new PushNotifications();
   const replyToMention = (message: ChatMessage) => {
     if (!message.mention?.includes("-1")) return;
-    void answerWithCatseugi(message.message).then((answer) => store.withMutation(() => {
+    const room = store.rooms.get(message.roomId);
+    const profile = room ? store.profiles.get(`${room.workspaceId}:${message.senderId}`) : undefined;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const timetable = room && profile?.grade && profile.class
+      ? [...store.timetables.values()].filter((item) => item.workspaceId === room.workspaceId && item.date.slice(0, 10) === today && item.grade === String(profile.grade) && item.classNum === String(profile.class))
+      : [];
+    const schoolAnswer = room ? answerSchoolQuestion(message.message, {
+      meals: (store.meals.get(room.workspaceId) ?? []).filter((meal) => meal.date.slice(0, 10) === today),
+      timetable,
+      notifications: [...store.notifications.values()].filter((item) => item.workspaceId === room.workspaceId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    }) : undefined;
+    void Promise.resolve(schoolAnswer ?? answerWithCatseugi(message.message)).then((answer) => store.withMutation(() => {
       const room = store.rooms.get(message.roomId);
       if (!room) return undefined;
       const reply: ChatMessage = { id: store.id(), roomId: room.id, senderId: "-1", message: JSON.stringify({ keyword: "기타", data: answer }), createdAt: new Date().toISOString(), emojis: {}, type: "BOT", mention: [message.senderId], mentionAll: false };

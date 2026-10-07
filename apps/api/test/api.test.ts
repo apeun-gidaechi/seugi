@@ -186,6 +186,31 @@ test("member can register, create a workspace, and retrieve it", async () => {
   await app.close();
 });
 
+test("Catseugi school-data answers use the selected workspace and enforce membership", async () => {
+  const store = new Store();
+  store.emailCodes.set("catseugi-owner@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  store.emailCodes.set("catseugi-outsider@example.com", { code: "654321", expiresAt: Date.now() + 60_000 });
+  const app = await buildApp(store);
+  try {
+    const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-owner@example.com", password: "password123", name: "학생", code: "123456" } });
+    const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` };
+    const created = await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "급식 학교" } });
+    const workspaceId = created.json().data as string;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    store.meals.set(workspaceId, [{ date: today, type: "중식", menu: ["김치볶음밥"] }]);
+    const answer = await app.inject({ method: "POST", url: "/ai", headers: ownerHeaders, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
+    assert.equal(answer.statusCode, 200);
+    assert.match(answer.json().data, /김치볶음밥/);
+
+    const outsider = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-outsider@example.com", password: "password123", name: "외부인", code: "654321" } });
+    const forbidden = await app.inject({ method: "POST", url: "/ai", headers: { authorization: `Bearer ${outsider.json().data.accessToken}` }, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
+    assert.equal(forbidden.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
 test("deleting a workspace preserves its data but hides it from active endpoints", async () => {
   const store = new Store(); store.emailCodes.set("workspace-delete@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
   const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "workspace-delete@example.com", password: "password123", code: "123456" } });
@@ -747,6 +772,9 @@ test("authenticated room members receive Socket.IO messages", async () => {
   const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
   const workspaceResponse = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "채팅 학교" } });
   const workspaceId = workspaceResponse.json().data as string;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  store.meals.set(workspaceId, [{ date: today, type: "중식", menu: ["김치볶음밥"] }]);
   const roomResponse = await app.inject({ method: "POST", url: "/chat/group/create", headers, payload: { workspaceId, name: "테스트 방", memberIds: [] } });
   const roomId = roomResponse.json().data as string;
   await app.listen({ port: 0, host: "127.0.0.1" });
@@ -794,6 +822,10 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const reply = await botReply;
     assert.equal(reply.senderId, "-1"); assert.deepEqual(JSON.parse(reply.message), { keyword: "기타", data: "안녕! 무엇을 도와드릴까요?" });
     assert.ok([...store.messages.values()].some((message) => message.id === reply.id && message.type === "BOT"));
+    const schoolBotReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi school-data reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT" && message.message.includes("김치볶음밥")) { clearTimeout(timer); resolve(message); } }); });
+    const schoolBotRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 오늘 급식 뭐야?", mention: [-1] }, resolve));
+    assert.equal(schoolBotRequest.message, "메시지 전송 성공");
+    assert.match(JSON.parse((await schoolBotReply).message).data, /김치볶음밥/);
     let receivedAfterLeaving = false;
     const afterLeaveListener = () => { receivedAfterLeaving = true; };
     socket.on("chat:message", afterLeaveListener);
