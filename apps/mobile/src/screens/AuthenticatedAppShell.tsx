@@ -273,7 +273,7 @@ function RoomMessages({
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: SeugiColor.Primary050 },
   back: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
-  title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700" },
+  title: { flex: 1, textAlign: "left", fontSize: 18, fontWeight: "700" },
   headerSearchField: { flex: 1, minWidth: 0, height: 42, minHeight: 42, borderWidth: 0, borderRadius: 10 },
   headerSearchInput: { fontSize: 16, paddingHorizontal: 12 },
   headerActions: { width: 64, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 12 },
