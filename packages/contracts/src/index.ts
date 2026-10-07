@@ -1,3 +1,6 @@
+export { API_SPEC } from "./api-spec.js";
+export { createTaskSchema, type CreateTaskInput } from "./task.js";
+
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";
 export type RoomType = "GROUP" | "PERSONAL";

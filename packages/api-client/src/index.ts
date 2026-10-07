@@ -1,4 +1,4 @@
-import type { ApiResponse, ChatMessage, ClassroomTask, Meal, Member, Notification, Profile, Room, Role, Schedule, Task, Timetable, Tokens, Workspace, WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type Meal, type Member, type Notification, type Profile, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -73,8 +73,8 @@ export class SeugiApi {
   updateNotification(input: { id: string; title: string; content: string }) { return this.request<void>("/notification", { method: "PATCH", body: JSON.stringify(input) }); }
   deleteNotification(workspaceId: string, id: string) { return this.request<void>(`/notification/${encodeURIComponent(workspaceId)}/${encodeURIComponent(id)}`, { method: "DELETE" }); }
   toggleNotificationEmoji(notificationId: string, emoji: string) { return this.request<void>("/notification/emoji", { method: "PATCH", body: JSON.stringify({ notificationId, emoji }) }); }
-  tasks(workspaceId: string) { return this.request<Task[]>(`/task/${workspaceId}`); }
-  createTask(input: { workspaceId: string; title: string; content?: string; dueDate?: string }) { return this.request<void>("/task", { method: "POST", body: JSON.stringify(input) }); }
+  tasks(workspaceId: string) { return this.request<Task[]>(API_SPEC.listTasks.pathFor(workspaceId)); }
+  createTask(input: CreateTaskInput) { return this.request<void>(API_SPEC.createTask.path, { method: API_SPEC.createTask.method, body: JSON.stringify(input) }); }
   classroomTasks() { return this.request<ClassroomTask[]>("/task/classroom"); }
   timetable(workspaceId: string) { return this.request<Timetable[]>(`/timetable/day?workspaceId=${encodeURIComponent(workspaceId)}`); }
   weeklyTimetable(workspaceId: string) { return this.request<Timetable[]>(`/timetable/weekend?workspaceId=${encodeURIComponent(workspaceId)}`); }

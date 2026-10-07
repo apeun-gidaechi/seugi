@@ -5,5 +5,6 @@
   "type": "module",
   "main": "src/index.ts",
   "exports": { ".": "./src/index.ts" },
+  "dependencies": { "zod": "^3.24.1" },
   "scripts": { "build": "tsc --noEmit", "check": "tsc --noEmit", "test": "tsc --noEmit" }
 }

@@ -279,7 +279,11 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
-  packages/contracts: {}
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
 
 packages:
 
