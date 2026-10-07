@@ -198,7 +198,11 @@ export function HomeScreen({
             </View>;
           })}</View>
         ) : (
-          <Text style={styles.muted}>{scheduleError && Platform.OS === "ios" ? "학교를 등록하고 일정을 확인하세요" : "일정이 없어요"}</Text>
+          scheduleError && Platform.OS === "ios"
+            ? <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
+            : Platform.OS === "ios" && schedules.length > 0
+              ? null
+              : <Text style={styles.muted}>일정이 없어요</Text>
         )}
       </HomeCard>
       <HomeAssignmentsCard tasks={tasks} classroomTasks={classroomTasks} loading={assignmentsLoading} error={assignmentError} onOpen={onOpenTasks} />
