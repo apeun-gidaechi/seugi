@@ -40,9 +40,9 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Group-chat second step | `CreateRoomScreen` internal step | device QA pending |
 | Image preview | `ZoomableImage` in `ChatConversationScreen` | pinch zoom and save/share implemented; device QA pending |
 
-## Known audit limits
+## Screen inventory and audit limits
 
-- The current mobile app has 11 screen source files, but those files contain the route destinations and sub-steps above. File count alone understates the number of UI states.
+- The current mobile app has 11 screen source files and 22 exported screen-level components: auth, workspace setup, home, meals, timetable, assignments/create assignment, CatSeugi, personal/group chat, conversation, room creation, notices/create-edit notice, profile/account settings, and workspace detail/general/members/invites/notifications/create/join. Several onboarding, workspace-join, and room-create screens are multi-step flows inside one component. File count alone understates the UI surface; component count alone does not prove behavioral parity.
 - Route presence is source-level evidence only. It does not prove matching layout, text, state transitions, permissions, system back behavior, or parity on real devices.
-- The iOS simulator launch verified the login and email-sign-up path. Google sign-in was absent because `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is not configured in the local app environment; provider sign-in still needs credential-backed runtime verification.
+- The iOS simulator launch verified only the login and email-sign-up path. Google sign-in was absent because `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is not configured in the local app environment; provider sign-in still needs credential-backed runtime verification.
 - The next parity pass should capture each source and TypeScript screen on Android and iOS, compare the interaction path, and update these statuses only after runtime verification.
