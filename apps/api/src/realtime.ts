@@ -29,10 +29,27 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
   app.addHook("onClose", async () => { unsubscribeMessageDeleted(); unsubscribeMessageEmoji(); });
   io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; store.requireMember(socket.data.userId); next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
-    socket.on("room:join", (roomId: string) => {
+    const pendingRoomJoins = new Map<string, number>();
+    let roomJoinSequence = 0;
+    socket.on("room:join", (roomId: string, acknowledge) => {
+      const sequence = ++roomJoinSequence;
+      pendingRoomJoins.set(roomId, sequence);
       void store.withMutation(() => { const room = store.rooms.get(roomId); if (!room?.memberIds.includes(socket.data.userId)) return false; room.memberReadAt ??= {}; room.memberReadAt[socket.data.userId] = new Date().toISOString(); return true; })
-        .then((allowed) => { if (allowed) socket.join(roomId); })
-        .catch((error) => app.log.error(error, "realtime room authorization failed"));
+        .then((allowed) => {
+          if (allowed && pendingRoomJoins.get(roomId) === sequence) socket.join(roomId);
+          if (pendingRoomJoins.get(roomId) === sequence) pendingRoomJoins.delete(roomId);
+          acknowledge?.(allowed);
+        })
+        .catch((error) => {
+          if (pendingRoomJoins.get(roomId) === sequence) pendingRoomJoins.delete(roomId);
+          acknowledge?.(false);
+          app.log.error(error, "realtime room authorization failed");
+        });
+    });
+    socket.on("room:leave", (roomId: string, acknowledge) => {
+      pendingRoomJoins.delete(roomId);
+      void Promise.resolve(socket.leave(roomId)).then(() => acknowledge?.())
+        .catch((error) => app.log.error(error, "realtime room leave failed"));
     });
     socket.on("chat:message", (rawInput, done) => {
       const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), files: z.array(z.string().min(1).max(2048)).max(10).optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);

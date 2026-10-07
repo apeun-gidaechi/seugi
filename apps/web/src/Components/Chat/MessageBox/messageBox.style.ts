@@ -29,3 +29,9 @@ export const messageTime = styled.div`
     color: ${SeugiColor.Gray600};
     ${SeugiFont.caption.caption2};
 `;
+
+export const messageAttachment = styled.a`
+    color: inherit;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+`;

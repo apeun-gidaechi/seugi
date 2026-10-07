@@ -10,7 +10,6 @@ import Spacer from "@/Components/common/Spacer/spacer";
 import {socketService} from "@/Hooks/Common/SendMessage/socketService";
 
 const Chat = () => {
-  const currentUser = "ㅠㅠ"; // 하드코딩 수정예정
   const {
     selectedRoom,
     selectedChatRooms,
@@ -31,7 +30,7 @@ const Chat = () => {
       <S.ChatWrapper>
         <Sidebar chatRooms={selectedChatRooms} handleChatRoomClick={handleChatRoomClick}/>
         {selectedRoom ? (
-          <SelectedChatRoom room={selectedRoom} currentUser={currentUser}/>
+          <SelectedChatRoom room={selectedRoom}/>
         ) : (
           <UnChatRoom/>
         )}

@@ -1,9 +1,8 @@
-import {useEffect, useState} from "react";
-import {socketService} from './socketService';
-import {ChatRoom} from "@/Components/common/ChatRoom";
+import { useEffect, useState } from "react";
+import { socketService } from "./socketService";
+import type { ChatRoom } from "@/Components/common/ChatRoom";
 import { getChatMessages } from "@/Api/chat";
-
-// TODO: Move to file
+import type { ChatMessage } from "@seugi/contracts";
 
 export type MessageType =
   'MESSAGE'
@@ -22,83 +21,69 @@ export type MessageStatus = 'ALIVE' | 'DELETE';
 
 export interface Message {
   id?: string;
-  chatRoomId?: number;
+  chatRoomId?: string;
   type?: MessageType;
-  userId: number;
+  userId: string;
   message: string;
   uuid: string;
-  emojiList?: any[];
-  mention: number[];
+  emojiList?: ChatMessage["emojiList"];
+  mention: Array<string | number>;
   mentionAll: boolean
   timestamp?: string
   messageStatus?: MessageStatus
   eventList: number[];
   emoticon?: string;
+  files?: string[];
 }
 
-type ApiMessage = { id: string; roomId: string; senderId: string; message: string; createdAt: string; emojis: Record<string, string[]> };
-const adaptMessage = (message: ApiMessage): Message => ({ id: message.id, uuid: message.id, chatRoomId: Number(message.roomId), userId: Number(message.senderId), message: message.message, mention: [], mentionAll: false, eventList: [], timestamp: message.createdAt });
+const adaptMessage = (message: ChatMessage): Message => ({
+  id: message.id,
+  uuid: message.id,
+  chatRoomId: message.roomId,
+  type: message.type,
+  userId: message.senderId,
+  message: message.message,
+  emojiList: message.emojiList,
+  mention: message.mention ?? [],
+  mentionAll: message.mentionAll ?? false,
+  eventList: [],
+  timestamp: message.createdAt,
+  messageStatus: message.messageStatus,
+  files: message.files,
+});
 
-const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
+const mergeMessages = (current: Message[], incoming: Message[]) => {
+  const byId = new Map<string, Message>();
+  for (const message of [...current, ...incoming]) byId.set(message.id ?? message.uuid, message);
+  return [...byId.values()].sort((left, right) => Date.parse(left.timestamp ?? "") - Date.parse(right.timestamp ?? ""));
+};
+
+const useChatMessages = (selectedRoom: ChatRoom) => {
   const [receivedMessages, setReceivedMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    console.log('useChatMessages.useEffect called');
+    const roomId = selectedRoom.id;
+    let active = true;
+    setReceivedMessages([]);
 
-    socketService.subscribeToMessages(selectedRoom.id, (message) => {
-      const newMessage = adaptMessage(JSON.parse(message) as ApiMessage);
-      setReceivedMessages((prevMessages) => [...prevMessages, newMessage]);
+    socketService.subscribeToMessages(roomId, (message) => {
+      const newMessage = adaptMessage(JSON.parse(message) as ChatMessage);
+      if (active) setReceivedMessages((current) => mergeMessages(current, [newMessage]));
     });
 
-    fetchNewMessages();
-
-    return () => socketService.unsubscribeFromMessages(selectedRoom.id);
-  }, [selectedRoom]);
-
-  const sendMessage = (message: string, type: MessageType) => {
-    const time = new Date().toISOString();
-    const newMessage = {
-      roomId: selectedRoom.id,
-      type: type,
-      message: message,
-      mention: [],
-      mentionAll: false,
-      emoticon: "",
-      time: time,
-      sender: currentUser,
-    };
-    socketService.sendMessage(JSON.stringify(newMessage));
-  };
-
-
-  // timestamp를 기반으로 최신 메시지를 가져오는 함수
-  // timestamp를 기반으로 최신 메시지를 가져오는 함수
-  const fetchNewMessages = async () => {
-    const roomId = selectedRoom?.id;
-    if (!roomId) {
-      return;
-    }
-    // 해당 roomId의 마지막 메시지 timestamp 가져오기
-    console.log("dd:", roomId);
-
-    try {
-      const response = await getChatMessages(roomId);
+    void getChatMessages(roomId).then((response) => {
       const messages = response.messages.map(adaptMessage);
-      messages
-        .sort((a, b) => new Date(a.timestamp ?? '').getTime() - new Date(b.timestamp ?? '').getTime())
+      if (active) setReceivedMessages((current) => mergeMessages(current, messages));
+    }).catch((error) => console.error("Error fetching chat messages:", error));
 
-      setReceivedMessages(messages);
-      // setMessages(messages);
+    return () => {
+      active = false;
+      socketService.unsubscribeFromMessages(roomId);
+    };
+  }, [selectedRoom.id]);
 
-      // 마지막 메시지의 timestamp 저장
-      // const lastMessageTimestamp = messages.messages[messages.messages.length - 1].timestamp;
-      // setLastTimestamps((prev) => ({
-      //   ...prev,
-      //   [roomId]: lastMessageTimestamp,
-      // }));
-    } catch (error) {
-      console.error("Error fetching new messages:", error);
-    }
+  const sendMessage = (message: string, files: string[] = []) => {
+    socketService.sendMessage(JSON.stringify({ roomId: selectedRoom.id, message, files }));
   };
 
   return {

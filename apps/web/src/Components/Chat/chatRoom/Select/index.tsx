@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 
 import * as S from './index.style';
 
-import useChatMessages, {MessageType} from '@/Hooks/Common/SendMessage/useChatMessages';
+import useChatMessages from '@/Hooks/Common/SendMessage/useChatMessages';
 import {ChatRoom} from "@/Components/common/ChatRoom";
 import MessageBox from "@/Components/Chat/MessageBox/messageBox";
 import FileIcon from "@/Assets/image/chat/fileButton/file_line.svg";
@@ -10,17 +10,18 @@ import ImageIcon from "@/Assets/image/chat/fileButton/image_line.svg";
 import PlusMessageFile from "@/Assets/image/chat-components/MessageFile.svg";
 import SendArrowBlue from "@/Assets/image/chat-components/sendBlueArrow.svg";
 import SendArrow from "@/Assets/image/chat-components/SendArrow.svg";
+import useFileUpload, { FileType } from "@/Hooks/Common/SendMessage/useFileUpload";
 
 interface SelectedChatRoomProps {
   room: ChatRoom;
-  currentUser: string;
 }
 
-const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room, currentUser}) => {
+const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
   const {
     receivedMessages,
     sendMessage
-  } = useChatMessages(room, currentUser);
+  } = useChatMessages(room);
+  const { uploadFile } = useFileUpload((file) => sendMessage("", [file.url]));
 
   // 현재 날짜를 원하는 형식으로 포맷팅하는 함수
   // const formatDate = (date: Date) => {
@@ -53,7 +54,7 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room, currentUser}) 
     if (message.trim() === "") {
       return;
     }
-    sendMessage(message, 'MESSAGE');
+    sendMessage(message);
     setMessage("");
     setHasText(false);
   };
@@ -63,7 +64,7 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room, currentUser}) 
       return;
     }
     if (event.key === "Enter") {
-      sendMessage(message, 'MESSAGE');
+      sendMessage(message);
       setMessage("");
       setHasText(false);
     }
@@ -72,15 +73,19 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room, currentUser}) 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // sendMessage(file, 'FILE');
+      void uploadFile(file, FileType.FILE);
+      setShowDropdown(false);
     }
+    event.target.value = "";
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const image = event.target.files?.[0];
     if (image) {
-      // uploadFile(image, FileType.IMG);
+      void uploadFile(image, FileType.IMG);
+      setShowDropdown(false);
     }
+    event.target.value = "";
   };
 
   return (

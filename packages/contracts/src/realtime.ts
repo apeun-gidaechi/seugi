@@ -28,7 +28,8 @@ export interface ChatMessageEmojiEvent {
 }
 
 export interface ClientToServerEvents {
-  "room:join": (roomId: string) => void;
+  "room:join": (roomId: string, acknowledge?: (joined: boolean) => void) => void;
+  "room:leave": (roomId: string, acknowledge?: () => void) => void;
   "chat:message": (input: ChatMessageInput, acknowledge?: (result: ChatMessageAck) => void) => void;
 }
 

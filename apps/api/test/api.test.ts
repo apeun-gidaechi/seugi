@@ -727,7 +727,8 @@ test("authenticated room members receive Socket.IO messages", async () => {
   const socket = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
   try {
     await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
-    socket.emit("room:join", roomId);
+    const joinedRoom = await new Promise<boolean>((resolve) => socket.emit("room:join", roomId, resolve));
+    assert.equal(joinedRoom, true);
     const received = new Promise<{ message: string }>((resolve) => socket.once("chat:message", resolve));
     const acknowledged = await new Promise<{ message: string; data?: ChatMessage }>((resolve) => socket.emit("chat:message", { roomId, message: "안녕하세요" }, resolve));
     assert.equal(acknowledged.message, "메시지 전송 성공"); assert.equal((await received).message, "안녕하세요");
@@ -752,6 +753,15 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const reply = await botReply;
     assert.equal(reply.senderId, "-1"); assert.deepEqual(JSON.parse(reply.message), { keyword: "기타", data: "안녕! 무엇을 도와드릴까요?" });
     assert.ok([...store.messages.values()].some((message) => message.id === reply.id && message.type === "BOT"));
+    let receivedAfterLeaving = false;
+    const afterLeaveListener = () => { receivedAfterLeaving = true; };
+    socket.on("chat:message", afterLeaveListener);
+    await new Promise<void>((resolve) => socket.emit("room:leave", roomId, resolve));
+    const sentAfterLeaving = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "방을 나간 뒤" }, resolve));
+    assert.equal(sentAfterLeaving.message, "메시지 전송 성공");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    socket.off("chat:message", afterLeaveListener);
+    assert.equal(receivedAfterLeaving, false);
   } finally { if (oldApiKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = oldApiKey; globalThis.fetch = oldFetch; socket.close(); await app.close(); }
 });
 

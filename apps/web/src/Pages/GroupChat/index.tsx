@@ -10,7 +10,6 @@ import Spacer from "@/Components/common/Spacer/spacer";
 import TitleText from "@/Components/common/TitleText";
 
 const GroupChat = () => {
-  const currentUser = "ㅠㅠ"; // 하드코딩 수정예정
   const {  
     selectedRoom,
     selectedChatRooms,
@@ -31,7 +30,7 @@ const GroupChat = () => {
       <S.ChatWrapper>
         <Sidebar chatRooms={selectedChatRooms} handleChatRoomClick={handleChatRoomClick}/>
         {selectedRoom ? (
-          <SelectedChatRoom room={selectedRoom} currentUser={currentUser}/>
+          <SelectedChatRoom room={selectedRoom}/>
         ) : (
           <UnChatRoom/>
         )}
