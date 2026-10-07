@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { io } from "socket.io-client";
+import WebSocket from "ws";
 import type { ChatMessage } from "@seugi/contracts";
 import { SeugiApi } from "../../../packages/api-client/src/index.js";
 import { buildApp } from "../src/app.js";
@@ -450,6 +451,29 @@ test("authenticated room members receive Socket.IO messages", async () => {
     assert.equal(fileMessage.message, "메시지 전송 성공");
     const emptyMessage = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "", files: [] }, resolve));
     assert.equal(emptyMessage.message, "MESSAGE_INVALID");
+  } finally { socket.close(); await app.close(); }
+});
+
+test("original mobile clients can authenticate, subscribe, and send over STOMP", async () => {
+  const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
+  store.emailCodes.set("stomp@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "stomp@example.com", password: "password123", code: "123456" } });
+  const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
+  const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "STOMP 학교" } })).json().data as string;
+  const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers, payload: { workspaceId, name: "원본 클라이언트 방", memberIds: [] } })).json().data as string;
+  await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/stomp/chat`);
+  try {
+    const frames: string[] = []; socket.on("message", (data) => frames.push(data.toString()));
+    await new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("STOMP websocket open timed out")), 2_000); socket.once("open", () => { clearTimeout(timer); resolve(); }); socket.once("error", (error) => { clearTimeout(timer); reject(error); }); });
+    const connected = new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.startsWith("CONNECTED\n"))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error(`STOMP CONNECT timed out: ${frames.join(" | ")}`)); }, 2_000); });
+    socket.send(`CONNECT\naccept-version:1.2\nAuthorization: Bearer ${token}\n\n\0`); await connected;
+    socket.send(`SUBSCRIBE\nid:sub-0\ndestination:/exchange/chat.exchange/room.${roomId}\n\n\0`);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    socket.send(`SEND\ndestination:/pub/chat.message\ncontent-type:application/json\n\n${JSON.stringify({ roomId, type: "MESSAGE", message: "구형 앱 호환", uuid: "client-uuid" })}\0`);
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { const message = store.messages.values().next().value as ChatMessage | undefined; if (message) { clearInterval(timer); resolve(); } if (frames.some((frame) => frame.startsWith("ERROR\n"))) { clearInterval(timer); reject(new Error(frames.at(-1))); } }, 5); setTimeout(() => reject(new Error("STOMP message timed out")), 2_000); });
+    const message = store.messages.values().next().value as ChatMessage; assert.equal(message.message, "구형 앱 호환");
+    assert.ok(frames.some((frame) => frame.includes(`destination:/exchange/chat.exchange/room.${roomId}`) && frame.includes("구형 앱 호환")));
   } finally { socket.close(); await app.close(); }
 });
 
