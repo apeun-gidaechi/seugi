@@ -8,6 +8,7 @@ export { createNotificationSchema, updateNotificationSchema, notificationEmojiSc
 export { createTimetableSchema, updateTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, type CreateTimetableInput, type UpdateTimetableInput } from "./school.js";
 export { oauthProviderSchema, authenticateOAuthSchema, connectGoogleSchema, sendVerificationQuerySchema, aiPromptSchema, uploadTypeSchema, type AuthenticateOAuthInput, type ConnectGoogleInput } from "./integrations.js";
 export { CHAT_EMOJIS } from "./constants.js";
+export { idParamSchema, workspaceIdParamSchema, tokenQuerySchema, uploadNameParamSchema } from "./common.js";
 
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";

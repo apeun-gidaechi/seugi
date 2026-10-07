@@ -8,9 +8,17 @@ import { createTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, month
 import { aiPromptSchema, authenticateOAuthSchema, connectGoogleSchema, oauthProviderSchema, sendVerificationQuerySchema, uploadTypeSchema } from "./integrations.js";
 import { emailVerificationSchema } from "./member.js";
 import { otherProfileQuerySchema, profileWorkspaceQuerySchema } from "./profile.js";
+import { tokenQuerySchema, uploadNameParamSchema } from "./common.js";
 
 /** Shared transport specification consumed by both the API server and SDK. */
 export const API_SPEC = {
+  health: { method: "GET", path: "/health" },
+  uploadedFile: { method: "GET", path: "/uploads/:name", params: uploadNameParamSchema, pathFor: (name: string) => `/uploads/${encodeURIComponent(name)}` },
+  refreshMember: { method: "GET", path: "/member/refresh", query: tokenQuerySchema, pathFor: (token: string) => `/member/refresh?token=${encodeURIComponent(token)}` },
+  memberInfo: { method: "GET", path: "/member/myInfo" },
+  removeMember: { method: "DELETE", path: "/member/remove" },
+  workspaceDetails: { method: "GET", path: "/workspace/:workspaceId", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}` },
+  deleteWorkspace: { method: "DELETE", path: "/workspace/:workspaceId", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}` },
   registerMember: { method: "POST", path: "/member/register", body: registerMemberSchema },
   loginMember: { method: "POST", path: "/member/login", body: loginMemberSchema },
   editMember: { method: "PATCH", path: "/member/edit", body: editMemberSchema },
@@ -87,4 +95,5 @@ export const API_SPEC = {
   kickWorkspaceMembers: { method: "PATCH", path: "/workspace/kick", body: kickWorkspaceMembersSchema },
   workspaceMember: { method: "GET", path: "/profile/others", query: otherProfileQuerySchema },
   myWaitingWorkspaces: { method: "GET", path: "/workspace/my/wait-list" },
+  classroomTasks: { method: "GET", path: "/task/classroom" },
 } as const;

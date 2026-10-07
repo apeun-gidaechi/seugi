@@ -29,16 +29,18 @@ export class SeugiApi {
   connectGoogle(input: ConnectGoogleInput & { platform: "ANDROID" | "IOS" }) { return this.request<void>(API_SPEC.connectGoogle.path, { method: API_SPEC.connectGoogle.method, body: JSON.stringify(input) }); }
   googleConnection() { return this.request<boolean>(API_SPEC.googleConnection.path); }
   removeGoogleConnection() { return this.request<void>(API_SPEC.removeGoogleConnection.path, { method: API_SPEC.removeGoogleConnection.method }); }
-  refreshAccessToken(refreshToken: string) { return this.request<string>(`/member/refresh?token=${encodeURIComponent(refreshToken)}`, {}, false); }
+  refreshAccessToken(refreshToken: string) { return this.request<string>(API_SPEC.refreshMember.pathFor(refreshToken), {}, false); }
   registerDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "POST", body: JSON.stringify({ token }) }); }
   removeDeviceToken(token: string) { return this.request<void>("/member/device-token", { method: "DELETE", body: JSON.stringify({ token }) }); }
   logout(deviceToken?: string) { return this.request<void>("/member/logout", { method: "POST", body: JSON.stringify({ deviceToken }) }); }
-  removeMember() { return this.request<void>("/member/remove", { method: "DELETE" }); }
+  removeMember() { return this.request<void>(API_SPEC.removeMember.path, { method: API_SPEC.removeMember.method }); }
   workspaces() { return this.request<Workspace[]>(API_SPEC.listWorkspaces.path); }
   myWaitingWorkspaces() { return this.request<Workspace[]>(API_SPEC.myWaitingWorkspaces.path); }
   cancelMyWorkspaceRequest(workspaceId: string) { const input: WorkspaceWaitlistActionInput = { workspaceId }; return this.request<void>(API_SPEC.rejectWorkspaceMembers.path, { method: API_SPEC.rejectWorkspaceMembers.method, body: JSON.stringify(input) }); }
   workspaceCode(workspaceId: string) { return this.request<string>(API_SPEC.workspaceCode.pathFor(workspaceId)); }
-  memberInfo() { return this.request<Member>("/member/myInfo"); }
+  workspaceDetails(workspaceId: string) { return this.request<Workspace>(API_SPEC.workspaceDetails.pathFor(workspaceId)); }
+  deleteWorkspace(workspaceId: string) { return this.request<void>(API_SPEC.deleteWorkspace.pathFor(workspaceId), { method: API_SPEC.deleteWorkspace.method }); }
+  memberInfo() { return this.request<Member>(API_SPEC.memberInfo.path); }
   editMember(input: EditMemberInput) { return this.request<void>(API_SPEC.editMember.path, { method: API_SPEC.editMember.method, body: JSON.stringify(input) }); }
   createWorkspace(input: CreateWorkspaceInput) { return this.request<string>(API_SPEC.createWorkspace.path, { method: API_SPEC.createWorkspace.method, body: JSON.stringify(input) }); }
   updateWorkspace(input: UpdateWorkspaceInput) { return this.request<void>(API_SPEC.updateWorkspace.path, { method: API_SPEC.updateWorkspace.method, body: JSON.stringify(input) }); }
@@ -75,7 +77,7 @@ export class SeugiApi {
   toggleNotificationEmoji(notificationId: string, emoji: string) { return this.request<void>(API_SPEC.toggleNotificationEmoji.path, { method: API_SPEC.toggleNotificationEmoji.method, body: JSON.stringify({ notificationId, emoji }) }); }
   tasks(workspaceId: string) { return this.request<Task[]>(API_SPEC.listTasks.pathFor(workspaceId)); }
   createTask(input: CreateTaskInput) { return this.request<void>(API_SPEC.createTask.path, { method: API_SPEC.createTask.method, body: JSON.stringify(input) }); }
-  classroomTasks() { return this.request<ClassroomTask[]>("/task/classroom"); }
+  classroomTasks() { return this.request<ClassroomTask[]>(API_SPEC.classroomTasks.path); }
   timetable(workspaceId: string) { return this.request<Timetable[]>(`${API_SPEC.dailyTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
   weeklyTimetable(workspaceId: string) { return this.request<Timetable[]>(`${API_SPEC.weeklyTimetable.path}?workspaceId=${encodeURIComponent(workspaceId)}`); }
   createTimetable(input: CreateTimetableInput) { return this.request<void>(API_SPEC.createTimetable.path, { method: API_SPEC.createTimetable.method, body: JSON.stringify(input) }); }
