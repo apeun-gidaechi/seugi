@@ -4,7 +4,6 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
-  Linking,
   Modal,
   Platform,
   RefreshControl,
@@ -26,6 +25,7 @@ import type {
 } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { HomeNoticesCard } from "../components/HomeNoticesCard";
+import { HomeAssignmentsCard } from "../components/HomeAssignmentsCard";
 import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
@@ -203,25 +203,7 @@ export function HomeScreen({
           <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
         )}
       </HomeCard>
-      <HomeCard title="다가오는 과제" icon="task" onPress={onOpenTasks}>
-        {classroomTasks.length || tasks.length ? (
-          <View style={styles.homeList}>{[...classroomTasks, ...tasks].map((item, index) => {
-            const days = item.dueDate ? daysUntil(today, item.dueDate) : undefined;
-            return <View key={`${"link" in item ? "classroom" : "task"}-${item.id}-${index}`} style={styles.homeCalendarRow}>
-              <Text style={[styles.homeCalendarDate, !item.dueDate && styles.homeCalendarNoDate]}>{item.dueDate ? monthDay(item.dueDate) : "기한없음"}</Text>
-              <Text numberOfLines={1} style={styles.homeCalendarTitle}>{item.title}</Text>
-              <Text style={styles.homeCalendarDDay}>{days === undefined ? "기한없음" : days > 0 ? `D-${days}` : days < 0 ? `D+${Math.abs(days)}` : "D-Day"}</Text>
-              {"link" in item && item.link ? (
-                <TouchableOpacity onPress={() => Linking.openURL(item.link!).catch(() => undefined)}>
-                  <Text style={styles.link}>과제 열기 ↗</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>;
-          })}</View>
-        ) : (
-          <Text style={styles.muted}>학교를 등록하고 과제를 확인하세요</Text>
-        )}
-      </HomeCard>
+      <HomeAssignmentsCard tasks={tasks} classroomTasks={classroomTasks} onOpen={onOpenTasks} />
     </ScrollView>
   );
 }
