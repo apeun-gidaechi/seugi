@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
+import { SeugiButton } from "../design-system/Button";
+import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
+
+export { SeugiButton } from "../design-system/Button";
 
 export type WorkspaceJoinRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN";
 
@@ -43,23 +47,7 @@ export function Button({
   kind?: "primary" | "secondary";
   disabled?: boolean;
 }) {
-  return (
-    <TouchableOpacity
-      disabled={disabled}
-      onPress={onPress}
-      style={[
-        styles.button,
-        kind === "secondary" && styles.secondary,
-        disabled && styles.disabled,
-      ]}
-    >
-      <Text
-        style={kind === "primary" ? styles.buttonText : styles.secondaryText}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
+  return <SeugiButton label={label} onPress={onPress} variant={kind === "primary" ? "primary" : "gray"} disabled={disabled} style={styles.buttonSpacing} />;
 }
 
 export function WorkspaceRolePicker({
@@ -77,44 +65,13 @@ export function WorkspaceRolePicker({
   return (
     <View>
       <Text style={styles.muted}>가입 유형</Text>
-      <View style={styles.roleOptions}>
-        {roles.map(([role, label]) => (
-          <TouchableOpacity
-            key={role}
-            accessibilityRole="button"
-            accessibilityState={{ selected: value === role }}
-            onPress={() => onChange(role)}
-            style={[
-              styles.roleOption,
-              value === role
-                ? styles.roleOptionSelected
-                : styles.roleOptionUnselected,
-            ]}
-          >
-            <Text
-              style={value === role ? styles.activeTab : styles.inactiveTab}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SeugiSegmentedControl value={value} options={roles.map(([role, label]) => ({ value: role, label }))} onChange={onChange} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: SeugiColor.Primary500,
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  secondary: { backgroundColor: SeugiColor.Primary100 },
-  buttonText: { color: SeugiColor.White, fontWeight: "700" },
-  secondaryText: { color: SeugiColor.Primary500, fontWeight: "700" },
-  disabled: { opacity: 0.5 },
+  buttonSpacing: { marginBottom: 10 },
   card: {
     backgroundColor: SeugiColor.White,
     borderRadius: 14,
@@ -130,16 +87,4 @@ const styles = StyleSheet.create({
   },
   cardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 24 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
-  activeTab: { color: SeugiColor.Primary500, fontWeight: "700" },
-  inactiveTab: { color: SeugiColor.Gray500 },
-  roleOptions: { flexDirection: "row", gap: 8 },
-  roleOption: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-  },
-  roleOptionSelected: { backgroundColor: SeugiColor.Primary100 },
-  roleOptionUnselected: { backgroundColor: SeugiColor.Gray100 },
 });

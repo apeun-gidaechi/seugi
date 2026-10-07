@@ -58,11 +58,11 @@ The TypeScript mobile target currently has shared color and font tokens in `pack
 
 | Priority | Original reusable UI | Current TypeScript state | Remaining work |
 | --- | --- | --- | --- |
-| P0 | Button variants/sizes/loading/press states | Basic primary/secondary button | Port variants, dimensions, disabled/loading and interaction states; migrate screen usage |
+| P0 | Button variants/sizes/loading/press states | `SeugiButton` now covers six variants, two sizes, loading/disabled/press states; existing screens use a compatibility wrapper | Match each call site's original size/type and verify screen captures |
 | P0 | Top bar, bottom navigation, scaffold/safe-area patterns | Header and tab bar are embedded in `AuthenticatedAppShell` | Extract reusable primitives and match Android/iOS behavior separately where needed |
 | P0 | Text fields, password/code/chat inputs | Mostly inline `TextInput` styles | Port field variants, validation/error and accessory behavior |
 | P1 | Avatar, image, room image, member/chat list rows | Ad hoc per-screen rendering | Create reusable components and replace duplicated screen markup |
-| P1 | Dialogs, sheets, dropdowns, segmented controls, toggles | Several native modals and inline choices | Match original variants and interaction semantics |
+| P1 | Dialogs, sheets, dropdowns, segmented controls, toggles | Role selection uses shared `SeugiSegmentedControl`; other choices remain inline/native modals | Match remaining variants and interaction semantics |
 | P2 | Badges, tooltips, shadows/gradients, shimmer/loading/error states | Partial local styling | Port where used by original screens and verify on both platforms |
 
 Until this component inventory is implemented and screen captures are compared, mobile UI conversion remains incomplete even where the destination has a TypeScript target.
