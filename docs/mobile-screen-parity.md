@@ -13,7 +13,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Create room, member step | `CreateRoomScreen` with removable selected-member chips, avatars, and native top-bar completion action | source layout/interactions restored; device QA pending |
 | Create room, name step | `createGroupRoomName` destination using `CreateRoomScreen` with native top-bar back/completion actions | Standalone shell destination; selected members persist across stack transitions; device QA pending |
 | Chat detail, member invite | `ChatInviteScreen` standalone screen component, entered from chat-room management and returned via its back action | Separated from the management screen's inline conditional view to mirror Android's `ChatDetailInviteScreen`; selected-member chips, workspace-member rows, completion action, and membership API flow are preserved; device QA pending |
-| Profile | `ProfileScreen` | device QA pending |
+| Profile | `ProfileScreen` | iOS phone/wireless-number editors now use numeric keypad and native 11-character limit; Android input length remains unchanged; device QA pending |
 | Account settings | `AccountSettingsScreen` | profile identity editing restored; device QA pending |
 | Notices | `NoticesScreen` | device QA pending |
 | Create notice | `NoticeEditorScreen` without initial notice | device QA pending |
