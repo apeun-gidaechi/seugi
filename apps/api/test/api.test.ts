@@ -27,6 +27,27 @@ test("production API refuses to start without a JWT secret", async () => {
   }
 });
 
+test("access tokens expire and a valid refresh token renews API access", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  store.emailCodes.set("token-expiry@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  try {
+    const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "token-expiry@example.com", password: "password123", code: "123456" } });
+    const { accessToken, refreshToken } = registration.json().data as { accessToken: string; refreshToken: string };
+    const memberId = app.jwt.decode<{ sub: string; exp?: number }>(accessToken)!.sub;
+    assert.ok(app.jwt.decode<{ exp?: number }>(accessToken)?.exp);
+    const expiredToken = app.jwt.sign({ sub: memberId, exp: Math.floor(Date.now() / 1000) - 1 });
+    assert.equal((await app.inject({ url: "/member/myInfo", headers: { authorization: `Bearer ${expiredToken}` } })).statusCode, 401);
+
+    const refreshed = await app.inject({ url: `/member/refresh?token=${encodeURIComponent(refreshToken)}` });
+    assert.equal(refreshed.statusCode, 200);
+    const renewedToken = refreshed.json().data as string;
+    assert.ok(app.jwt.decode<{ exp?: number }>(renewedToken)?.exp);
+    assert.equal((await app.inject({ url: "/member/myInfo", headers: { authorization: `Bearer ${renewedToken}` } })).statusCode, 200);
+  } finally {
+    await app.close();
+  }
+});
+
 test("file-backed API serializes concurrent registrations for the same email", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-register-"));
   const store = new Store(join(directory, "state.json")); const app = await buildApp(store);

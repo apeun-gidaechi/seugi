@@ -35,6 +35,12 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const push = new PushNotifications();
   await app.register(cors, { origin: true });
   await app.register(jwt, { secret: jwtSecret });
+  const accessTokenTtl = process.env.JWT_ACCESS_TTL ?? "15m";
+  const refreshTokenTtl = process.env.JWT_REFRESH_TTL ?? "30d";
+  const issueTokens = (memberId: string) => ({
+    accessToken: app.jwt.sign({ sub: memberId }, { expiresIn: accessTokenTtl }),
+    refreshToken: app.jwt.sign({ sub: memberId }, { expiresIn: refreshTokenTtl }),
+  });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook("onRequest", async () => { await store.beginRequest(); });
   app.addHook("onSend", async (_request, reply, payload) => { if (reply.statusCode >= 400) await store.rollbackRequest(); else await store.persist(); return payload; });
@@ -50,7 +56,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const member: { id: string; email: string; name: string; password: string; refreshToken?: string } = { id: store.id(), email: input.email, name: input.name ?? input.email.split("@")[0], password: await bcrypt.hash(input.password, 12) };
     store.members.set(member.id, member);
     store.emailCodes.delete(input.email);
-    const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
+    const tokens = issueTokens(member.id);
     member.refreshToken = tokens.refreshToken;
     return ok("회원가입 성공", tokens);
   });
@@ -59,13 +65,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const candidate = [...store.members.values()].find((item) => item.email === input.email && !item.deleted);
     const member = candidate?.password && await bcrypt.compare(input.password, candidate.password) ? candidate : undefined;
     if (!member) return reply.code(401).send({ message: "이메일 또는 비밀번호가 올바르지 않습니다" });
-    const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
+    const tokens = issueTokens(member.id);
     member.refreshToken = tokens.refreshToken; rememberDeviceToken(member.id, input.token);
     return ok("로그인 성공", tokens);
   });
   app.get(API_SPEC.refreshMember.path, async (request, reply) => {
     const token = query(tokenQuerySchema, request).token;
-    try { const claims = app.jwt.verify<Claims>(token); const member = store.requireMember(claims.sub); if (member.refreshToken !== token) throw new Error(); return ok("토큰 재발급 성공", app.jwt.sign({ sub: member.id })); }
+    try { const claims = app.jwt.verify<Claims>(token); const member = store.requireMember(claims.sub); if (member.refreshToken !== token) throw new Error(); return ok("토큰 재발급 성공", app.jwt.sign({ sub: member.id }, { expiresIn: accessTokenTtl })); }
     catch { return reply.code(401).send({ message: "유효하지 않은 리프레시 토큰입니다" }); }
   });
   app.get(API_SPEC.memberInfo.path, { preHandler: auth }, async (request) => { const { password: _password, refreshToken: _refreshToken, ...member } = store.requireMember(request.user.sub); return ok("내 정보 조회 성공", member); });
@@ -190,7 +196,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.get(API_SPEC.monthSchedules.path, { preHandler: auth }, async (request) => { const input = query(monthScheduleQuerySchema, request); if (!store.canAccess(input.workspaceId, request.user.sub)) throw new Error("권한이 없습니다"); const all = store.schedules.filter((item) => item.workspaceId === input.workspaceId); const schedules = all.length ? all : await resetSchedules(input.workspaceId); return ok("학사일정 한달치 불러오기 성공", schedules.filter((item) => new Date(item.date).getMonth() + 1 === input.month)); });
   app.get(API_SPEC.sendVerification.path, async (request) => { const email = query(sendVerificationQuerySchema, request).email; const code = String(Math.floor(100000 + Math.random() * 900000)); store.emailCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 }); await sendVerificationEmail(email, code); return ok("이메일 인증 코드 발송 성공"); });
   app.post(API_SPEC.confirmVerification.path, async (request, reply) => { const input = body(emailVerificationSchema, request); const verification = store.emailCodes.get(input.email); if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) return reply.code(409).send({ message: "코드가 일치하지 않거나 만료되었습니다" }); return ok("이메일 인증 성공"); });
-  app.post(API_SPEC.authenticateOAuth.path, async (request, reply) => { const provider = oauthProviderSchema.parse(request.params).provider; const input = body(authenticateOAuthSchema, request); const identity = provider === "google" ? await oauth.google(input.code, input.platform) : await oauth.apple(input.code, input.platform, input.name); let member = [...store.members.values()].find((item) => item.email === identity.email); if (!member) { member = { id: store.id(), email: identity.email, name: identity.name, password: undefined }; store.members.set(member.id, member); } rememberDeviceToken(member.id, input.token); store.oauth.set(`${member.id}:${provider}`, { provider, accessToken: identity.accessToken, refreshToken: identity.refreshToken }); const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) }; member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
+  app.post(API_SPEC.authenticateOAuth.path, async (request, reply) => { const provider = oauthProviderSchema.parse(request.params).provider; const input = body(authenticateOAuthSchema, request); const identity = provider === "google" ? await oauth.google(input.code, input.platform) : await oauth.apple(input.code, input.platform, input.name); let member = [...store.members.values()].find((item) => item.email === identity.email); if (!member) { member = { id: store.id(), email: identity.email, name: identity.name, password: undefined }; store.members.set(member.id, member); } rememberDeviceToken(member.id, input.token); store.oauth.set(`${member.id}:${provider}`, { provider, accessToken: identity.accessToken, refreshToken: identity.refreshToken }); const tokens = issueTokens(member.id); member.refreshToken = tokens.refreshToken; return reply.send(ok("소셜 로그인 성공", tokens)); });
   app.post(API_SPEC.connectGoogle.path, { preHandler: auth }, async (request) => {
     const input = body(connectGoogleSchema, request);
     const identity = await oauth.google(input.code, input.platform);
