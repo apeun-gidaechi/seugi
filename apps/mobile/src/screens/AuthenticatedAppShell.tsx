@@ -30,12 +30,9 @@ import {
   WorkspaceDetailScreen,
   WorkspaceGeneralScreen,
   WorkspaceInviteScreen,
-  WorkspaceJoinRequestsScreen,
   WorkspaceJoinScreen,
   WorkspaceMembersScreen,
   WorkspaceNotificationsScreen,
-  WorkspaceOrganizationScreen,
-  WorkspacePendingScreen,
   type WorkspaceSection,
 } from "./ProfileScreen";
 
@@ -68,11 +65,8 @@ const detailTitles: Record<AppDetail, string> = {
   accountSettings: "설정",
   workspaceGeneral: "일반",
   workspaceMembers: "구성원",
-  workspaceJoinRequests: "가입 신청 관리",
   workspaceInvite: "초대 코드",
   workspaceNotifications: "알림 설정",
-  workspaceOrganization: "조직도",
-  workspacePending: "가입 승인 대기",
   workspaceCreate: "새 학교 만들기",
   workspaceJoin: "학교 가입",
 };
@@ -106,6 +100,7 @@ export function AuthenticatedAppShell({
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
   const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); onTabChange(next); };
+  const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); onSelectWorkspace(selected); onTabChange("home"); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
 
   useEffect(() => {
@@ -159,14 +154,11 @@ export function AuthenticatedAppShell({
         />
       ) : null}
       {detail === "catSeugi" ? <CatSeugiScreen workspace={workspace} /> : null}
-      {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={onSelectWorkspace} onNavigate={pushDetail} /> : null}
+      {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={switchWorkspace} onNavigate={pushDetail} /> : null}
       {detail === "workspaceGeneral" ? <WorkspaceGeneralScreen /> : null}
       {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}
-      {detail === "workspaceJoinRequests" ? <WorkspaceJoinRequestsScreen workspace={workspace} /> : null}
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
       {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
-      {detail === "workspaceOrganization" ? <WorkspaceOrganizationScreen workspace={workspace} /> : null}
-      {detail === "workspacePending" ? <WorkspacePendingScreen onReload={onReload} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
       {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} /> : null}
       {detail === "accountSettings" ? <AccountSettingsScreen onLogout={onLogout} /> : null}

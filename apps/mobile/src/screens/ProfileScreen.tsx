@@ -24,9 +24,10 @@ export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Pro
   return <ScrollView style={styles.content}><Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card><Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} /><Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView>;
 }
 
-export type WorkspaceSection = "workspaceGeneral" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";
+export type WorkspaceSection = "workspaceGeneral" | "workspaceMembers" | "workspaceInvite" | "workspaceNotifications" | "workspaceCreate" | "workspaceJoin";
 
 export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void }) {
+  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [role, setRole] = useState<Role>("STUDENT");
   useEffect(() => {
     let active = true;
@@ -42,11 +43,48 @@ export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavig
     ? role !== "STUDENT"
     : role === "ADMIN" || role === "MIDDLE_ADMIN";
 
-  return <ScrollView style={styles.content}>
-    <Card title="가입된 학교">{workspaces.map((item) => <TouchableOpacity key={item.id} onPress={() => onSelect(item)}><Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text></TouchableOpacity>)}</Card>
-    <Card title="학교 관리"><Button label="일반" kind="secondary" onPress={() => onNavigate("workspaceGeneral")} /><Button label="구성원" kind="secondary" onPress={() => onNavigate("workspaceMembers")} /><Button label="가입 신청 관리" kind="secondary" onPress={() => onNavigate("workspaceJoinRequests")} />{canInvite ? <Button label="멤버 초대" kind="secondary" onPress={() => onNavigate("workspaceInvite")} /> : null}<Button label="알림 설정" kind="secondary" onPress={() => onNavigate("workspaceNotifications")} /><Button label="조직도" kind="secondary" onPress={() => onNavigate("workspaceOrganization")} /></Card>
-    <Card title="학교 추가"><Button label="가입 승인 대기" kind="secondary" onPress={() => onNavigate("workspacePending")} /><Button label="새 학교 만들기" kind="secondary" onPress={() => onNavigate("workspaceCreate")} /><Button label="초대 코드로 학교 가입" kind="secondary" onPress={() => onNavigate("workspaceJoin")} /></Card>
-  </ScrollView>;
+  return <>
+    <ScrollView style={styles.content}>
+      <View style={styles.workspaceHero}>
+        {workspace.image ? <Image source={{ uri: absoluteApiUrl(workspace.image) }} style={styles.workspaceAvatar} /> : <View style={styles.workspaceAvatarPlaceholder}><Text style={styles.link}>{workspace.name.slice(0, 1)}</Text></View>}
+        <View style={styles.workspaceHeroText}><Text style={styles.rowTitle}>{workspace.name}</Text><TouchableOpacity accessibilityRole="button" onPress={() => setWorkspacePickerOpen(true)} style={styles.switchButton}><Text style={styles.switchButtonText}>학교 전환</Text></TouchableOpacity></View>
+      </View>
+      <View style={styles.workspaceDivider} />
+      <View style={styles.workspaceSectionHeading}><Text style={styles.workspaceSectionIcon}>⚙</Text></View>
+      <WorkspaceNavigationRow title="일반" onPress={() => onNavigate("workspaceGeneral")} />
+      <WorkspaceNavigationRow title="알림 설정" onPress={() => onNavigate("workspaceNotifications")} />
+      <View style={styles.workspaceSectionHeading}><Text style={styles.workspaceSectionIcon}>♙</Text></View>
+      <WorkspaceNavigationRow title="멤버" onPress={() => onNavigate("workspaceMembers")} />
+      {canInvite ? <WorkspaceNavigationRow title="멤버 초대" onPress={() => onNavigate("workspaceInvite")} /> : null}
+    </ScrollView>
+    <Modal visible={workspacePickerOpen} transparent animationType="slide" onRequestClose={() => setWorkspacePickerOpen(false)}>
+      <View style={styles.workspacePickerBackdrop}>
+        <TouchableOpacity accessibilityRole="button" style={styles.workspacePickerDismiss} activeOpacity={1} onPress={() => setWorkspacePickerOpen(false)} />
+        <View style={styles.workspacePicker}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.dialogTitle}>가입된 학교</Text>
+          <ScrollView style={styles.workspacePickerList}>
+            {workspaces.map((item) => <TouchableOpacity key={item.id} style={styles.workspaceOption} onPress={() => { setWorkspacePickerOpen(false); onSelect(item); }}>
+              {item.image ? <Image source={{ uri: absoluteApiUrl(item.image) }} style={styles.workspaceOptionAvatar} /> : <View style={styles.workspaceOptionAvatarPlaceholder}><Text style={styles.link}>{item.name.slice(0, 1)}</Text></View>}
+              <Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text>
+              <Text style={styles.muted}>›</Text>
+            </TouchableOpacity>)}
+          </ScrollView>
+          <View style={styles.workspacePickerActions}>
+            <Button label="새 학교 만들기" kind="secondary" onPress={() => { setWorkspacePickerOpen(false); onNavigate("workspaceCreate"); }} />
+            <Button label="기존 학교 가입" onPress={() => { setWorkspacePickerOpen(false); onNavigate("workspaceJoin"); }} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </>;
+}
+
+function WorkspaceNavigationRow({ title, onPress }: { title: string; onPress: () => void }) {
+  return <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.workspaceNavigationRow}>
+    <Text style={styles.workspaceNavigationTitle}>{title}</Text>
+    <Text style={styles.workspaceNavigationArrow}>›</Text>
+  </TouchableOpacity>;
 }
 
 export function WorkspaceGeneralScreen() {
@@ -54,11 +92,8 @@ export function WorkspaceGeneralScreen() {
   return <ScrollView style={styles.content}><TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}><Text style={styles.leaveWorkspace}>학교 나가기</Text><Text style={styles.muted}>›</Text></TouchableOpacity></ScrollView>;
 }
 export function WorkspaceMembersScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceMembers workspace={workspace} /></ScrollView>; }
-export function WorkspaceJoinRequestsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><JoinRequests workspace={workspace} /></ScrollView>; }
-export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /></ScrollView>; }
+export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceNotificationSettings workspace={workspace} /></ScrollView>; }
-export function WorkspaceOrganizationScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceOrganizationChart workspace={workspace} /></ScrollView>; }
-export function WorkspacePendingScreen({ onReload }: { onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><PendingWorkspaceRequests onChanged={onReload} /></ScrollView>; }
 export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><CreateWorkspaceCard onCreated={onReload} /></ScrollView>; }
 export function WorkspaceJoinScreen({ onReload }: { onReload: () => Promise<void> }) {
   const [step, setStep] = useState<"role" | "code" | "confirm" | "waiting">("role");
@@ -167,6 +202,27 @@ const styles = StyleSheet.create({
   schoolSummary: { alignItems: "center", gap: 8, paddingVertical: 12 },
   schoolImage: { width: 76, height: 76, borderRadius: 38 },
   schoolName: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700" },
+  workspaceHero: { minHeight: 84, paddingHorizontal: 4, paddingBottom: 18, flexDirection: "row", alignItems: "center", gap: 14 },
+  workspaceHeroText: { flex: 1, gap: 8 },
+  workspaceAvatar: { width: 48, height: 48, borderRadius: 24 },
+  workspaceAvatarPlaceholder: { width: 48, height: 48, borderRadius: 24, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
+  switchButton: { alignSelf: "flex-start", backgroundColor: SeugiColor.Gray100, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
+  switchButtonText: { color: SeugiColor.Gray600, fontSize: 13 },
+  workspaceDivider: { height: 8, backgroundColor: SeugiColor.Gray100, marginHorizontal: -16 },
+  workspaceSectionHeading: { height: 42, justifyContent: "center", paddingHorizontal: 4 },
+  workspaceSectionIcon: { fontSize: 22, color: SeugiColor.Gray800 },
+  workspaceNavigationRow: { minHeight: 56, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
+  workspaceNavigationTitle: { color: SeugiColor.Gray800, fontSize: 15, fontWeight: "600" },
+  workspaceNavigationArrow: { color: SeugiColor.Gray400, fontSize: 26, lineHeight: 30 },
+  workspacePickerBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.32)" },
+  workspacePickerDismiss: { flex: 1 },
+  workspacePicker: { maxHeight: "75%", backgroundColor: SeugiColor.White, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 24 },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: SeugiColor.Gray300, alignSelf: "center", marginBottom: 16 },
+  workspacePickerList: { marginTop: 12 },
+  workspaceOption: { minHeight: 60, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
+  workspaceOptionAvatar: { width: 36, height: 36, borderRadius: 18 },
+  workspaceOptionAvatarPlaceholder: { width: 36, height: 36, borderRadius: 18, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
+  workspacePickerActions: { flexDirection: "row", gap: 8, paddingTop: 12 },
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, marginBottom: 8 },
   profilePicture: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Gray300 },
   profilePictureEmpty: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
