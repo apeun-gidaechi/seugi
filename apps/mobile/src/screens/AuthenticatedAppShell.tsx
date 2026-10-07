@@ -182,7 +182,7 @@ export function AuthenticatedAppShell({
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
       {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
-      {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} onDone={goBack} /> : null}
+      {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} onDone={() => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange("home"); }} /> : null}
       {detail === "accountSettings" ? <AccountSettingsScreen workspace={workspace} onLogout={onLogout} /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen

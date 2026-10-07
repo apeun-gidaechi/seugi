@@ -26,7 +26,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
 | Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; shared illustrated `WorkspaceRoleSelection` and dedicated `WorkspaceJoinConfirmation` | Added in-flow top bar; top-bar/system back now follows role → code → confirmation stack behavior; device QA pending |
-| Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | Waiting screen now has native-style top bar and returns to confirmation on back; explicit “완료” still exits to the parent; device QA pending |
+| Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | Waiting screen has native-style top bar and returns to confirmation on back; authenticated join completion now clears nested routes and returns to the Home root like native Android/iOS; device QA pending |
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |
