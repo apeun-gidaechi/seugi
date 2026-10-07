@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
@@ -81,7 +82,10 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
     <Card title="프로필 정보">
       <View style={styles.settingsIdentity}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="프로필 사진 변경" onPress={() => void changePhoto()} disabled={busy}>
-          <SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} fallbackText="사진 추가" imageStyle={styles.settingsAvatar} fallbackStyle={styles.settingsAvatarPlaceholder} labelStyle={styles.link} />
+          <View style={styles.settingsAvatarWrap}>
+            <SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} imageStyle={styles.settingsAvatar} fallbackStyle={styles.settingsAvatarPlaceholder} />
+            {!picture ? <Svg style={styles.settingsAvatarAdd} width={24} height={25} viewBox="0 0 24 25"><Path d="M5.636 18.728C9.151 22.243 14.849 22.243 18.364 18.728C21.879 15.213 21.879 9.515 18.364 6C14.849 2.485 9.151 2.485 5.636 6C2.121 9.515 2.121 15.213 5.636 18.728ZM7.05 11.364C6.498 11.364 6.05 11.812 6.05 12.364C6.05 12.916 6.498 13.364 7.05 13.364H11L11 17.314C11 17.866 11.448 18.314 12 18.314C12.552 18.314 13 17.866 13 17.314V13.364H16.95C17.502 13.364 17.95 12.916 17.95 12.364C17.95 11.812 17.502 11.364 16.95 11.364H13L13 7.414C13 6.862 12.552 6.414 12 6.414C11.448 6.414 11 6.862 11 7.414L11 11.364H7.05Z" fill={SeugiColor.Gray600} fillRule="evenodd" /></Svg> : null}
+          </View>
         </TouchableOpacity>
         <View style={styles.settingsIdentityName}><Text style={styles.profileNameText}>{name || "이름"}</Text><TouchableOpacity accessibilityRole="button" onPress={() => { setDraft(name); setEditingName(true); }} disabled={busy}><Text style={styles.link}>이름 수정</Text></TouchableOpacity></View>
       </View>
@@ -246,7 +250,7 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
     } finally { setBusy(false); }
   };
   return <Card title="내 프로필">
-    <View style={styles.profileHeader}><SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} fallbackText="프로필" imageStyle={styles.profilePicture} fallbackStyle={styles.profilePictureEmpty} labelStyle={styles.link} /><View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
+    <View style={styles.profileHeader}><SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} imageStyle={styles.profilePicture} fallbackStyle={styles.profilePictureEmpty} /><View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
     {profileRows.map(([key, title, value]) => <TouchableOpacity key={key} accessibilityRole="button" style={styles.profileRow} onPress={() => openEditor(key as NonNullable<typeof editing>, value)}><View><Text style={styles.profileLabel}>{title}</Text><Text style={styles.profileValue}>{value || "미설정"}</Text></View><Text style={styles.profileEdit}>✎</Text></TouchableOpacity>)}
     {notice ? <Text style={notice.endsWith("수정 성공") ? styles.answer : styles.error}>{notice}</Text> : null}
     <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => { if (!busy) setEditing(undefined); }}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>{fieldTitle} 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={`${fieldTitle} 입력`} multiline={editing === "status"} keyboardType={editing === "phone" || editing === "wire" ? Platform.OS === "ios" ? "number-pad" : "phone-pad" : "default"} editable={!busy} maxLength={editing === "status" ? 160 : editing === "nick" ? 40 : editing === "spot" ? 80 : editing === "belong" || editing === "location" ? 120 : Platform.OS === "ios" && (editing === "phone" || editing === "wire") ? 11 : 40} /><View style={styles.dialogActions}><TouchableOpacity disabled={busy} onPress={() => setEditing(undefined)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity disabled={busy} onPress={() => void commitDraft()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
@@ -406,8 +410,10 @@ const styles = StyleSheet.create({
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, marginBottom: 8 },
   settingsIdentity: { minHeight: 104, flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 8 },
   settingsIdentityName: { flex: 1, gap: 8 },
-  settingsAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: SeugiColor.Gray300 },
-  settingsAvatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
+  settingsAvatarWrap: { width: 80, height: 80, alignItems: "center", justifyContent: "center" },
+  settingsAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: SeugiColor.Gray300 },
+  settingsAvatarPlaceholder: { width: 64, height: 64, borderRadius: 32 },
+  settingsAvatarAdd: { position: "absolute", right: 4, bottom: 4 },
   profilePicture: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Gray300 },
   profilePictureEmpty: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   profileName: { flex: 1, gap: 4 },
