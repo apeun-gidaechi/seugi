@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { ClassroomTask, Task, Workspace } from "@seugi/contracts";
 import { api } from "../services/api";
@@ -9,13 +9,23 @@ import { SeugiTopBar } from "../design-system/TopBar";
 
 export function AssignmentsScreen({ workspace, onCreateTask }: { workspace: Workspace; onCreateTask: () => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [error, setError] = useState("");
+  const [taskState, setTaskState] = useState<"loading" | "success" | "error">("loading");
   const canCreate = useCanCreateTask(workspace);
-  const refresh = useCallback(async () => { const result = await api.tasks(workspace.id); setTasks((result.data ?? []).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))); }, [workspace.id]);
-  useEffect(() => { refresh().catch((e) => setError(e instanceof Error ? e.message : "과제를 불러오지 못했습니다")); }, [refresh]);
+  const refresh = useCallback(async () => {
+    setTaskState("loading");
+    try {
+      const result = await api.tasks(workspace.id);
+      setTasks((result.data ?? []).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")));
+      setTaskState("success");
+    } catch {
+      setTasks([]);
+      setTaskState("error");
+    }
+  }, [workspace.id]);
+  useEffect(() => { void refresh(); }, [refresh]);
   return <View style={styles.screen}><FlatList style={styles.content} data={tasks} keyExtractor={(item) => item.id}
-    ListHeaderComponent={<><ClassroomTasks /><Text style={styles.sectionTitle}>일반 과제</Text>{error ? <Text style={styles.error}>{error}</Text> : null}</>}
-    ListEmptyComponent={!error ? <Text style={styles.empty}>등록된 일반 과제가 없습니다.</Text> : null}
+    ListHeaderComponent={<><ClassroomTasks />{Platform.OS === "ios" || taskState === "success" ? <Text style={styles.sectionTitle}>일반 과제</Text> : null}</>}
+    ListEmptyComponent={Platform.OS === "ios" ? taskState === "loading" ? <ActivityIndicator style={styles.loading} color={SeugiColor.Primary500} /> : <Text style={styles.empty}>과제가 없어요</Text> : null}
     renderItem={({ item }) => <View style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.content ? <Text style={styles.taskDescription}>{item.content}</Text> : null}</View>} />
     {Platform.OS === "android" && canCreate ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="과제 만들기" onPress={onCreateTask} style={styles.fab}><Text style={styles.fabText}>＋</Text></TouchableOpacity> : null}
   </View>;
@@ -67,13 +77,14 @@ function CreateTask({ workspace, onCreated, onBack }: { workspace: Workspace; on
 }
 
 function ClassroomTasks() {
-  const [items, setItems] = useState<ClassroomTask[]>([]); const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<ClassroomTask[]>([]); const [state, setState] = useState<"loading" | "success" | "error">("loading");
   useEffect(() => {
     let active = true;
-    api.classroomTasks().then((result) => { if (active) setItems(result.data ?? []); }).catch(() => { if (active) setItems([]); }).finally(() => { if (active) setLoading(false); });
+    api.classroomTasks().then((result) => { if (active) { setItems(result.data ?? []); setState("success"); } }).catch(() => { if (active) { setItems([]); setState("error"); } });
     return () => { active = false; };
   }, []);
-  return <><Text style={styles.sectionTitle}>구글 클래스룸 과제</Text>{loading ? <Text style={styles.empty}>불러오는 중…</Text> : items.length === 0 ? <Text style={styles.empty}>과제가 없어요</Text> : items.map((item) => <TouchableOpacity key={item.id} activeOpacity={1} disabled={Platform.OS !== "android" || !item.link} onPress={() => { if (item.link) void Linking.openURL(item.link).catch(() => undefined); }} style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.description ? <Text style={styles.taskDescription}>{item.description}</Text> : null}</TouchableOpacity>)}</>;
+  if (Platform.OS === "android" && state !== "success") return null;
+  return <><Text style={styles.sectionTitle}>구글 클래스룸 과제</Text>{state === "loading" ? <ActivityIndicator style={styles.loading} color={SeugiColor.Primary500} /> : state === "error" || items.length === 0 ? <Text style={styles.empty}>과제가 없어요</Text> : items.map((item) => <TouchableOpacity key={item.id} activeOpacity={1} disabled={Platform.OS !== "android" || !item.link} onPress={() => { if (item.link) void Linking.openURL(item.link).catch(() => undefined); }} style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.description ? <Text style={styles.taskDescription}>{item.description}</Text> : null}</TouchableOpacity>)}</>;
 }
 
 function getDDayLabel(dueDate?: string | null) {
@@ -100,6 +111,7 @@ const styles = StyleSheet.create({
   fabText: { color: SeugiColor.White, fontSize: 34, lineHeight: 38, fontWeight: "400" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
+  loading: { paddingVertical: 20 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   editorField: { marginBottom: 10 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
