@@ -6,7 +6,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 
 | Original destination | TypeScript mobile target | Status |
 | --- | --- | --- |
-| Home | `HomeScreen` in `HomeScreen.tsx` | iPad empty-state screen observed; populated meal/timetable/schedule/task parity pending |
+| Home | `HomeScreen` in `HomeScreen.tsx` | Pull-to-refresh reloads the home data set like Android; iPad empty-state screen observed; populated meal/timetable/schedule/task parity pending |
 | Chat | `ChatScreen` (`roomType="personal"`) | device QA pending |
 | Group rooms | `ChatScreen` (`roomType="group"`) | device QA pending |
 | Chat detail | `ChatConversationScreen` | device QA pending |

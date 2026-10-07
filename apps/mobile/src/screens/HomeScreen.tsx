@@ -7,6 +7,7 @@ import {
   Linking,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -32,6 +33,7 @@ export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspa
 
 export function HomeScreen({
   workspace,
+  refreshToken = 0,
   onOpenCatSeugi,
   onOpenMeals,
   onOpenTimetable,
@@ -39,6 +41,7 @@ export function HomeScreen({
   onOpenWorkspace,
 }: {
   workspace: Workspace;
+  refreshToken?: number;
   onOpenCatSeugi: () => void;
   onOpenMeals: () => void;
   onOpenTimetable: () => void;
@@ -52,29 +55,26 @@ export function HomeScreen({
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [mealPage, setMealPage] = useState(0);
   const [mealPageWidth, setMealPageWidth] = useState(0);
-  const refreshTasks = useCallback(async () => {
-    const result = await api.tasks(workspace.id);
-    setTasks(result.data ?? []);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshHome = useCallback(async () => {
+    setRefreshing(true);
+    const results = await Promise.allSettled([
+      api.tasks(workspace.id),
+      api.classroomTasks(),
+      api.weeklyTimetable(workspace.id),
+      api.meals(workspace.id),
+      api.schedules(workspace.id),
+    ]);
+    if (results[0].status === "fulfilled") setTasks(results[0].value.data ?? []);
+    if (results[1].status === "fulfilled") setClassroomTasks(results[1].value.data ?? []);
+    if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
+    if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
+    if (results[4].status === "fulfilled") setSchedules(results[4].value.data ?? []);
+    setRefreshing(false);
   }, [workspace.id]);
   useEffect(() => {
-    refreshTasks().catch(() => undefined);
-    api
-      .classroomTasks()
-      .then((result) => setClassroomTasks(result.data ?? []))
-      .catch(() => setClassroomTasks([]));
-    api
-      .weeklyTimetable(workspace.id)
-      .then((result) => setTimetable(result.data ?? []))
-      .catch(() => undefined);
-    api
-      .meals(workspace.id)
-      .then((result) => setMeals(result.data ?? []))
-      .catch(() => setMeals([]));
-    api
-      .schedules(workspace.id)
-      .then((result) => setSchedules(result.data ?? []))
-      .catch(() => undefined);
-  }, [workspace.id, refreshTasks]);
+    void refreshHome();
+  }, [refreshHome, refreshToken]);
 
   const today = localDateKey(new Date());
   const todaysMeals = (meals ?? []).filter((item) => item.date.slice(0, 10) === today);
@@ -90,7 +90,10 @@ export function HomeScreen({
     .sort((a, b) => a.date.localeCompare(b.date))
 
   return (
-    <ScrollView style={styles.homeContent}>
+    <ScrollView
+      style={styles.homeContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshHome()} tintColor={SeugiColor.Primary500} colors={[SeugiColor.Primary500]} />}
+    >
       <HomeCard title="내 학교" icon="school" onPress={Platform.OS === "ios" ? onOpenWorkspace : undefined}>
         {Platform.OS === "ios" ? <Text style={styles.workspaceName}>{workspace.name}</Text> : <View style={styles.schoolRow}>
           <Text style={styles.rowTitle}>{workspace.name}</Text>

@@ -96,6 +96,7 @@ export function AuthenticatedAppShell({
   const [roomSearch, setRoomSearch] = useState("");
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const [canCreateNotice, setCanCreateNotice] = useState(false);
+  const [homeRefreshToken, setHomeRefreshToken] = useState(0);
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
   const closeRoomSearch = () => { setRoomSearchActive(false); setRoomSearch(""); };
@@ -144,7 +145,7 @@ export function AuthenticatedAppShell({
         trailing={!detail && tab === "home" ? (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => void onReload().catch(() => undefined)}
+            onPress={() => void onReload().then(() => setHomeRefreshToken((current) => current + 1)).catch(() => undefined)}
           >
             <Text style={styles.link}>새로고침</Text>
           </TouchableOpacity>
@@ -192,6 +193,7 @@ export function AuthenticatedAppShell({
       {!detail && tab === "home" ? (
         <Home
           workspace={workspace}
+          refreshToken={homeRefreshToken}
           onOpenCatSeugi={() => pushDetail("catSeugi")}
           onOpenMeals={() => pushDetail("meals")}
           onOpenTimetable={() => pushDetail("timetable")}
