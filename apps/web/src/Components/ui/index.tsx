@@ -133,3 +133,19 @@ export const Eyebrow = styled.span`
   letter-spacing: 0.1em;
   text-transform: uppercase;
 `;
+
+export const avatarSize = Object.freeze({
+  large: 60,
+  medium: 36,
+  small: 32,
+});
+
+type AvatarSize = keyof typeof avatarSize;
+
+export const Avatar = styled.img<{ size?: AvatarSize }>`
+  width: ${({ size = "medium" }) => avatarSize[size]}px;
+  height: ${({ size = "medium" }) => avatarSize[size]}px;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 990;
+`;

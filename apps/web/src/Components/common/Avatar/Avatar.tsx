@@ -1,11 +1,10 @@
 import React, {useState, useEffect} from 'react';
-import * as S from './Avatar.style';
+import { Avatar as AvatarPrimitive, avatarSize } from '@/Components/ui';
 import DefaultProfileImage from "@/Assets/image/profile/Avatar.svg";
-import {profileSize} from './Avatar.style';
 import {getMyInfos} from "@/Api/profile";
 
 interface AvatarProps {
-  size?: keyof typeof profileSize;
+  size?: keyof typeof avatarSize;
   imageUrl?: string;
 }
 
@@ -44,9 +43,7 @@ const Avatar = ({size = 'medium', imageUrl}: AvatarProps) => {
   }, [imageUrl]);
 
   return (
-    <>
-      <S.ProfileImage src={userProfileImage} size={size}/>
-    </>
+    <AvatarPrimitive src={userProfileImage} size={size} alt="" />
   );
 };
 
