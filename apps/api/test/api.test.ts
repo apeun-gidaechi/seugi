@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { io } from "socket.io-client";
 import WebSocket from "ws";
-import type { ChatMessage } from "@seugi/contracts";
+import { authenticateOAuthSchema, type ChatMessage } from "@seugi/contracts";
 import { SeugiApi, SeugiApiError } from "../../../packages/api-client/src/index.js";
 import { createAuthenticatedSocket } from "../../mobile/src/realtime.js";
 import { buildApp } from "../src/app.js";
@@ -470,6 +470,21 @@ test("email login accepts the original client token field", async () => {
   await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-token@example.com", password: "password123", code: "123456" } });
   const login = await app.inject({ method: "POST", url: "/member/login", payload: { email: "legacy-token@example.com", password: "password123", token: "legacy-fcm-token" } });
   assert.equal(login.statusCode, 200); assert.deepEqual([...store.deviceTokens.values()], [["legacy-fcm-token"]]);
+  await app.close();
+});
+
+test("empty optional push tokens do not block legacy auth or logout", async () => {
+  const store = new Store(); store.emailCodes.set("empty-token@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registered = await app.inject({ method: "POST", url: "/member/register", payload: { email: "empty-token@example.com", password: "password123", code: "123456", token: "" } });
+  assert.equal(registered.statusCode, 200);
+  const login = await app.inject({ method: "POST", url: "/member/login", payload: { email: "empty-token@example.com", password: "password123", token: "" } });
+  assert.equal(login.statusCode, 200);
+  const tokens = login.json().data as { accessToken: string; refreshToken: string };
+  const memberId = app.jwt.decode<{ sub: string }>(tokens.accessToken)?.sub; assert.ok(memberId);
+  assert.equal(store.deviceTokens.has(memberId), false);
+  const logout = await app.inject({ method: "POST", url: "/member/logout", headers: { authorization: `Bearer ${tokens.accessToken}` }, payload: { fcmToken: "" } });
+  assert.equal(logout.statusCode, 200);
+  assert.equal(authenticateOAuthSchema.parse({ code: "authorization-code", token: "" }).token, undefined);
   await app.close();
 });
 
