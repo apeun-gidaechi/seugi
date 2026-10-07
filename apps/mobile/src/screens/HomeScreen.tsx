@@ -118,8 +118,6 @@ export function HomeScreen({
       setAllPeriodsOver(state.allPeriodsOver);
     };
     updatePeriod();
-    const interval = setInterval(updatePeriod, 1000);
-    return () => clearInterval(interval);
   }, [timetable]);
 
   return (
@@ -151,12 +149,13 @@ export function HomeScreen({
             </ScrollView>
           ) : (
             <View style={styles.androidPeriods}>
-              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${allPeriodsOver ? 100 : Math.max(1, Math.min(100, (((currentPeriod ?? 0) + 0.9) / todaysTimetable.length) * 100))}%` }]} /></View>
-              <View style={styles.periodRow}>{todaysTimetable.map((item) => {
-                const current = currentPeriod === Number(item.time);
+              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${allPeriodsOver ? 100 : Math.max(1, Math.min(100, (((currentPeriod ?? 0) - 0.1) / todaysTimetable.length) * 100))}%` }]} /></View>
+              <View style={styles.periodRow}>{todaysTimetable.map((item, index) => {
+                const period = index + 1;
+                const current = currentPeriod === period;
                 return <View key={item.id} style={styles.androidPeriod}>
                   <Text style={[styles.periodNumber, current && styles.periodNumberCurrent]}>{item.time}</Text>
-                  <Text numberOfLines={1} style={[styles.periodSubjectText, current && styles.periodSubjectTextCurrent, !allPeriodsOver && currentPeriod !== null && Number(item.time) > currentPeriod && styles.periodUpcoming]}>{item.subject}</Text>
+                  <Text numberOfLines={1} style={[styles.periodSubjectText, current && styles.periodSubjectTextCurrent, !allPeriodsOver && currentPeriod !== null && period > currentPeriod && styles.periodUpcoming]}>{item.subject}</Text>
                 </View>;
               })}</View>
             </View>
@@ -243,27 +242,11 @@ function HomeCard({ title, icon, children, onPress }: { title: string; icon: Hom
 function getCurrentTimetablePeriod(entries: Timetable[], now = new Date()) {
   const startTime = new Date(now);
   startTime.setHours(8, 50, 0, 0);
-  const lunchStart = new Date(now);
-  lunchStart.setHours(12, 40, 0, 0);
-  const lunchEnd = new Date(now);
-  lunchEnd.setHours(13, 30, 0, 0);
-  let lastPeriodEnd: Date | undefined;
-
-  for (let index = 0; index < entries.length; index += 1) {
-    const periodStart = new Date(startTime.getTime() + index * 60 * 60 * 1000);
-    const periodEnd = new Date(periodStart.getTime() + 50 * 60 * 1000);
-    const breakEnd = new Date(periodEnd.getTime() + 10 * 60 * 1000);
-    if (periodStart >= lunchStart && periodStart < lunchEnd) periodStart.setTime(lunchEnd.getTime());
-    if (periodEnd >= lunchStart && periodEnd < lunchEnd) {
-      periodEnd.setTime(lunchEnd.getTime());
-      breakEnd.setTime(periodEnd.getTime() + 10 * 60 * 1000);
-    }
-    lastPeriodEnd = breakEnd;
-    if ((now >= periodStart && now < periodEnd) || (now >= periodEnd && now < breakEnd)) {
-      return { period: index + 1, allPeriodsOver: false };
-    }
-  }
-  return { period: null, allPeriodsOver: !!lastPeriodEnd && now > lastPeriodEnd };
+  const selectedIndex = Math.trunc((now.getTime() - startTime.getTime()) / (60 * 60 * 1000));
+  return {
+    period: selectedIndex + 1,
+    allPeriodsOver: selectedIndex >= entries.length,
+  };
 }
 
 export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entries: Timetable[]; onSelectCell?: (date: string, time: string) => void; onSelectEntry?: (entry: Timetable) => void }) {
