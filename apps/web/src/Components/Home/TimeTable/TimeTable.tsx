@@ -4,11 +4,12 @@ import ArrowImg from "@/Assets/image/home/arrow.svg";
 import NoSchedule from '@/Assets/image/home/NoSchedule.svg';
 import * as S from './TimeTable.style'
 import { SeugiColor } from '@/Design/color/SeugiColor';
-import MyCalendar from "@/Components/DetailTimetable/DetailTimeTable";
 import PlusButtonImg from '@/Assets/image/home/plusbutton.svg';
-import CreateTimetable from "@/Components/DetailTimetable/CreateTimetable/CreateTimetable";
 import { format } from 'date-fns';
 import Cookies from "js-cookie";
+
+const MyCalendar = React.lazy(() => import('@/Components/DetailTimetable/DetailTimeTable'));
+const CreateTimetable = React.lazy(() => import('@/Components/DetailTimetable/CreateTimetable/CreateTimetable'));
 
 interface TimetableItem {
     id: string;
@@ -159,14 +160,18 @@ const DailySchedule = ({ timetable = [] }: Props) => {
             </S.ScheduleTitleBox>
 
             {showCalendar && (
-                <div ref={calendarRef}>
-                    <MyCalendar onClose={closeCalendar} />
-                </div>
+                <React.Suspense fallback={null}>
+                    <div ref={calendarRef}>
+                        <MyCalendar onClose={closeCalendar} />
+                    </div>
+                </React.Suspense>
             )}
             {isCreateTimetableOpen && (
-                <div ref={dialogRef}>
-                    <CreateTimetable date={todayDate} onClose={closeCreateTimetable} />
-                </div>
+                <React.Suspense fallback={null}>
+                    <div ref={dialogRef}>
+                        <CreateTimetable date={todayDate} onClose={closeCreateTimetable} />
+                    </div>
+                </React.Suspense>
             )}
 
             <S.ScheduleDivBox>

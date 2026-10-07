@@ -6,15 +6,16 @@ import Emoji from "@/Assets/image/home/emoji.svg";
 import NoNotification from '@/Assets/image/home/NoNotification.svg';
 import NotificationImg from "@/Assets/image/home/notification.svg";
 import CorrectionImg from '@/Assets/image/home/Correction.svg';
-import AddEmoji from '@/Components/Home/Notification/Emoji/emojipicker';
 import { toggleNotificationEmoji } from '@/Api/notification';
-import { EmojiClickData } from 'emoji-picker-react';
-import CreateNotice from '@/Components/Home/Notification/CreateNotice/CreateNotice';
-import ChangeNotice from './ChangeNotice/ChangeNotice';
+import type { EmojiClickData } from 'emoji-picker-react';
 import { useUserContext } from '@/Contexts/userContext';
 import Cookies from 'js-cookie';
 import type { KeyedMutator } from 'swr';
 import type { LegacyNotification } from '@seugi/contracts';
+
+const AddEmoji = React.lazy(() => import('@/Components/Home/Notification/Emoji/emojipicker'));
+const CreateNotice = React.lazy(() => import('@/Components/Home/Notification/CreateNotice/CreateNotice'));
+const ChangeNotice = React.lazy(() => import('./ChangeNotice/ChangeNotice'));
 
 type NotificationItem = LegacyNotification;
 type EmojiItem = LegacyNotification["emoji"][number];
@@ -225,10 +226,12 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
     return (
         <S.LeftContainer>
             {isCreateNoticeVisible && (
-                <CreateNotice
-                    onClose={() => setCreateNoticeVisible(false)}
-                    mutateNotifications={mutateNotifications}
-                />
+                <React.Suspense fallback={null}>
+                    <CreateNotice
+                        onClose={() => setCreateNoticeVisible(false)}
+                        mutateNotifications={mutateNotifications}
+                    />
+                </React.Suspense>
             )}
             {showAlert && (
                 <CustomAlert
@@ -285,19 +288,23 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                                 ))}
                             </S.NotificationEmojiBox>
                             {isEmojiPickerVisible && activeNotificationId === item.id && (
-                                <AddEmoji
-                                    isOpened={isEmojiPickerVisible}
-                                    setIsOpened={setEmojiPickerVisible}
-                                    onSelect={handleEmojiSelect}
-                                />
+                                <React.Suspense fallback={null}>
+                                    <AddEmoji
+                                        isOpened={isEmojiPickerVisible}
+                                        setIsOpened={setEmojiPickerVisible}
+                                        onSelect={handleEmojiSelect}
+                                    />
+                                </React.Suspense>
                             )}
                             {changeNoticeId === item.id && (
-                                <ChangeNotice
-                                    onClose={() => handleActionButtonClick(item.id)}
-                                    notificationId={item.id}
-                                    userId={item.userId}
-                                    mutateNotifications={mutateNotifications}
-                                />
+                                <React.Suspense fallback={null}>
+                                    <ChangeNotice
+                                        onClose={() => handleActionButtonClick(item.id)}
+                                        notificationId={item.id}
+                                        userId={item.userId}
+                                        mutateNotifications={mutateNotifications}
+                                    />
+                                </React.Suspense>
                             )}
                         </S.NotificationWrapper>
                     ))

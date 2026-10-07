@@ -3,8 +3,6 @@ import Router from '@/Components/router';
 import './App.css';
 import { UserContextProvider } from './Contexts/userContext';
 import { SelectedProvider } from './Hooks/Selected/useSelected';
-import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
 import { appleAuthHelpers, useScript } from 'react-apple-signin-auth';
 import Cookies from 'js-cookie';
 
@@ -52,9 +50,11 @@ function App() {
     let active = true;
     let unsubscribe: (() => void) | undefined;
 
-    void isSupported().then(async (supported) => {
+    void import('firebase/messaging').then(async ({ getMessaging, getToken, isSupported, onMessage }) => {
+      const supported = await isSupported();
       if (!supported || !active) return;
       try {
+        const { initializeApp } = await import('firebase/app');
         const messaging = getMessaging(initializeApp(firebaseConfig));
         await registerServiceWorker();
         const permission = await Notification.requestPermission();
