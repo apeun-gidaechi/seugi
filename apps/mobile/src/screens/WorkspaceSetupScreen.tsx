@@ -8,7 +8,7 @@ import { api } from "../services/api";
 import { SeugiTextField } from "../design-system/TextField";
 
 export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
-  const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting">("start");
+  const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting" | "requests">("start");
   const [role, setRole] = useState<WorkspaceJoinRole>("STUDENT");
   const [code, setCode] = useState("");
   const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>();
@@ -46,8 +46,9 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     {screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
     <Text style={styles.logo}>스기</Text>
     {error ? <Text style={styles.error}>{error}</Text> : null}
-    {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
+    {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="가입 신청 내역" kind="secondary" onPress={() => setScreen("requests")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
+    {screen === "requests" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>가입 신청 내역</Text><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView> : null}
     {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
     {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} containerStyle={styles.fieldSpacing} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
     {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
