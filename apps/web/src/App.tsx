@@ -4,7 +4,7 @@ import './App.css';
 import { UserContextProvider } from './Contexts/userContext';
 import { SelectedProvider } from './Hooks/Selected/useSelected';
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
 import { appleAuthHelpers, useScript } from 'react-apple-signin-auth';
 import Cookies from 'js-cookie';
 
@@ -20,9 +20,10 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Firebase 앱 초기화
-const fapp = initializeApp(firebaseConfig);
-const messaging = getMessaging(fapp);
+const firebaseConfigured = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId &&
+  firebaseConfig.messagingSenderId && firebaseConfig.appId && VAPID_PUBLIC
+);
 
 // 서비스 워커 등록 함수
 const registerServiceWorker = async () => {
@@ -47,35 +48,26 @@ function App() {
   useScript(appleAuthHelpers.APPLE_SCRIPT_SRC);
 
   useEffect(() => {
-    registerServiceWorker(); // 서비스 워커 등록
+    if (!firebaseConfigured || !('Notification' in window) || !('serviceWorker' in navigator)) return;
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
 
-    // 알림 권한 요청
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        console.log('Notification permission granted.');
-
-        // FCM 토큰 요청
-        getToken(messaging, { vapidKey: VAPID_PUBLIC }).then((currentToken) => {
-          if (currentToken) {
-            Cookies.set('fcmToken', currentToken);
-          } else {
-            console.log('No registration token available.');
-          }
-        }).catch((err) => {
-          console.error('An error occurred while retrieving token: ', err);
-        });
-
-        // FCM 메시지 수신 처리
-        onMessage(messaging, (payload) => {
-          console.log('Message received: ', payload);
-          // 알림 표시 등 추가 처리 로직
-        });
-      } else {
-        console.log('Notification permission denied.');
+    void isSupported().then(async (supported) => {
+      if (!supported || !active) return;
+      try {
+        const messaging = getMessaging(initializeApp(firebaseConfig));
+        await registerServiceWorker();
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted' || !active) return;
+        const currentToken = await getToken(messaging, { vapidKey: VAPID_PUBLIC });
+        if (currentToken) Cookies.set('fcmToken', currentToken);
+        unsubscribe = onMessage(messaging, (payload) => console.info('Push message received', payload));
+      } catch (error) {
+        console.error('Push notifications are unavailable:', error);
       }
-    }).catch((err) => {
-      console.error('Error occurred while requesting notification permission: ', err);
-    });
+    }).catch((error) => console.error('Push notification capability check failed:', error));
+
+    return () => { active = false; unsubscribe?.(); };
   }, []);
 
   return (

@@ -1,7 +1,8 @@
 import { SeugiApi } from "@seugi/api-client";
 import Cookies from "js-cookie";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
+const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined)
+  || (import.meta.env.DEV ? "http://localhost:8080" : window.location.origin);
 const tokenValue = (token?: string) => token?.replace(/^Bearer\s+/i, "");
 
 export async function withSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ data?: T }>): Promise<T> {
