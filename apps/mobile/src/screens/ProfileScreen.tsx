@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import * as SecureStore from "expo-secure-store";
-import * as Notifications from "expo-notifications";
 import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
@@ -15,7 +13,6 @@ import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen 
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
 import { api } from "../services/api";
-import { EAS_PROJECT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "../config";
 import { absoluteApiUrl } from "../utils/url";
 import { WorkspaceMembersScreen as WorkspaceMembersDestination } from "./WorkspaceMembersScreen";
 
@@ -177,7 +174,6 @@ function WorkspaceNavigationRow({ title, onPress }: { title: string; onPress: ()
 
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: import("@seugi/contracts").Room) => void }) { return <WorkspaceMembersDestination workspace={workspace} onOpenRoom={onOpenRoom} />; }
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
-export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <View style={styles.notificationScreen}><WorkspaceNotificationSettings workspace={workspace} /></View>; }
 export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <CreateWorkspaceCard onCreated={onReload} presentation="screen" />; }
 export function WorkspaceJoinScreen({ step, onReload, onNavigate, onBack, onDone }: {
   step: "role" | "code" | "confirm" | "waiting";
@@ -214,39 +210,6 @@ function WorkspaceOrganizationChart({ workspace }: { workspace: Workspace }) {
   return <Card title="워크스페이스 조직도">{error ? <Text style={styles.error}>{error}</Text> : !chart ? <Text style={styles.muted}>불러오는 중…</Text> : sections.map(([key, title]) => { const groups = chart[key]; return <View key={key}><Text style={styles.rowTitle}>{title}</Text>{Object.entries(groups).length ? Object.entries(groups).map(([belong, people]) => <View key={`${key}-${belong}`} style={{ paddingLeft: 12 }}><Text style={styles.muted}>{belong}</Text>{people.map((person) => <Text key={person.member.id}>{person.member.name}{person.spot ? ` · ${person.spot}` : ""}{person.status ? ` — ${person.status}` : ""}</Text>)}</View>) : <Text style={styles.muted}>등록된 구성원이 없습니다.</Text>}</View>; })}</Card>;
 }
 
-function WorkspaceNotificationSettings({ workspace }: { workspace: Workspace }) {
-  const [enabled, setEnabled] = useState(true); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
-  useEffect(() => {
-    let active = true;
-    const load = Platform.OS === "ios"
-      ? SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY).then((value) => value !== "false")
-      : api.workspaceNotificationPreference(workspace.id).then((result) => result.data ?? true);
-    load.then((value) => { if (active) setEnabled(value); }).catch((error) => active && setNotice(error instanceof Error ? error.message : "알림 설정을 불러오지 못했습니다"));
-    return () => { active = false; };
-  }, [workspace.id]);
-  const toggle = async (next: boolean) => {
-    if (busy) return;
-    setBusy(true); setNotice("");
-    try {
-      if (Platform.OS === "ios") {
-        await SecureStore.setItemAsync(IOS_ALLOW_ALARM_KEY, String(next));
-        setEnabled(next);
-        let token = await SecureStore.getItemAsync(IOS_DEVICE_TOKEN_KEY);
-        if (!token && EAS_PROJECT_ID) {
-          token = (await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID })).data;
-          await SecureStore.setItemAsync(IOS_DEVICE_TOKEN_KEY, token);
-        }
-        if (token && next) await api.registerDeviceToken(token);
-        else if (token) await api.removeDeviceToken(token);
-      } else {
-        const result = await api.setWorkspaceNotificationPreference(workspace.id, next);
-        setEnabled(result.data ?? next);
-      }
-    } catch (error) { setNotice(error instanceof Error ? error.message : "알림 설정을 저장하지 못했습니다"); }
-    finally { setBusy(false); }
-  };
-  return <View style={styles.notificationSettings}><TouchableOpacity accessibilityRole="switch" accessibilityState={{ checked: enabled, disabled: busy }} onPress={() => void toggle(!enabled)} disabled={busy} style={styles.notificationRow}><Text style={styles.notificationLabel}>전체 알림 허용</Text><Switch value={enabled} onValueChange={(next) => void toggle(next)} disabled={busy} trackColor={{ false: SeugiColor.Gray300, true: SeugiColor.Primary300 }} thumbColor={enabled ? SeugiColor.Primary500 : SeugiColor.White} /></TouchableOpacity>{notice ? <Text style={styles.error}>{notice}</Text> : null}</View>;
-}
 function WorkspaceInviteCode({ workspace }: { workspace: Workspace }) { const [code, setCode] = useState(""); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState(""); const load = useCallback(async () => { setBusy(true); setNotice(""); try { const result = await api.workspaceCode(workspace.id); setCode(result.data ?? ""); } catch (error) { setNotice(error instanceof Error ? error.message : "초대 코드를 불러오지 못했습니다"); } finally { setBusy(false); } }, [workspace.id]); useEffect(() => { setCode(""); void load(); }, [load]); const share = async () => { if (!code) return; try { await Share.share({ message: `스기 ${workspace.name} 워크스페이스 초대 코드: ${code}` }); } catch (error) { setNotice(error instanceof Error ? error.message : "초대 코드를 공유하지 못했습니다"); } }; return <Card title="구성원 초대"><Text style={styles.muted}>초대 코드를 공유하면 다른 구성원이 가입을 신청할 수 있습니다.</Text>{code ? <><Text selectable style={styles.rowTitle}>{code}</Text><Button label="초대 코드 공유" kind="secondary" onPress={share} /></> : <Button label={busy ? "불러오는 중…" : "초대 코드 보기"} kind="secondary" onPress={() => void load()} disabled={busy} />}{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card>; }
 
 function WorkspaceMembers({ workspace }: { workspace: Workspace }) { const [members, setMembers] = useState<Member[]>([]); const [isOwner, setIsOwner] = useState(false); const [busyId, setBusyId] = useState(""); const [notice, setNotice] = useState(""); const refresh = useCallback(async () => { const [info, result] = await Promise.all([api.memberInfo(), api.workspaceMembers(workspace.id)]); setIsOwner(info.data?.id === workspace.ownerId); setMembers((result.data ?? []).map((member) => ({ ...member, role: member.id === workspace.ownerId ? "ADMIN" : member.role ?? "STUDENT" }))); }, [workspace.id, workspace.ownerId]); useEffect(() => { refresh().catch((error) => setNotice(error instanceof Error ? error.message : "구성원 목록을 불러오지 못했습니다")); }, [refresh]); const roleName = (role?: Role) => role === "ADMIN" ? "관리자" : role === "MIDDLE_ADMIN" ? "중간관리자" : role === "TEACHER" ? "교사" : "학생"; const setRole = async (member: Member, role: Role) => { if (busyId) return; setBusyId(member.id); setNotice(""); try { await api.setWorkspaceMemberRole(workspace.id, member.id, role); await refresh(); } catch (error) { setNotice(error instanceof Error ? error.message : "권한을 변경하지 못했습니다"); } finally { setBusyId(""); } }; const remove = (member: Member) => Alert.alert("구성원 내보내기", `${member.name}님을 워크스페이스에서 내보낼까요?`, [{ text: "취소", style: "cancel" }, { text: "내보내기", style: "destructive", onPress: () => { void (async () => { setBusyId(member.id); setNotice(""); try { await api.removeWorkspaceMember(workspace.id, member.id); await refresh(); } catch (error) { setNotice(error instanceof Error ? error.message : "구성원을 내보내지 못했습니다"); } finally { setBusyId(""); } })(); } }]); return <Card title="워크스페이스 구성원">{members.map((member) => <View key={member.id} style={styles.memberRow}><Text style={styles.rowTitle}>{member.name} · {roleName(member.role)}</Text>{isOwner && member.id !== workspace.ownerId ? <><View style={styles.memberActions}>{(["STUDENT", "TEACHER", "MIDDLE_ADMIN"] as const).map((role) => <TouchableOpacity key={role} disabled={!!busyId} onPress={() => setRole(member, role)}><Text style={member.role === role ? styles.activeTab : styles.link}>{role === "STUDENT" ? "학생" : role === "TEACHER" ? "교사" : "관리자"}</Text></TouchableOpacity>)}</View><TouchableOpacity disabled={!!busyId} onPress={() => remove(member)}><Text style={styles.error}>내보내기</Text></TouchableOpacity></> : null}</View>)}{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card>; }
@@ -391,10 +354,6 @@ const styles = StyleSheet.create({
   joinScreen: { flex: 1, backgroundColor: SeugiColor.White },
   joinBack: { color: SeugiColor.Gray700, fontSize: 30, lineHeight: 34 },
   joinTitle: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700" },
-  notificationScreen: { flex: 1, backgroundColor: SeugiColor.White },
-  notificationSettings: { flex: 1, paddingTop: 6 },
-  notificationRow: { minHeight: 56, paddingHorizontal: 20, paddingVertical: 12, flexDirection: "row", alignItems: "center" },
-  notificationLabel: { color: SeugiColor.Gray800, fontSize: 15, fontWeight: "600", flex: 1 },
   activeTab: { color: SeugiColor.Primary500, fontWeight: "700" },
   inactiveTab: { color: SeugiColor.Gray500 },
   rowTitle: { fontWeight: "600" },

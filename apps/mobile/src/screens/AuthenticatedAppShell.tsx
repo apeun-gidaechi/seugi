@@ -35,10 +35,10 @@ import {
   WorkspaceInviteScreen,
   WorkspaceJoinScreen,
   WorkspaceMembersScreen,
-  WorkspaceNotificationsScreen,
   type WorkspaceSection,
 } from "./ProfileScreen";
 import { WorkspaceGeneralScreen } from "./WorkspaceGeneralScreen";
+import { WorkspaceNotificationsScreen } from "./WorkspaceNotificationsScreen";
 
 const tabTitles: Record<SeugiTab, string> = {
   home: "홈",
