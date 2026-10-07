@@ -15,7 +15,9 @@ import { SeugiChatTextField } from "../design-system/TextField";
 
 type ChatMessage = { id: string; role: "assistant" | "user"; content: string };
 
-const suggestions = ["오늘 급식 뭐야?", "오늘의 시간표 알려줘"];
+const suggestions = Platform.OS === "ios"
+  ? ["오늘 급식 뭐야?", "8월 행사 알려줘"]
+  : ["오늘 급식 뭐야?", "오늘의 시간표 알려줘"];
 
 export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -102,7 +104,7 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
           ) : null
         }
       />
-      {messages.length === 1 ? (
+      {Platform.OS === "ios" ? messages.length === 1 : messages.length === 1 || !!draft.trim() ? (
         <View style={styles.suggestions}>
           {suggestions.map((suggestion) => (
             <TouchableOpacity

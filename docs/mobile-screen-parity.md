@@ -18,7 +18,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Notices | `NoticesScreen` | device QA pending |
 | Create notice | `NoticeEditorScreen` without initial notice | device QA pending |
 | Edit notice | `NoticeEditorScreen` with initial notice | device QA pending |
-| CatSeugi | `CatSeugiScreen` | device QA pending |
+| CatSeugi | `CatSeugiScreen` | Suggestion prompts now match platform originals (iOS “8월 행사 알려줘”, Android today’s timetable); Android keeps prompts visible while the user is typing; device QA pending |
 | Workspace detail | `WorkspaceDetailScreen` | device QA pending |
 | Workspace members | `WorkspaceMembersScreen` | Teacher/student segmented list, member avatars/admin marks, profile sheet, and start-personal-chat action now match native interaction structure; device QA pending |
 | Workspace invitation / join requests | `WorkspaceInviteScreen` with role-filtered multi-select and bulk approve/reject actions | Batch request handling and selection-state clearing match the existing web/API contract; native avatar rows and confirmation prompts restored; device QA pending |
