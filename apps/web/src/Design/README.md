@@ -4,7 +4,7 @@ The web app keeps screen composition in `Pages/` and feature behavior in the exi
 
 ## Foundations
 
-`tokens.ts` provides semantic aliases and shared spacing/radius/shadow values grounded in the existing `SeugiColor` and `SeugiFont` definitions. It is not a replacement palette: existing screens remain the visual source of truth. Prefer these aliases in new styled components and preserve computed styles when extracting existing ones.
+`tokens.ts` provides semantic aliases and shared spacing/radius/shadow values grounded in `@seugi/design-tokens`. The package is the canonical source for the original Seugi color and typography values used by the web and mobile apps. It is not a replacement palette: existing screens remain the visual source of truth. Prefer these aliases in new styled components and preserve computed styles when extracting existing ones.
 
 ## Components
 

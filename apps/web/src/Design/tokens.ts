@@ -1,5 +1,4 @@
-import { SeugiColor } from "@/Design/color/SeugiColor";
-import { SeugiFont } from "@/Design/text/SeugiFont";
+import { SeugiColor, SeugiFont } from "@seugi/design-tokens";
 
 export const designTokens = Object.freeze({
   color: {

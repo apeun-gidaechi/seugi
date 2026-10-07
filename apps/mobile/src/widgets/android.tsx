@@ -8,6 +8,7 @@ import {
   requestWidgetUpdate,
 } from "react-native-android-widget";
 import { SeugiApi } from "@seugi/api-client";
+import { SeugiColor } from "@seugi/design-tokens";
 import type { Meal, Timetable } from "@seugi/contracts";
 import { API_URL } from "../config";
 
@@ -60,7 +61,7 @@ function WidgetShell({ children }: { children: React.ReactNode }) {
         width: "match_parent",
         height: "match_parent",
         flexDirection: "column",
-        backgroundColor: "#F5F5F5",
+        backgroundColor: SeugiColor.Gray100,
         borderRadius: 22,
         padding: 10,
         flexGap: 7,
@@ -83,9 +84,9 @@ function WidgetHeader({ title, trailing }: { title: string; trailing?: string })
     >
       <TextWidget
         text={title}
-        style={{ color: "#FFFFFF", backgroundColor: "#1D93F3", fontSize: 13, fontWeight: "bold", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 }}
+        style={{ color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, fontSize: 13, fontWeight: "bold", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 }}
       />
-      {trailing ? <TextWidget text={trailing} style={{ color: "#5D5F60", fontSize: 11 }} /> : null}
+      {trailing ? <TextWidget text={trailing} style={{ color: SeugiColor.Gray600, fontSize: 11 }} /> : null}
     </FlexWidget>
   );
 }
@@ -94,8 +95,8 @@ function MealWidget({ meal, label, status }: { meal?: Meal; label: string; statu
   return (
     <WidgetShell>
       <WidgetHeader title={label} trailing={meal?.calorie} />
-      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: "#FFFFFF", borderRadius: 18, padding: 10, flexGap: 3 }}>
-        {meal?.menu.length ? meal.menu.slice(0, 7).map((item, index) => <TextWidget key={`${index}-${item}`} text={item} maxLines={1} style={{ color: "#171717", fontSize: 13 }} />) : <TextWidget text={status ?? "급식이 존재하지 않습니다."} maxLines={3} style={{ color: "#5D5F60", fontSize: 13 }} />}
+      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: SeugiColor.White, borderRadius: 18, padding: 10, flexGap: 3 }}>
+        {meal?.menu.length ? meal.menu.slice(0, 7).map((item, index) => <TextWidget key={`${index}-${item}`} text={item} maxLines={1} style={{ color: SeugiColor.Gray800, fontSize: 13 }} />) : <TextWidget text={status ?? "급식이 존재하지 않습니다."} maxLines={3} style={{ color: SeugiColor.Gray600, fontSize: 13 }} />}
       </FlexWidget>
     </WidgetShell>
   );
@@ -105,8 +106,8 @@ function TimetableWidget({ entries, date, status }: { entries: Timetable[]; date
   return (
     <WidgetShell>
       <WidgetHeader title="시간표" trailing={`${date.getMonth() + 1}.${date.getDate()}`} />
-      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: "#FFFFFF", borderRadius: 18, padding: 10, flexGap: 3 }}>
-        {entries.length ? entries.slice(0, 8).map((item, index) => <TextWidget key={item.id || `${item.time}-${index}`} text={`${item.time}교시 : ${item.subject}`} maxLines={1} style={{ color: "#171717", fontSize: 13 }} />) : <TextWidget text={status ?? "시간표가 존재하지 않습니다."} maxLines={3} style={{ color: "#5D5F60", fontSize: 13 }} />}
+      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: SeugiColor.White, borderRadius: 18, padding: 10, flexGap: 3 }}>
+        {entries.length ? entries.slice(0, 8).map((item, index) => <TextWidget key={item.id || `${item.time}-${index}`} text={`${item.time}교시 : ${item.subject}`} maxLines={1} style={{ color: SeugiColor.Gray800, fontSize: 13 }} />) : <TextWidget text={status ?? "시간표가 존재하지 않습니다."} maxLines={3} style={{ color: SeugiColor.Gray600, fontSize: 13 }} />}
       </FlexWidget>
     </WidgetShell>
   );

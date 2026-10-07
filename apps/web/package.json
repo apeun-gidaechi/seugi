@@ -18,6 +18,7 @@
     "@react-oauth/google": "^0.12.1",
     "@seugi/api-client": "workspace:*",
     "@seugi/contracts": "workspace:*",
+    "@seugi/design-tokens": "workspace:*",
     "@types/js-cookie": "^3.0.6",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
