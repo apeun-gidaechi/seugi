@@ -1,27 +1,11 @@
-import React from 'react';
-import * as S from './TextField.style';
-import { CSSObject } from 'styled-components';
+import React from "react";
+import { TextControl } from "@/Components/ui";
 
-interface SeugiTextFieldProps {
-    text?: string;
-    onChange?: React.ChangeEventHandler<HTMLInputElement>;
-    placeholder?: string;
-    type?: React.HTMLInputTypeAttribute;
-    onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
-    style: React.CSSProperties;
-    value: string;
+interface SeugiTextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "style"> {
+  text?: string;
+  style?: React.CSSProperties;
 }
 
-const TextField: React.FC<SeugiTextFieldProps> = ({ onChange, placeholder, type = 'text', onKeyDown, style }) => {
-    return (
-        <S.TxtField
-            onChange={onChange}
-            placeholder={placeholder}
-            type={type}
-            onKeyDown={onKeyDown}
-            style={style}
-        />
-    );
-}
+const TextField: React.FC<SeugiTextFieldProps> = ({ text: _text, ...props }) => <TextControl {...props} />;
 
 export default TextField;
