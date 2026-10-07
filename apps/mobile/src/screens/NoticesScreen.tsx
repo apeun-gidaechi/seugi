@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, ToastAndroid, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
 import { Button } from "../components/ui";
@@ -120,29 +120,41 @@ const NOTICE_EMOJIS = ["👍", "👎", "❤️", "😍", "😂", "😮", "😢",
 export function NoticeEditorScreen({ workspace, initial, onSaved, onCancel }: { workspace: Workspace; initial?: Notification; onSaved: () => Promise<void>; onCancel: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [content, setContent] = useState(initial?.content ?? "");
-  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async () => {
-    if (!title.trim() || !content.trim() || busy) return;
-    setBusy(true); setNotice("");
+    if (!title || !content || busy) return;
+    setBusy(true);
     try {
-      if (initial) await api.updateNotification({ id: initial.id, title: title.trim(), content: content.trim() });
-      else await api.createNotification({ workspaceId: workspace.id, title: title.trim(), content: content.trim() });
-      if (!initial) { setTitle(""); setContent(""); }
-      await onSaved();
-    } catch (e) { setNotice(e instanceof Error ? e.message : initial ? "공지를 수정하지 못했습니다" : "공지를 등록하지 못했습니다"); }
+      if (initial) await api.updateNotification({ id: initial.id, title, content });
+      else await api.createNotification({ workspaceId: workspace.id, title, content });
+      if (Platform.OS === "ios") {
+        Alert.alert(initial ? "공지 수정 성공" : "공지 작성 성공", undefined, [
+          { text: "닫기", onPress: () => { void onSaved(); } },
+        ]);
+      } else {
+        ToastAndroid.show(initial ? "수정에 성공하였습니다" : "등록에 성공하였습니다", ToastAndroid.SHORT);
+        await onSaved();
+      }
+    } catch (e) {
+      if (Platform.OS === "ios") {
+        Alert.alert(initial ? "공지 수정 실패" : "공지 작성 실패", "잠시 후 다시 시도해 주세요", [
+          { text: "확인", onPress: onCancel },
+        ]);
+      } else {
+        ToastAndroid.show(e instanceof Error ? e.message : "공지 저장에 실패했습니다", ToastAndroid.SHORT);
+      }
+    }
     finally { setBusy(false); }
   };
   return <View style={styles.editorScreen}>
     <SeugiTopBar
       leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onCancel} disabled={busy}><Text style={styles.editorBack}>‹</Text></TouchableOpacity>}
       title={<Text style={styles.editorTitle}>{initial ? "공지 수정" : "새 공지 작성"}</Text>}
-      trailing={<TouchableOpacity accessibilityRole="button" onPress={() => void submit()} disabled={busy || !title.trim() || !content.trim()}><Text style={[styles.editorDone, (busy || !title.trim() || !content.trim()) && styles.editorDoneDisabled]}>{busy ? "저장 중…" : "완료"}</Text></TouchableOpacity>}
+      trailing={<TouchableOpacity accessibilityRole="button" onPress={() => void submit()} disabled={busy || !title || !content}><Text style={[styles.editorDone, (busy || !title || !content) && styles.editorDoneDisabled]}>{busy ? "저장 중…" : "완료"}</Text></TouchableOpacity>}
     />
     <ScrollView style={styles.editorScroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.editorFields}>
-      <SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목을 입력해 주세요" editable={!busy} returnKeyType="next" />
+      <SeugiTextField autoFocus={Platform.OS === "ios"} value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목을 입력해 주세요" editable={!busy} returnKeyType="next" />
       <SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} fieldStyle={styles.noticeBodyField} style={styles.noticeBodyInput} placeholder="내용을 입력해 주세요" multiline editable={!busy} />
-      {notice ? <Text style={styles.error}>{notice}</Text> : null}
     </ScrollView>
   </View>;
 }
