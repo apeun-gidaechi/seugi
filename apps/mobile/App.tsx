@@ -242,6 +242,7 @@ function Profile({ workspaces, workspace, onSelect, onReload, onLogout }: { work
     finally { setBusy(false); }
   };
   const signOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
+  const openPolicy = (url: string) => { void Linking.openURL(url).catch(() => setMessage("정책 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.")); };
   const withdraw = () => Alert.alert("회원 탈퇴", "계정과 연결된 데이터에 접근할 수 없게 됩니다. 탈퇴를 진행할까요?", [
     { text: "취소", style: "cancel" },
     { text: "탈퇴", style: "destructive", onPress: () => { void (async () => { setBusy(true); setMessage(""); try { await api.removeMember(); await onLogout(); } catch (e) { setMessage(e instanceof Error ? e.message : "회원 탈퇴에 실패했습니다"); } finally { setBusy(false); } })(); } },
@@ -254,6 +255,7 @@ function Profile({ workspaces, workspace, onSelect, onReload, onLogout }: { work
     <CreateWorkspaceCard onCreated={onReload} />
     <Card title="초대 코드로 가입"><TextInput value={inviteCode} onChangeText={setInviteCode} autoCapitalize="characters" style={styles.input} placeholder="초대 코드" /><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label={busy ? "처리 중…" : "가입 신청"} onPress={join} disabled={busy || !inviteCode.trim()} /></Card>
     {message ? <Text style={styles.answer}>{message}</Text> : null}
+    <Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card>
     <Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} />
     <Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />
   </ScrollView>;
