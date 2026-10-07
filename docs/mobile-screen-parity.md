@@ -32,7 +32,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | Loading, empty, and retrieval-failure presentation now follows native platform behavior: Android keeps unresolved/failed sections hidden, iOS shows progress and “과제가 없어요”; failed requests clear stale rows; device QA pending |
-| Create assignment | `TaskCreateScreen` with native title/date fields and top-bar create action | source layout/action restored; device QA pending |
+| Create assignment | `TaskCreateScreen` with native title/date fields and top-bar create action | Past dates are disabled to match Android's date picker validation; source layout/action restored; device QA pending |
 | Email/social onboarding | `AuthScreen` states and provider actions | iPad simulator verified the gradient/cloud start, sign-in option sheet and signup fields/code-entry transition; the email login route now mirrors native labels/footer but needs a fresh visual comparison. Code delivery/submission and Google remain unverified; Apple action is visible but credential flow unverified |
 
 ## iOS-only navigation differences
