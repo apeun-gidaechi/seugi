@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as S from '@/Components/Home/Notification/ChangeNotice/ChangeNotice.style';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import AlertContainer from '@/Components/Alert/Alert';
 import CreateNotice from '@/Components/Home/Notification/CreateNotice/CreateNotice';
 import { fetchingNotice } from '@/Api/Home';
+import { deleteNotice } from '@/Api/notification';
 import Cookies from 'js-cookie';
 
 interface NotificationEmoji {
@@ -44,11 +44,11 @@ const ChangeNotice: React.FC<Props> = ({ notificationId, userId, onClose, mutate
         }
 
         try {
-            const NoticeIds: Notice[] = await fetchingNotice(workspaceId);
-            const notification = NoticeIds.find((item) => item.id === notificationId);
+            const NoticeIds = await fetchingNotice(workspaceId);
+            const notification = NoticeIds.find((item) => String(item.id) === String(notificationId));
 
             if (notification) {
-                setCurrentUserId(notification.userId);
+                setCurrentUserId(Number(notification.userId ?? notification.authorId));
             }
         } catch (error) {
             console.error('Failed to fetch notification data', error);
@@ -60,8 +60,9 @@ const ChangeNotice: React.FC<Props> = ({ notificationId, userId, onClose, mutate
     }, [notificationId]);
 
     const handleDeleteNotice = async () => {
+        if (!workspaceId) return;
         try {
-            await SeugiCustomAxios.delete(`/notification/${workspaceId}/${notificationId}`);
+            await deleteNotice(workspaceId, String(notificationId));
             handleGetNoticeId();
             mutateNotifications();
         } catch (error) {

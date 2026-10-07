@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as S from '@/Components/Home/Notification/CreateNotice/CreateNotice.style';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import { fetchingNotice } from '@/Api/Home';
+import { createNotice, updateNotice } from '@/Api/notification';
 import Cookies from 'js-cookie';
 
 interface CreateNoticeProps {
@@ -43,18 +43,11 @@ const CreateNotice = ({ onClose, notificationId, mutateNotifications }: CreateNo
         try {
             if (notificationId) {
                 // 공지 수정 API 호출
-                await SeugiCustomAxios.patch(`/notification`, {
-                    title,
-                    content,
-                    id: notificationId
-                });
+                await updateNotice(String(notificationId), title, content);
             } else {
                 // 새 공지 작성 API 호출
-                await SeugiCustomAxios.post(`/notification`, {
-                    title,
-                    content,
-                    workspaceId
-                });
+                if (!workspaceId) return;
+                await createNotice(workspaceId, title, content);
             }
             mutateNotifications();
             onClose();

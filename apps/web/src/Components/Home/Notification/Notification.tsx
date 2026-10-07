@@ -7,7 +7,7 @@ import NoNotification from '@/Assets/image/home/NoNotification.svg';
 import NotificationImg from "@/Assets/image/home/notification.svg";
 import CorrectionImg from '@/Assets/image/home/Correction.svg';
 import AddEmoji from '@/Components/Home/Notification/Emoji/emojipicker';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
+import { toggleNotificationEmoji } from '@/Api/notification';
 import { EmojiClickData } from 'emoji-picker-react';
 import CreateNotice from '@/Components/Home/Notification/CreateNotice/CreateNotice';
 import ChangeNotice from './ChangeNotice/ChangeNotice';
@@ -143,10 +143,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                 }
             });
 
-            await SeugiCustomAxios.patch(`/notification/emoji`, {
-                notificationId: notifications[parentKey].id,
-                emoji: emoji.emoji,
-            });
+            await toggleNotificationEmoji(String(notifications[parentKey].id), emoji.emoji);
 
             mutateNotifications(updatedNotifications);
         } catch (error) {
@@ -211,10 +208,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                 }
             });
 
-            await SeugiCustomAxios.patch(`/notification/emoji`, {
-                notificationId: notification.id,
-                emoji: emoji.emoji,
-            });
+            await toggleNotificationEmoji(String(notification.id), emoji.emoji);
             mutateNotifications(updatedNotifications);
         } catch (error) {
             console.error(error);
