@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   memberRow: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, backgroundColor: SeugiColor.White, borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
   checked: { color: SeugiColor.Primary500, fontSize: 20 },
   unchecked: { color: SeugiColor.Gray400, fontSize: 20 },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Primary100 },
+  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Primary100 },
   avatarText: { color: SeugiColor.Primary500, fontWeight: "700" },
   memberName: { color: SeugiColor.Gray800, fontSize: 15 },
   empty: { color: SeugiColor.Gray500, textAlign: "center", padding: 24 },

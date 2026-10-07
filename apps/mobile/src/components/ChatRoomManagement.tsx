@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
   profileDismiss: { flex: 1 },
   profileSheet: { backgroundColor: SeugiColor.White, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32, gap: 10 },
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 12 },
-  avatar: { width: 54, height: 54, borderRadius: 27 },
-  avatarPlaceholder: { width: 54, height: 54, borderRadius: 27, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
+  avatar: { width: 32, height: 32, borderRadius: 16 },
+  avatarPlaceholder: { width: 32, height: 32, borderRadius: 16, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   profileName: { color: SeugiColor.Gray800, fontWeight: "700", fontSize: 18 },
   profileField: { borderTopWidth: 1, borderColor: SeugiColor.Gray100, paddingTop: 10, gap: 4 },
 });
