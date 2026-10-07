@@ -25,7 +25,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
 | Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps | device QA pending |
-| Waiting for workspace approval | `WorkspaceJoinScreen` / `WorkspaceSetupScreen` waiting state | device QA pending |
+| Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | device QA pending |
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |
@@ -42,7 +42,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 
 ## Screen inventory and audit limits
 
-- The current mobile app has 11 screen source files and 26 exported functions/components in those files. That count includes helpers such as `TimetableWeek`, shell components, and reusable cards; it is not a count of independently navigable screens. Auth, workspace setup, join, and room creation combine multiple destinations into local step state, so they are harder to discover than the original native feature modules.
+- The current mobile app has 11 screen source files and 27 exported functions/components in those files. That count includes helpers such as `TimetableWeek`, shell components, and reusable cards; it is not a count of independently navigable screens. Auth, workspace setup, join, and room creation combine multiple destinations into local step state, so they are harder to discover than the original native feature modules. Workspace approval now has a distinct screen component, but it is still embedded in the setup/join flow rather than registered as a standalone route.
 - The Android source has separate feature modules for onboarding, home, meal, timetable, assignment/create, personal/group chat and chat detail, notices/create/edit, CatSeugi, profile/settings, room creation, workspace setup/detail/member/invite/settings. The iOS source additionally separates image preview, profile settings, and several onboarding/join and notification flows. These are mapped to TypeScript components and states above, but route/component existence is only an initial coverage check; every interaction and permission path still needs parity QA.
 - Route presence is source-level evidence only. It does not prove matching layout, text, state transitions, permissions, system back behavior, or parity on real devices.
 - Group-room member invitations are available to every current room member in the Android source. The TypeScript UI and API now match that behavior while keeping member invitations limited to authenticated room members and workspace members; kick and leadership-transfer actions remain room-admin-only.

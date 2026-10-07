@@ -5,7 +5,7 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiTextField } from "../design-system/TextField";
-import { CreateWorkspaceCard, PendingWorkspaceRequests } from "./WorkspaceSetupScreen";
+import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
@@ -158,24 +158,25 @@ export function WorkspaceMembersScreen({ workspace }: { workspace: Workspace }) 
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceNotificationSettings workspace={workspace} /></ScrollView>; }
 export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <ScrollView style={styles.content}><CreateWorkspaceCard onCreated={onReload} /></ScrollView>; }
-export function WorkspaceJoinScreen({ onReload }: { onReload: () => Promise<void> }) {
+export function WorkspaceJoinScreen({ onReload, onDone }: { onReload: () => Promise<void>; onDone: () => void }) {
   const [step, setStep] = useState<"role" | "code" | "confirm" | "waiting">("role");
   const [inviteCode, setInviteCode] = useState(""); const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT"); const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (step === "role") return false;
+      if (step === "waiting") { onDone(); return true; }
       setStep((current) => current === "confirm" ? "code" : current === "code" ? "role" : "role");
       return true;
     });
     return () => subscription.remove();
-  }, [step]);
+  }, [step, onDone]);
   const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); setStep("confirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
   const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); setStep("waiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
   return <ScrollView style={styles.content}>
     {step === "role" ? <Card title="가입 유형 선택"><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label="계속하기" onPress={() => setStep("code")} /></Card> : null}
     {step === "code" ? <Card title="초대 코드 입력"><SeugiTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} containerStyle={styles.inputSpacing} placeholder="학교 코드 6자리" /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card> : null}
     {step === "confirm" && workspace ? <Card title="학교 확인"><View style={styles.schoolSummary}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text></View><Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /><Button label="다시 입력" kind="secondary" onPress={() => setStep("code")} disabled={busy} /></Card> : null}
-    {step === "waiting" ? <><Card title="가입 승인 대기"><Text style={styles.muted}>관리자의 승인이 완료되면 워크스페이스 목록에 표시됩니다.</Text><Button label="목록 새로고침" kind="secondary" onPress={() => void onReload()} /></Card><PendingWorkspaceRequests onChanged={onReload} /></> : null}
+    {step === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={onDone} /> : null}
     {message ? <Text style={styles.error}>{message}</Text> : null}
   </ScrollView>;
 }

@@ -51,8 +51,21 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
     {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} containerStyle={styles.fieldSpacing} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
     {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
-    {screen === "waiting" ? <><Text style={styles.subtitle}>가입 승인 대기</Text><Text style={styles.muted}>관리자가 가입 신청을 승인하면 학교 화면으로 이동합니다.</Text><ScrollView style={styles.flow}><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView><Button label="새로고침" kind="secondary" onPress={onCreated} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
+    {screen === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={() => setScreen("start")} /> : null}
   </SafeAreaView>;
+}
+
+export function WorkspaceApprovalScreen({ workspace, onDone }: { workspace: WorkspaceSearchSummary; onDone: () => void }) {
+  return <View style={styles.approvalScreen}>
+    <View style={styles.approvalSpacer} />
+    <View style={styles.approvalContent}>
+      {workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.approvalImage} /> : <View style={styles.approvalImageFallback}><Text style={styles.approvalSchoolIcon}>⌂</Text></View>}
+      <Text style={styles.approvalSchoolName}>{workspace.workspaceName}</Text>
+      <View style={styles.approvalTooltip}><Text style={styles.approvalTooltipText}>가입 수락을 대기중이에요</Text></View>
+    </View>
+    <View style={styles.approvalSpacer} />
+    <Button label="완료" onPress={onDone} />
+  </View>;
 }
 
 export function CreateWorkspaceCard({ onCreated }: { onCreated: () => Promise<void> }) {
@@ -88,6 +101,15 @@ const styles = StyleSheet.create({
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   link: { color: SeugiColor.Primary500 },
   flow: { flexGrow: 0, maxHeight: "70%" },
+  approvalScreen: { flex: 1, justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16 },
+  approvalSpacer: { flex: 1 },
+  approvalContent: { alignItems: "center", paddingHorizontal: 28 },
+  approvalImage: { width: 145, height: 145, resizeMode: "contain" },
+  approvalImageFallback: { width: 145, height: 145, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Primary100 },
+  approvalSchoolIcon: { color: SeugiColor.Primary500, fontSize: 78, lineHeight: 90 },
+  approvalSchoolName: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700", textAlign: "center", marginTop: 12 },
+  approvalTooltip: { alignSelf: "flex-end", marginTop: 16, backgroundColor: SeugiColor.Primary100, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
+  approvalTooltipText: { color: SeugiColor.Primary700, fontSize: 13 },
   roleCard: { backgroundColor: SeugiColor.Gray100, borderRadius: 12, borderWidth: 1, borderColor: SeugiColor.Gray100, padding: 20, marginBottom: 10 },
   roleCardSelected: { borderColor: SeugiColor.Primary500 },
   roleText: { color: SeugiColor.Gray600, textAlign: "center", fontSize: 16 },
