@@ -14,6 +14,7 @@
     "electron-build": "tsc && vite build && electron-builder"
   },  
   "dependencies": {
+    "@seugi/api-client": "workspace:*",
     "@react-oauth/google": "^0.12.1",
     "@stomp/stompjs": "^7.0.0",
     "@types/js-cookie": "^3.0.6",

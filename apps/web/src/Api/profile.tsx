@@ -1,12 +1,9 @@
-import { SeugiCustomAxios } from "@/axios/SeugiCutomAxios";
+import { withSeugiApi } from "./client";
   
 export const fetchingProfile = async (workspaceId: string) => {
-    const res = await SeugiCustomAxios.get(`/profile/me?workspaceId=${workspaceId}`);
-    return res.data.data;
+    return withSeugiApi((api) => api.myProfile(workspaceId));
 }
 
 export const getMyInfos = async () => {
-    const res = await SeugiCustomAxios.get(`/member/myInfo`);
-    console.log(res);
-    return res.data.data
+    return withSeugiApi((api) => api.memberInfo());
 }

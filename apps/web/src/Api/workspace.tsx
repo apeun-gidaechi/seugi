@@ -1,26 +1,21 @@
-import { SeugiCustomAxios } from "../axios/SeugiCutomAxios";
+import { withSeugiApi } from "./client";
 
 export const getMyWorkspaces = async () => {
-    const res = await SeugiCustomAxios.get(`/workspace/`);
-    return res.data.data;
+    return withSeugiApi((api) => api.workspaces());
 };
 
 export const getMyWaitingWorkspace = async () => {
-    const res = await SeugiCustomAxios.get(`/workspace/my/wait-list`);
-    return res.data.data;
+    return withSeugiApi((api) => api.myWaitingWorkspaces());
 }
 
 export const WorkspaceName = async (workspaceId: string) => {
-    const res = await SeugiCustomAxios.get(`/workspace/${workspaceId}`);
-    return res.data.data;
+    return withSeugiApi((api) => api.workspaceDetails(workspaceId));
 }
 
 export const getWorkspaceInfo = async (verificationCode: string) => {
-    const res = await SeugiCustomAxios.get(`/workspace/search/${verificationCode}`);
-    return res.data.data;
+    return withSeugiApi((api) => api.searchWorkspace(verificationCode));
 }
 
 export const getWorkspaceCode = async (verificationCode: string) => {
-    const res = await SeugiCustomAxios.get(`/workspace?code=${verificationCode}`);
-    return res.data.data
+    return withSeugiApi((api) => api.searchWorkspace(verificationCode));
 }
