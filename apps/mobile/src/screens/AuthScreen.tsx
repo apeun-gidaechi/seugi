@@ -14,10 +14,12 @@ type AuthScreenProps = {
   error: string;
   email: string;
   password: string;
+  confirmPassword: string;
   name: string;
   code: string;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
+  onConfirmPasswordChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onCodeChange: (value: string) => void;
   onGoogleCode: (code: string) => Promise<void>;
@@ -28,7 +30,7 @@ type AuthScreenProps = {
   onRegister: () => void;
 };
 
-export function AuthScreen({ hydrated, appleAvailable, loading, error, email, password, name, code, onEmailChange, onPasswordChange, onNameChange, onCodeChange, onGoogleCode, onAppleSignIn, onError, onSendVerification, onLogin, onRegister }: AuthScreenProps) {
+export function AuthScreen({ hydrated, appleAvailable, loading, error, email, password, confirmPassword, name, code, onEmailChange, onPasswordChange, onConfirmPasswordChange, onNameChange, onCodeChange, onGoogleCode, onAppleSignIn, onError, onSendVerification, onLogin, onRegister }: AuthScreenProps) {
   const [screen, setScreen] = useState<"start" | "login" | "signup" | "verification">("start");
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -62,8 +64,10 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
       <SeugiTextField placeholder="이름" containerStyle={styles.inputSpacing} value={name} onChangeText={onNameChange} />
       <SeugiTextField placeholder="이메일" autoCapitalize="none" keyboardType="email-address" containerStyle={styles.inputSpacing} value={email} onChangeText={onEmailChange} />
       <SeugiPasswordTextField placeholder="비밀번호 (8자 이상)" containerStyle={styles.inputSpacing} value={password} onChangeText={onPasswordChange} />
+      <SeugiPasswordTextField placeholder="비밀번호를 다시 입력해 주세요" containerStyle={styles.inputSpacing} value={confirmPassword} onChangeText={onConfirmPasswordChange} />
+      {confirmPassword && password !== confirmPassword ? <Text style={styles.error}>비밀번호가 다릅니다</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label={loading ? "발송 중…" : "인증 코드 보내기"} kind="secondary" onPress={async () => { if (await onSendVerification()) setScreen("verification"); }} disabled={!email || !name || !password || loading} />
+      <Button label={loading ? "발송 중…" : "인증 코드 보내기"} kind="secondary" onPress={async () => { if (await onSendVerification()) setScreen("verification"); }} disabled={!email || !name || password.length < 8 || !confirmPassword || password !== confirmPassword || loading} />
     </> : null}
     {screen === "verification" ? <>
       <Text style={styles.subtitle}>이메일 인증</Text>

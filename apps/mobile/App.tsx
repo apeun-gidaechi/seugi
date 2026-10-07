@@ -48,6 +48,7 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -267,10 +268,12 @@ export default function App() {
         error={error}
         email={email}
         password={password}
+        confirmPassword={confirmPassword}
         name={name}
         code={code}
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
+        onConfirmPasswordChange={setConfirmPassword}
         onNameChange={setName}
         onCodeChange={setCode}
         onGoogleCode={authenticateGoogle}
