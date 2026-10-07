@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import type { ChatMessage, Meal, Member, Notification, Profile, Room, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
 
 export type StoreSnapshot = {
-  members: Array<[string, Member & { password?: string; refreshToken?: string }]>;
+  members: Array<[string, Member & { password?: string; refreshToken?: string; deleted?: boolean }]>;
   profiles: Array<[string, Profile]>;
   workspaces: Array<[string, Workspace]>;
   rooms: Array<[string, Room]>;
@@ -28,7 +28,7 @@ export type MessageEmojiEvent = { roomId: string; messageId: string; senderId: s
  * deployments can use the PostgreSQL adapter without changing domain handlers.
  */
 export class Store {
-  members = new Map<string, Member & { password?: string; refreshToken?: string }>();
+  members = new Map<string, Member & { password?: string; refreshToken?: string; deleted?: boolean }>();
   profiles = new Map<string, Profile>();
   workspaces = new Map<string, Workspace>();
   rooms = new Map<string, Room>();
@@ -50,7 +50,7 @@ export class Store {
   constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   pushTokensForWorkspace(workspaceId: string, memberIds: string[], excludedMemberId?: string) { return memberIds.filter((id) => id !== excludedMemberId && this.workspacePushPreferences.get(`${workspaceId}:${id}`) !== false).flatMap((id) => this.deviceTokens.get(id) ?? []); }
-  requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
+  requireMember(id: string) { const value = this.members.get(id); if (!value || value.deleted) throw new Error("MEMBER_NOT_FOUND"); return value; }
   requireWorkspace(id: string) { const value = this.workspaces.get(id); if (!value || value.status === "DELETE") throw new Error("WORKSPACE_NOT_FOUND"); return value; }
   canAccess(workspaceId: string, memberId: string) { return this.requireWorkspace(workspaceId).members.includes(memberId); }
   onMessageDeleted(listener: (event: MessageDeletedEvent) => void) { this.messageDeletedListeners.add(listener); return () => this.messageDeletedListeners.delete(listener); }

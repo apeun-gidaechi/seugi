@@ -204,9 +204,15 @@ test("account withdrawal invalidates outstanding access and refresh tokens", asy
   const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "withdraw@example.com", password: "password123", code: "123456" } });
   const tokens = registration.json().data as { accessToken: string; refreshToken: string };
   const headers = { authorization: `Bearer ${tokens.accessToken}` };
+  const memberId = app.jwt.decode<{ sub: string }>(tokens.accessToken)?.sub; assert.ok(memberId);
+  store.deviceTokens.set(memberId, ["device-token"]);
   assert.equal((await app.inject({ method: "DELETE", url: "/member/remove", headers })).statusCode, 200);
+  assert.equal(store.members.get(memberId)?.deleted, true);
+  assert.equal(store.members.has(memberId), true);
+  assert.equal(store.deviceTokens.has(memberId), false);
   assert.equal((await app.inject({ method: "GET", url: "/member/myInfo", headers })).statusCode, 404);
   assert.equal((await app.inject({ method: "GET", url: `/member/refresh?token=${encodeURIComponent(tokens.refreshToken)}` })).statusCode, 401);
+  assert.equal((await app.inject({ method: "POST", url: "/member/login", payload: { email: "withdraw@example.com", password: "password123" } })).statusCode, 401);
   await app.close();
 });
 

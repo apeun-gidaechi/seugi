@@ -56,7 +56,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   });
   app.post("/member/login", async (request, reply) => {
     const input = body(credentials.pick({ email: true, password: true, token: true }), request);
-    const candidate = [...store.members.values()].find((item) => item.email === input.email);
+    const candidate = [...store.members.values()].find((item) => item.email === input.email && !item.deleted);
     const member = candidate?.password && await bcrypt.compare(input.password, candidate.password) ? candidate : undefined;
     if (!member) return reply.code(401).send({ message: "이메일 또는 비밀번호가 올바르지 않습니다" });
     const tokens = { accessToken: app.jwt.sign({ sub: member.id }), refreshToken: app.jwt.sign({ sub: member.id }, { expiresIn: "30d" }) };
@@ -73,7 +73,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   app.post("/member/device-token", { preHandler: auth }, async (request) => { const token = body(z.object({ token: z.string().min(1).max(4096) }), request).token; store.deviceTokens.set(request.user.sub, [...new Set([...(store.deviceTokens.get(request.user.sub) ?? []), token])]); return ok("기기 알림 토큰 등록 성공"); });
   app.delete("/member/device-token", { preHandler: auth }, async (request) => { const token = body(z.object({ token: z.string().min(1).max(4096) }), request).token; store.deviceTokens.set(request.user.sub, (store.deviceTokens.get(request.user.sub) ?? []).filter((value) => value !== token)); return ok("기기 알림 토큰 삭제 성공"); });
   app.post("/member/logout", { preHandler: auth }, async (request) => { const token = body(z.object({ deviceToken: z.string().min(1).max(4096).optional(), fcmToken: z.string().min(1).max(4096).optional() }), request); store.requireMember(request.user.sub).refreshToken = undefined; const deviceToken = token.deviceToken ?? token.fcmToken; if (deviceToken) store.deviceTokens.set(request.user.sub, (store.deviceTokens.get(request.user.sub) ?? []).filter((value) => value !== deviceToken)); return ok("로그아웃 성공"); });
-  app.delete("/member/remove", { preHandler: auth }, async (request) => { store.members.delete(request.user.sub); store.deviceTokens.delete(request.user.sub); return ok("회원 탈퇴 성공"); });
+  app.delete("/member/remove", { preHandler: auth }, async (request) => { const member = store.requireMember(request.user.sub); member.deleted = true; member.refreshToken = undefined; store.deviceTokens.delete(request.user.sub); return ok("회원 탈퇴 성공"); });
 
   const workspaceInput = z.object({ name: z.string().min(1).max(80).optional(), workspaceName: z.string().min(1).max(80).optional(), schoolCode: z.string().optional(), educationOfficeCode: z.string().optional(), schoolType: z.string().optional(), image: z.string().url().or(z.string().regex(/^\/uploads\/[0-9a-f-]{36}-[a-zA-Z0-9._%+-]+$/i)).optional(), workspaceImageUrl: z.string().url().or(z.string().regex(/^\/uploads\/[0-9a-f-]{36}-[a-zA-Z0-9._%+-]+$/i)).or(z.literal("")).optional(), workspaceImgUrl: z.string().url().or(z.string().regex(/^\/uploads\/[0-9a-f-]{36}-[a-zA-Z0-9._%+-]+$/i)).or(z.literal("")).optional() });
   const normalizeWorkspaceInput = (input: z.infer<typeof workspaceInput>) => ({ name: input.name ?? input.workspaceName!, schoolCode: input.schoolCode, educationOfficeCode: input.educationOfficeCode, schoolType: input.schoolType, image: input.image ?? (input.workspaceImageUrl || input.workspaceImgUrl || undefined) });
