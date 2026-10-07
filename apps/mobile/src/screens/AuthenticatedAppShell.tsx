@@ -200,6 +200,9 @@ export function AuthenticatedAppShell({
           onOpenTimetable={() => pushDetail("timetable")}
           onOpenTasks={() => pushDetail("tasks")}
           onOpenWorkspace={() => pushDetail("workspace")}
+          onOpenNotices={() => changeTab("notice")}
+          onCreateNotice={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}
+          canCreateNotice={canCreateNotice}
         />
       ) : null}
       {!detail && (tab === "chat" || tab === "group") ? (

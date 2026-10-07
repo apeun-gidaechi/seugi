@@ -25,6 +25,7 @@ import type {
   Workspace,
 } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
+import { HomeNoticesCard } from "../components/HomeNoticesCard";
 import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
@@ -39,6 +40,9 @@ export function HomeScreen({
   onOpenTimetable,
   onOpenTasks,
   onOpenWorkspace,
+  onOpenNotices,
+  onCreateNotice,
+  canCreateNotice,
 }: {
   workspace: Workspace;
   refreshToken?: number;
@@ -47,6 +51,9 @@ export function HomeScreen({
   onOpenTimetable: () => void;
   onOpenTasks: () => void;
   onOpenWorkspace: () => void;
+  onOpenNotices: () => void;
+  onCreateNotice: () => void;
+  canCreateNotice: boolean;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
@@ -132,6 +139,7 @@ export function HomeScreen({
           <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
         )}
       </HomeCard>
+      <HomeNoticesCard workspace={workspace} canCreate={canCreateNotice} onOpen={onOpenNotices} onCreate={onCreateNotice} />
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
         {meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
           {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
