@@ -258,7 +258,7 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
 }
 
 function JoinRequests({ workspace }: { workspace: Workspace }) {
-  type RequestRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN";
+  type RequestRole = "STUDENT" | "TEACHER";
   const [role, setRole] = useState<Role>();
   const [requestRole, setRequestRole] = useState<RequestRole>("STUDENT");
   const [members, setMembers] = useState<Member[]>([]);
@@ -278,7 +278,7 @@ function JoinRequests({ workspace }: { workspace: Workspace }) {
   }, [workspace.id, workspace.ownerId]);
 
   const options: RequestRole[] = role === "ADMIN"
-    ? ["TEACHER", "STUDENT", "MIDDLE_ADMIN"]
+    ? ["TEACHER", "STUDENT"]
     : role === "MIDDLE_ADMIN"
       ? ["TEACHER", "STUDENT"]
       : role === "TEACHER" ? ["STUDENT"] : [];

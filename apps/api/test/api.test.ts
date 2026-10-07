@@ -653,6 +653,7 @@ test("workspace admins can approve or reject matching join requests, while membe
   assert.equal((await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders })).json().data.length, 0);
   assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
   assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 1);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=MIDDLE_ADMIN`, headers: ownerHeaders })).statusCode, 400);
   assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: outsiderHeaders, payload: { workspaceId, userSet: [applicantId], role: "STUDENT" } })).statusCode, 403);
   assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: ownerHeaders, payload: { workspaceId, userSet: [applicantId], role: "STUDENT" } })).statusCode, 200);
   assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 0);
