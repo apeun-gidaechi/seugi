@@ -1,5 +1,5 @@
-import axios from "axios";
 import { useState } from "react";
+import { withSeugiApi } from "@/Api/client";
 
 // TODO: Move to file
 export enum FileType {
@@ -25,13 +25,9 @@ const useFileUpload = (completion: FileCompletion) => {
     formData.append("file", file);
   
     try {
-      const response = await axios.post(`/upload/${type}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-  
-      const result: FileResult = response.data.data;
+      const apiType = type === FileType.IMG ? "IMAGE" : type === FileType.FILE ? "FILE" : "EMOJI";
+      const uploaded = await withSeugiApi((api) => api.uploadFile(apiType, formData));
+      const result: FileResult = { url: uploaded.url, name: uploaded.name, byte: uploaded.byte ?? uploaded.size };
       completion(result, type);
     } catch (error) {
       console.error("File upload failed:", error);
