@@ -30,7 +30,7 @@ export const joinWorkspaceSchema = z.object({
   workspaceId: z.string().uuid().optional(),
   code: z.string().optional(),
   workspaceCode: z.string().optional(),
-  role: z.enum(["STUDENT", "TEACHER", "MIDDLE_ADMIN"]).default("STUDENT"),
+  role: z.enum(["STUDENT", "TEACHER"]).default("STUDENT"),
 }).refine((input) => input.workspaceId || input.code || input.workspaceCode, "워크스페이스 정보가 필요합니다");
 
 export const workspaceNotificationsSchema = z.object({ receivePush: z.boolean() });

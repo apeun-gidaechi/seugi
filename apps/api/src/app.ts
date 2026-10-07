@@ -73,6 +73,7 @@ import { fetchClassroomTasks } from "./classroom.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
+import { redactRequestUrl } from "./logging.js";
 
 const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const createWorkspaceCode = () =>
@@ -101,7 +102,18 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       : "development-only-change-me");
   if (!jwtSecret) throw new Error("JWT_SECRET_REQUIRED");
   const app = Fastify({
-    logger: true,
+    logger: {
+      serializers: {
+        req(request) {
+          return {
+            method: request.method,
+            url: redactRequestUrl(String(request.url ?? "")),
+            host: request.headers.host,
+            remoteAddress: request.ip,
+          };
+        },
+      },
+    },
     routerOptions: { ignoreTrailingSlash: true },
   });
   const auth = async (request: FastifyRequest) => {

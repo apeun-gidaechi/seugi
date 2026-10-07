@@ -636,8 +636,11 @@ test("workspace admins can approve or reject matching join requests, while membe
   const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const applicantHeaders = { authorization: `Bearer ${applicant.json().data.accessToken}` }; const outsiderHeaders = { authorization: `Bearer ${outsider.json().data.accessToken}` };
   const created = await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "가입 흐름 학교" } }); const workspaceId = created.json().data as string;
   const code = (await app.inject({ method: "GET", url: `/workspace/code/${workspaceId}`, headers: ownerHeaders })).json().data as string;
-  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
   const applicantId = app.jwt.decode<{ sub: string }>(applicant.json().data.accessToken)?.sub; assert.ok(applicantId);
+  const unsupportedRole = await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code, role: "MIDDLE_ADMIN" } });
+  assert.equal(unsupportedRole.statusCode, 400);
+  assert.equal(store.workspaces.get(workspaceId)?.waitlist.includes(applicantId), false);
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
   const myRequests = await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders });
   assert.equal(myRequests.json().data[0].workspaceId, workspaceId);
   assert.equal(myRequests.json().data[0].workspaceName, "가입 흐름 학교");

@@ -6,7 +6,7 @@ import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 
 export { SeugiButton } from "../design-system/Button";
 
-export type WorkspaceJoinRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN";
+export type WorkspaceJoinRole = "STUDENT" | "TEACHER";
 
 export function Card({
   title,
@@ -60,7 +60,6 @@ export function WorkspaceRolePicker({
   const roles: Array<[WorkspaceJoinRole, string]> = [
     ["STUDENT", "학생"],
     ["TEACHER", "교사"],
-    ["MIDDLE_ADMIN", "중간관리자"],
   ];
   return (
     <View>
