@@ -11,6 +11,21 @@ import { buildApp } from "../src/app.js";
 import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
 
+test("production API refuses to start without a JWT secret", async () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.NODE_ENV = "production";
+  delete process.env.JWT_SECRET;
+  try {
+    await assert.rejects(buildApp(), /JWT_SECRET_REQUIRED/);
+  } finally {
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = originalJwtSecret;
+  }
+});
+
 test("shared API client refreshes an expired access token once and retries the request", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; authorization: string | null }> = [];

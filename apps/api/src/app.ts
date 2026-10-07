@@ -24,6 +24,8 @@ const idParam = idParamSchema;
 const workspaceParam = workspaceIdParamSchema;
 
 export async function buildApp(store = new Store()): Promise<FastifyInstance> {
+  const jwtSecret = process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? undefined : "development-only-change-me");
+  if (!jwtSecret) throw new Error("JWT_SECRET_REQUIRED");
   const app = Fastify({ logger: true, routerOptions: { ignoreTrailingSlash: true } });
   const auth = async (request: FastifyRequest) => { await request.jwtVerify<Claims>(); store.requireMember(request.user.sub); };
   const uploadDirectory = process.env.UPLOAD_DIR ?? "./data/uploads";
@@ -32,7 +34,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const oauth = new OAuthProvider();
   const push = new PushNotifications();
   await app.register(cors, { origin: true });
-  await app.register(jwt, { secret: process.env.JWT_SECRET ?? "development-only-change-me" });
+  await app.register(jwt, { secret: jwtSecret });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook("onRequest", async () => { await store.beginRequest(); });
   app.addHook("onError", async () => { await store.rollbackRequest(); });
