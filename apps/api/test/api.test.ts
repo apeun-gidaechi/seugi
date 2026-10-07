@@ -34,6 +34,34 @@ test("shared API client refreshes an expired access token once and retries the r
   }
 });
 
+test("shared API client builds query and parameter URLs consistently from its contract", async () => {
+  const originalFetch = globalThis.fetch;
+  const paths: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    paths.push(String(input).replace("https://api.example.com", ""));
+    return new Response(JSON.stringify({ message: "ok", data: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    const api = new SeugiApi("https://api.example.com", "token");
+    await Promise.all([
+      api.searchRooms("workspace id", "hello world"),
+      api.profileOfOther("workspace-id", "member-id"),
+      api.messages("room-id", "2026-10-07T12:00:00Z"),
+      api.meals("workspace-id", 2026, 10),
+      api.schedulesForMonth("workspace-id", 10),
+    ]);
+    assert.deepEqual(paths.sort(), [
+      "/chat/group/search?workspace=workspace%20id&word=hello%20world",
+      "/message/search/room-id?timestamp=2026-10-07T12%3A00%3A00Z",
+      "/meal/all?workspaceId=workspace-id&year=2026&month=10",
+      "/profile/others?workspaceId=workspace-id&memberId=member-id",
+      "/schedule/month?workspaceId=workspace-id&month=10",
+    ].sort());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("member can register, create a workspace, and retrieve it", async () => {
   const store = new Store(); store.emailCodes.set("student@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
   const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "student@example.com", password: "password123", name: "학생", code: "123456" } });

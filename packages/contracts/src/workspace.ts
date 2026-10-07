@@ -48,3 +48,4 @@ export type JoinWorkspaceInput = z.input<typeof joinWorkspaceSchema>;
 export type WorkspaceWaitlistActionInput = z.input<typeof workspaceWaitlistActionSchema>;
 export type UpdateWorkspaceMemberRoleInput = z.input<typeof updateWorkspaceMemberRoleSchema>;
 export type KickWorkspaceMembersInput = z.input<typeof kickWorkspaceMembersSchema>;
+export interface WorkspaceSearchSummary { workspaceId: string; workspaceName: string; workspaceImageUrl: string; studentCount: number; teacherCount: number }

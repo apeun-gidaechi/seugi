@@ -13,3 +13,5 @@ export const emailVerificationSchema = z.object({ email: z.string().email(), cod
 export type RegisterMemberInput = z.input<typeof registerMemberSchema>;
 export type LoginMemberInput = z.input<typeof loginMemberSchema>;
 export type EditMemberInput = z.input<typeof editMemberSchema>;
+export type LogoutMemberInput = z.infer<typeof logoutMemberSchema>;
+export type EmailVerificationInput = z.infer<typeof emailVerificationSchema>;
