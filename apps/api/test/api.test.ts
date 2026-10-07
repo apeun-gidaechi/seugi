@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +24,21 @@ test("production API refuses to start without a JWT secret", async () => {
     else process.env.NODE_ENV = originalNodeEnv;
     if (originalJwtSecret === undefined) delete process.env.JWT_SECRET;
     else process.env.JWT_SECRET = originalJwtSecret;
+  }
+});
+
+test("file-backed API serializes concurrent registrations for the same email", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "seugi-register-"));
+  const store = new Store(join(directory, "state.json")); const app = await buildApp(store);
+  store.emailCodes.set("concurrent-register@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  const register = () => app.inject({ method: "POST", url: "/member/register", payload: { email: "concurrent-register@example.com", password: "password123", code: "123456" } });
+  try {
+    const responses = await Promise.all([register(), register()]);
+    assert.deepEqual(responses.map((response) => response.statusCode).sort(), [200, 409]);
+    assert.equal([...store.members.values()].filter((member) => member.email === "concurrent-register@example.com").length, 1);
+  } finally {
+    await app.close();
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -499,6 +515,36 @@ test("workspace admins can approve or reject matching join requests, while membe
   assert.equal((await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, memberId: applicantId, role: "STUDENT" } })).statusCode, 200);
   assert.equal(store.workspaces.get(workspaceId)?.members.includes(applicantId), true);
   await app.close();
+});
+
+test("failed multi-member approval rolls back every workspace change", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "seugi-rollback-"));
+  const store = new Store(join(directory, "state.json")); const app = await buildApp(store);
+  try {
+    store.emailCodes.set("rollback-owner@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+    store.emailCodes.set("rollback-applicant@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+    const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "rollback-owner@example.com", password: "password123", code: "123456" } });
+    const applicant = await app.inject({ method: "POST", url: "/member/register", payload: { email: "rollback-applicant@example.com", password: "password123", code: "123456" } });
+    const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` };
+    const applicantHeaders = { authorization: `Bearer ${applicant.json().data.accessToken}` };
+    const applicantId = app.jwt.decode<{ sub: string }>(applicant.json().data.accessToken)!.sub;
+    const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "롤백 검증 학교" } })).json().data as string;
+    const code = (await app.inject({ url: `/workspace/code/${workspaceId}`, headers: ownerHeaders })).json().data as string;
+    await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } });
+
+    const response = await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, userSet: [applicantId, randomUUID()], role: "STUDENT" } });
+    assert.equal(response.statusCode, 404);
+    assert.equal(store.workspaces.get(workspaceId)?.waitlist.includes(applicantId), true);
+    assert.equal(store.workspaces.get(workspaceId)?.members.includes(applicantId), false);
+    assert.equal(store.profiles.has(`${workspaceId}:${applicantId}`), false);
+    const reloaded = new Store(join(directory, "state.json"));
+    reloaded.load();
+    assert.equal(reloaded.workspaces.get(workspaceId)?.waitlist.includes(applicantId), true);
+    assert.equal(reloaded.workspaces.get(workspaceId)?.members.includes(applicantId), false);
+  } finally {
+    await app.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("workspace data rejects unauthenticated and non-member access with HTTP semantics", async () => {

@@ -37,8 +37,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   await app.register(jwt, { secret: jwtSecret });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   app.addHook("onRequest", async () => { await store.beginRequest(); });
-  app.addHook("onError", async () => { await store.rollbackRequest(); });
-  app.addHook("onSend", async (_request, _reply, payload) => { await store.persist(); return payload; });
+  app.addHook("onSend", async (_request, reply, payload) => { if (reply.statusCode >= 400) await store.rollbackRequest(); else await store.persist(); return payload; });
   app.setErrorHandler((error, _request, reply) => { const message = error instanceof Error ? error.message : "INTERNAL_ERROR"; const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : ""; const explicitStatus = typeof error === "object" && error !== null && "statusCode" in error && typeof error.statusCode === "number" ? error.statusCode : undefined; const status = explicitStatus ?? (error instanceof z.ZodError ? 400 : code === "FST_JWT_NO_AUTHORIZATION_IN_HEADER" || code === "FST_JWT_AUTHORIZATION_TOKEN_INVALID" ? 401 : message === "권한이 없습니다" ? 403 : message.endsWith("NOT_FOUND") ? 404 : message.startsWith("AI_") ? 503 : 500); return reply.code(status).send({ message }); });
   app.get(API_SPEC.health.path, async () => ok("healthy", { status: "ok" }));
   app.get(API_SPEC.uploadedFile.path, async (request, reply) => { const name = basename(uploadNameParamSchema.parse(request.params).name); try { return reply.send(await storage.read(name)); } catch (error) { if (error instanceof Error && error.message === "FILE_NOT_FOUND") return reply.code(404).send({ message: "FILE_NOT_FOUND" }); throw error; } });

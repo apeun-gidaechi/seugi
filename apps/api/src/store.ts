@@ -47,6 +47,9 @@ export class Store {
   private readonly messageEmojiListeners = new Set<(event: MessageEmojiEvent) => void>();
   private pendingMessageDeletedEvents: MessageDeletedEvent[] = [];
   private pendingMessageEmojiEvents: MessageEmojiEvent[] = [];
+  private requestSnapshot?: StoreSnapshot;
+  private requestGateRelease?: () => void;
+  private requestGate: Promise<void> = Promise.resolve();
   constructor(private readonly filePath?: string) {}
   id() { return randomUUID(); }
   pushTokensForWorkspace(workspaceId: string, memberIds: string[], excludedMemberId?: string) { return memberIds.filter((id) => id !== excludedMemberId && this.workspacePushPreferences.get(`${workspaceId}:${id}`) !== false).flatMap((id) => this.deviceTokens.get(id) ?? []); }
@@ -75,21 +78,56 @@ export class Store {
     return { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals], emailCodes: [...this.emailCodes], oauth: [...this.oauth], deviceTokens: [...this.deviceTokens], waitlistRoles: [...this.waitlistRoles], workspacePushPreferences: [...this.workspacePushPreferences] };
   }
   persist(): void | Promise<void> {
-    if (this.filePath) {
-      mkdirSync(dirname(this.filePath), { recursive: true });
-      const snapshot = this.snapshot();
-      const temporary = `${this.filePath}.tmp`;
-      writeFileSync(temporary, JSON.stringify(snapshot), "utf8");
-      renameSync(temporary, this.filePath);
+    try {
+      if (this.filePath) {
+        mkdirSync(dirname(this.filePath), { recursive: true });
+        const temporary = `${this.filePath}.tmp`;
+        writeFileSync(temporary, JSON.stringify(this.snapshot()), "utf8");
+        renameSync(temporary, this.filePath);
+      }
+      this.flushMessageDeletedEvents();
+    } catch (error) {
+      if (this.requestSnapshot) this.restore(this.requestSnapshot);
+      this.discardMessageDeletedEvents();
+      throw error;
+    } finally {
+      this.finishRequest();
     }
-    this.flushMessageDeletedEvents();
   }
-  async beginRequest() {}
-  async rollbackRequest() { this.discardMessageDeletedEvents(); }
+  async beginRequest() {
+    const release = await this.acquireRequestGate();
+    this.requestSnapshot = structuredClone(this.snapshot());
+    this.requestGateRelease = release;
+  }
+  async rollbackRequest() {
+    if (this.requestSnapshot) this.restore(this.requestSnapshot);
+    this.discardMessageDeletedEvents();
+    this.finishRequest();
+  }
   async close() {}
   async withMutation<T>(operation: () => Promise<T> | T): Promise<T> {
-    const result = await operation();
-    await this.persist();
-    return result;
+    await this.beginRequest();
+    try {
+      const result = await operation();
+      await this.persist();
+      return result;
+    } catch (error) {
+      await this.rollbackRequest();
+      throw error;
+    }
+  }
+
+  private finishRequest() {
+    this.requestSnapshot = undefined;
+    this.requestGateRelease?.();
+    this.requestGateRelease = undefined;
+  }
+
+  private async acquireRequestGate() {
+    const previous = this.requestGate;
+    let release!: () => void;
+    this.requestGate = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+    return release;
   }
 }
