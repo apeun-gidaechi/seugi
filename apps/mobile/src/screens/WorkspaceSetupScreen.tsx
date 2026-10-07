@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BackHandler, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { BackHandler, Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
@@ -84,23 +84,25 @@ export function WorkspaceApprovalScreen({ workspace, onDone }: { workspace: Work
 }
 
 export function CreateWorkspaceCard({ onCreated, presentation = "card" }: { onCreated: () => Promise<void>; presentation?: "card" | "screen" }) {
-  const [name, setName] = useState(""); const [image, setImage] = useState<{ uri: string; name: string; mimeType?: string }>(); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
+  const [name, setName] = useState(""); const [image, setImage] = useState<{ uri: string; name: string; mimeType?: string }>(); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState(""); const [schoolNameError, setSchoolNameError] = useState(false);
   const pickImage = async () => { try { const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) { const asset = result.assets[0]; setImage({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? undefined }); setNotice(""); } } catch (error) { setNotice(error instanceof Error ? error.message : "학교 이미지를 선택하지 못했습니다"); } };
   const create = async () => {
-    if (!name.trim() || busy) return;
+    if (busy) return;
+    if (name === "") { setSchoolNameError(true); return; }
+    setSchoolNameError(false);
     setBusy(true); setNotice("");
     try {
       let imageUrl: string | undefined;
       if (image) { const form = new FormData(); form.append("file", { uri: image.uri, name: image.name, type: image.mimeType ?? "image/jpeg" } as unknown as Blob); const uploaded = await api.uploadFile("IMAGE", form); imageUrl = uploaded.data?.url; if (!imageUrl) throw new Error("이미지 업로드 응답이 올바르지 않습니다"); }
-      await api.createWorkspace({ name: name.trim(), image: imageUrl }); setName(""); setImage(undefined); await onCreated(); setNotice("워크스페이스를 만들었습니다.");
+      await api.createWorkspace({ name, image: imageUrl }); setName(""); setImage(undefined); await onCreated(); setNotice("워크스페이스를 만들었습니다.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "워크스페이스 생성에 실패했습니다"); }
     finally { setBusy(false); }
   };
   const imagePicker = <TouchableOpacity accessibilityRole="button" accessibilityLabel="학교 이미지 추가 (선택)" onPress={() => void pickImage()} disabled={busy} style={styles.workspaceImagePicker}>{image ? <Image source={{ uri: image.uri }} style={styles.workspaceCreateImage} /> : <View style={styles.workspaceCreateImageEmpty}><Text style={styles.link}>＋</Text></View>}<Text style={styles.link}>{image ? "이미지 변경" : "학교 이미지 추가 (선택)"}</Text></TouchableOpacity>;
-  const nameField = <SeugiTextField label={presentation === "screen" ? "학교 이름" : undefined} value={name} onChangeText={setName} containerStyle={styles.fieldSpacing} placeholder="학교 이름을 입력해 주세요" maxLength={80} editable={!busy} />;
-  const createButton = <Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || !name.trim()} />;
-  if (presentation === "screen") return <View style={styles.createWorkspacePage}>{imagePicker}<View style={styles.createWorkspaceNameField}>{nameField}</View><View style={styles.createWorkspaceSpacer} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}{createButton}</View>;
-  return <Card title="새 학교 등록">{imagePicker}{nameField}{createButton}{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
+  const nameField = <SeugiTextField label={presentation === "screen" ? "학교 이름" : undefined} value={name} onChangeText={setName} containerStyle={styles.fieldSpacing} placeholder="학교 이름을 입력해 주세요" editable={!busy} />;
+  const createButton = <Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || (Platform.OS === "ios" && name === "")} />;
+  if (presentation === "screen") return <View style={styles.createWorkspacePage}>{imagePicker}<View style={styles.createWorkspaceNameField}>{nameField}</View>{schoolNameError && Platform.OS === "android" ? <Text style={styles.error}>이메일을 입력해 주세요</Text> : null}<View style={styles.createWorkspaceSpacer} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}{createButton}</View>;
+  return <Card title="새 학교 등록">{imagePicker}{nameField}{schoolNameError ? <Text style={styles.error}>학교 이름을 입력해 주세요</Text> : null}{createButton}{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
 }
 
 export function PendingWorkspaceRequests({ onChanged }: { onChanged?: () => Promise<void> }) {

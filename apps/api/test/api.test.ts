@@ -203,6 +203,13 @@ test("member can register, create a workspace, and retrieve it", async () => {
   assert.equal(store.requireMember(shortPasswordMemberId).name, " ".repeat(41));
   const list = await app.inject({ method: "GET", url: "/workspace", headers: { authorization } });
   assert.equal(list.json().data.length, 1);
+  const blankWorkspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: "   " } });
+  assert.equal(blankWorkspace.statusCode, 400);
+  const longWorkspaceName = ` ${"스기".repeat(50)} `;
+  const longWorkspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization }, payload: { name: longWorkspaceName } });
+  assert.equal(longWorkspace.statusCode, 200);
+  const longWorkspaceDetails = await app.inject({ method: "GET", url: `/workspace/${longWorkspace.json().data}`, headers: { authorization } });
+  assert.equal(longWorkspaceDetails.json().data.name, longWorkspaceName);
   await app.close();
 });
 

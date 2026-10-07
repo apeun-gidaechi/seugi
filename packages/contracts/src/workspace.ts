@@ -4,8 +4,8 @@ const workspaceImageSchema = z.string().url().or(z.string().regex(/^\/uploads\/[
 
 /** Request contracts shared by the workspace API, SDK, web and mobile apps. */
 export const workspaceFieldsSchema = z.object({
-  name: z.string().min(1).max(80).optional(),
-  workspaceName: z.string().min(1).max(80).optional(),
+  name: z.string().optional(),
+  workspaceName: z.string().optional(),
   schoolCode: z.string().optional(),
   educationOfficeCode: z.string().optional(),
   schoolType: z.string().optional(),
@@ -15,14 +15,15 @@ export const workspaceFieldsSchema = z.object({
 });
 
 export const createWorkspaceSchema = workspaceFieldsSchema.refine(
-  (value) => !!(value.name ?? value.workspaceName),
+  (value) => !!(value.name ?? value.workspaceName)?.trim(),
   "워크스페이스 이름이 필요합니다",
 );
 
 export const updateWorkspaceSchema = workspaceFieldsSchema
   .extend({ workspaceId: z.string().uuid() })
   .refine(
-    (value) => value.name !== undefined || value.workspaceName !== undefined || value.image !== undefined || value.workspaceImageUrl !== undefined || value.workspaceImgUrl !== undefined,
+    (value) => (value.name !== undefined || value.workspaceName !== undefined || value.image !== undefined || value.workspaceImageUrl !== undefined || value.workspaceImgUrl !== undefined)
+      && (value.name ?? value.workspaceName ?? "").trim() !== "",
     "변경할 항목이 필요합니다",
   );
 
