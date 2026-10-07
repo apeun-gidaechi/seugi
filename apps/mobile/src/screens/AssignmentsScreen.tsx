@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { ClassroomTask, Task, Workspace } from "@seugi/contracts";
 import { GOOGLE_WEB_CLIENT_ID } from "../config";
 import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
+import { localDateKey } from "../utils/date";
 
 export function AssignmentsScreen({ workspace, onCreateTask }: { workspace: Workspace; onCreateTask: () => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -35,24 +36,25 @@ function TaskCreationLink({ workspace, onPress }: { workspace: Workspace; onPres
 
 function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
   const canCreate = useCanCreateTask(workspace);
-  const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [dueDate, setDueDate] = useState(""); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
+  const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [dueDate, setDueDate] = useState(() => localDateKey(new Date())); const [calendarSelection, setCalendarSelection] = useState(dueDate); const [calendarMonth, setCalendarMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); }); const [calendarOpen, setCalendarOpen] = useState(false); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
   const create = async () => {
     if (busy || !title.trim()) return;
     setBusy(true); setNotice("");
     try {
-      let normalizedDueDate: string | undefined;
-      if (dueDate.trim()) {
-        const dateText = dueDate.trim(); const date = new Date(`${dateText}T00:00:00.000Z`);
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== dateText) throw new Error("마감일은 올바른 YYYY-MM-DD 날짜로 입력해 주세요");
-        normalizedDueDate = date.toISOString();
-      }
+      const normalizedDueDate = new Date(`${dueDate}T00:00:00.000Z`).toISOString();
       await api.createTask({ workspaceId: workspace.id, title: title.trim(), content: content.trim() || undefined, dueDate: normalizedDueDate });
       setTitle(""); setContent(""); setDueDate(""); setNotice("과제를 만들었습니다."); await onCreated();
     } catch (error) { setNotice(error instanceof Error ? error.message : "과제를 만들지 못했습니다"); }
     finally { setBusy(false); }
   };
   if (!canCreate) return null;
-  return <Card title="일반 과제 만들기"><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="과제 제목" maxLength={120} /><TextInput value={content} onChangeText={setContent} style={styles.input} placeholder="과제 설명" multiline /><TextInput value={dueDate} onChangeText={setDueDate} style={styles.input} placeholder="마감일 (YYYY-MM-DD, 선택)" keyboardType="numbers-and-punctuation" /><Button label={busy ? "만드는 중…" : "과제 만들기"} onPress={create} disabled={busy || !title.trim()} />{notice ? <Text style={notice.includes("만들었") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
+  const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+  const leadingDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
+  const monthDays = [...Array<string | undefined>(leadingDays).fill(undefined), ...Array.from({ length: daysInMonth }, (_, index) => localDateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), index + 1)))];
+  const shiftMonth = (amount: number) => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + amount, 1));
+  return <Card title="일반 과제 만들기"><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" maxLength={120} /><TextInput value={content} onChangeText={setContent} style={[styles.input, styles.descriptionInput]} placeholder="내용" multiline textAlignVertical="top" /><TouchableOpacity accessibilityRole="button" onPress={() => { setCalendarSelection(dueDate); setCalendarOpen(true); }} style={styles.dateButton}><Text style={styles.dateText}>{Number(dueDate.slice(5, 7))}월 {Number(dueDate.slice(8, 10))}일까지</Text><Text style={styles.calendarIcon}>▦</Text></TouchableOpacity><Button label={busy ? "만드는 중…" : "만들기"} onPress={create} disabled={busy || !title.trim()} />{notice ? <Text style={notice.includes("만들었") ? styles.answer : styles.error}>{notice}</Text> : null}
+    <Modal visible={calendarOpen} transparent animationType="fade" onRequestClose={() => setCalendarOpen(false)}><View style={styles.dateModalBackdrop}><View style={styles.dateDialog}><Text style={styles.dateDialogTitle}>마감일 선택</Text><View style={styles.monthHeader}><TouchableOpacity onPress={() => shiftMonth(-1)}><Text style={styles.link}>‹ 이전</Text></TouchableOpacity><Text style={styles.rowTitle}>{calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월</Text><TouchableOpacity onPress={() => shiftMonth(1)}><Text style={styles.link}>다음 ›</Text></TouchableOpacity></View><View style={styles.calendarGrid}>{["일", "월", "화", "수", "목", "금", "토"].map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}{monthDays.map((date, index) => date ? <TouchableOpacity key={date} accessibilityRole="button" accessibilityState={{ selected: calendarSelection === date }} onPress={() => setCalendarSelection(date)} style={[styles.calendarDay, calendarSelection === date && styles.calendarDaySelected]}><Text style={calendarSelection === date ? styles.calendarDayTextSelected : styles.calendarDayText}>{Number(date.slice(-2))}</Text></TouchableOpacity> : <View key={`blank-${index}`} style={styles.calendarDay} />)}</View><TouchableOpacity style={styles.todayButton} onPress={() => { const today = new Date(); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setCalendarSelection(localDateKey(today)); }}><Text style={styles.link}>오늘</Text></TouchableOpacity><View style={styles.dateDialogActions}><TouchableOpacity onPress={() => setCalendarOpen(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => { setDueDate(calendarSelection); setCalendarOpen(false); }}><Text style={styles.link}>완료</Text></TouchableOpacity></View></View></View></Modal>
+  </Card>;
 }
 
 function ClassroomTasks() {
@@ -90,4 +92,20 @@ const styles = StyleSheet.create({
   taskName: { flex: 1 },
   taskDue: { color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, overflow: "hidden", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12, fontWeight: "600" },
   classroomTask: { borderTopWidth: 1, borderColor: SeugiColor.Gray100, paddingTop: 12, marginTop: 8, gap: 6 },
+  descriptionInput: { minHeight: 265 },
+  dateButton: { minHeight: 52, borderWidth: 1.5, borderColor: SeugiColor.Gray400, backgroundColor: SeugiColor.White, borderRadius: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  dateText: { color: SeugiColor.Gray800, fontWeight: "600" },
+  calendarIcon: { color: SeugiColor.Gray500, marginLeft: "auto", fontSize: 20 },
+  dateModalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "center", padding: 24 },
+  dateDialog: { backgroundColor: SeugiColor.White, borderRadius: 16, padding: 18, gap: 14 },
+  dateDialogTitle: { color: SeugiColor.Gray800, fontSize: 17, fontWeight: "700" },
+  monthHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
+  weekday: { width: "14.285%", textAlign: "center", color: SeugiColor.Gray600, paddingVertical: 8 },
+  calendarDay: { width: "14.285%", aspectRatio: 1, alignItems: "center", justifyContent: "center", borderRadius: 24 },
+  calendarDaySelected: { backgroundColor: SeugiColor.Primary500 },
+  calendarDayText: { color: SeugiColor.Gray800 },
+  calendarDayTextSelected: { color: SeugiColor.White, fontWeight: "700" },
+  todayButton: { alignSelf: "flex-end", padding: 8 },
+  dateDialogActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 24, paddingTop: 4 },
 });
