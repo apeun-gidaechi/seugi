@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Member, Role, Room, Workspace } from "@seugi/contracts";
 import { Button } from "../components/ui";
 import { SeugiTextField } from "../design-system/TextField";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { SeugiAvatar } from "../design-system/Avatar";
 import { StudentInfoScreen } from "./StudentInfoScreen";
 
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: Room) => void }) {
@@ -80,7 +81,7 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
       {!loading && !notice && visibleMembers.length === 0 ? <Text style={styles.empty}>{search.trim() ? "검색 결과가 없어요" : "멤버가 없어요"}</Text> : null}
       {!loading ? visibleMembers.map((member) => <View key={member.id} style={styles.member}>
         <TouchableOpacity accessibilityRole="button" onPress={() => void openProfile(member)} style={styles.identity}>
-          {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Text style={styles.avatarInitial}>{member.name.slice(0, 1)}</Text></View>}
+          <SeugiAvatar uri={member.picture ? absoluteApiUrl(member.picture) : undefined} name={member.name} imageStyle={styles.avatar} fallbackStyle={styles.avatarFallback} labelStyle={styles.avatarInitial} />
           <View style={styles.identityText}><Text style={styles.name}>{member.name}</Text><Text style={styles.role}>{roleLabel(member.role)}</Text></View>
           {member.role === "ADMIN" || member.role === "MIDDLE_ADMIN" ? <Text style={styles.crown}>♛</Text> : null}
         </TouchableOpacity>
@@ -94,7 +95,7 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
     <Modal visible={!!selected && !editingStudentInfo} transparent animationType="slide" onRequestClose={() => setSelected(undefined)}>
       <View style={styles.backdrop}><TouchableOpacity style={styles.dismiss} activeOpacity={1} onPress={() => setSelected(undefined)} /><View style={styles.sheet}>
         <View style={styles.profileHeader}>
-          {selected?.member.picture ? <Image source={{ uri: absoluteApiUrl(selected.member.picture) }} style={styles.profileAvatar} /> : <View style={styles.profileAvatarFallback}><Text style={styles.avatarInitial}>{selected?.member.name.slice(0, 1) ?? "?"}</Text></View>}
+          <SeugiAvatar uri={selected?.member.picture ? absoluteApiUrl(selected.member.picture) : undefined} name={selected?.member.name} imageStyle={styles.profileAvatar} fallbackStyle={styles.profileAvatarFallback} labelStyle={styles.avatarInitial} />
           <View style={styles.identityText}><Text style={styles.profileName}>{selected?.member.name}</Text><Text style={styles.role}>{selected ? roleLabel(selected.permission) : ""}</Text></View>
           <TouchableOpacity onPress={() => setSelected(undefined)}><Text style={styles.action}>닫기</Text></TouchableOpacity>
         </View>

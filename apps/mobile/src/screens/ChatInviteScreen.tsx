@@ -1,7 +1,8 @@
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Member } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { absoluteApiUrl } from "../utils/url";
+import { SeugiAvatar } from "../design-system/Avatar";
 
 type ChatInviteScreenProps = {
   members: Member[];
@@ -51,7 +52,7 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
           return (
             <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked }} style={styles.memberRow} onPress={() => onToggle(item.id)} disabled={busy}>
               <Text style={checked ? styles.checked : styles.unchecked}>{checked ? "☑" : "□"}</Text>
-              {item.picture ? <Image source={{ uri: absoluteApiUrl(item.picture) }} style={styles.avatar} /> : <View style={styles.avatar}><Text style={styles.avatarText}>{item.name.slice(0, 1)}</Text></View>}
+              <SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.avatar} fallbackStyle={styles.avatar} labelStyle={styles.avatarText} />
               <Text style={styles.memberName}>{item.name}</Text>
             </TouchableOpacity>
           );
