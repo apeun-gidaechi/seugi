@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { type Room, type Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
-import { AssignmentsScreen } from "./AssignmentsScreen";
+import { AssignmentsScreen, TaskCreateScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
 import { ChatScreen } from "./ChatScreen";
 import { ChatConversationScreen } from "./ChatConversationScreen";
@@ -19,7 +19,7 @@ import {
   TimetablePage,
   type HomeDetail,
 } from "./HomeScreen";
-import { NoticesScreen } from "./NoticesScreen";
+import { NoticeEditorScreen, NoticesScreen } from "./NoticesScreen";
 import { ProfileScreen } from "./ProfileScreen";
 
 export type Tab = "home" | "chat" | "group" | "notice" | "profile";
@@ -37,13 +37,16 @@ const tabTitles: Record<Tab, string> = {
   notice: "알림",
   profile: "프로필",
 };
-type AppDetail = HomeDetail | "createRoom";
+type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice";
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
   tasks: "과제",
   catSeugi: "캣스기",
   createRoom: "멤버 선택",
+  createTask: "과제 만들기",
+  createNotice: "공지 작성",
+  editNotice: "공지 수정",
 };
 
 type AuthenticatedAppShellProps = {
@@ -69,6 +72,7 @@ export function AuthenticatedAppShell({
 }: AuthenticatedAppShellProps) {
   const [detail, setDetail] = useState<AppDetail>();
   const [createdRoom, setCreatedRoom] = useState<Room>();
+  const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const title = detail ? detailTitles[detail] : tabTitles[tab];
 
   return (
@@ -100,7 +104,16 @@ export function AuthenticatedAppShell({
 
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
       {detail === "timetable" ? <TimetablePage workspace={workspace} /> : null}
-      {detail === "tasks" ? <AssignmentsScreen workspace={workspace} /> : null}
+      {detail === "tasks" ? <AssignmentsScreen workspace={workspace} onCreateTask={() => setDetail("createTask")} /> : null}
+      {detail === "createTask" ? <TaskCreateScreen workspace={workspace} onCreated={async () => setDetail("tasks")} /> : null}
+      {detail === "createNotice" || detail === "editNotice" ? (
+        <NoticeEditorScreen
+          workspace={workspace}
+          initial={editingNotice}
+          onCancel={() => { setEditingNotice(undefined); setDetail(undefined); }}
+          onSaved={async () => { setEditingNotice(undefined); setDetail(undefined); }}
+        />
+      ) : null}
       {detail === "catSeugi" ? <CatSeugiScreen /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
@@ -131,7 +144,11 @@ export function AuthenticatedAppShell({
         />
       ) : null}
       {!detail && tab === "notice" ? (
-        <NoticesScreen workspace={workspace} />
+        <NoticesScreen
+          workspace={workspace}
+          onCreate={() => { setEditingNotice(undefined); setDetail("createNotice"); }}
+          onEdit={(notice) => { setEditingNotice(notice); setDetail("editNotice"); }}
+        />
       ) : null}
       {!detail && tab === "profile" ? (
         <ProfileScreen

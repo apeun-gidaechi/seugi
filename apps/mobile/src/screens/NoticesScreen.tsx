@@ -5,13 +5,12 @@ import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
-export function NoticesScreen({ workspace }: { workspace: Workspace }) {
+export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Workspace; onCreate: () => void; onEdit: (notice: Notification) => void }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [error, setError] = useState("");
   const [memberId, setMemberId] = useState("");
   const [canPost, setCanPost] = useState(false);
   const [canManage, setCanManage] = useState(false);
-  const [editing, setEditing] = useState<Notification>();
   const refresh = useCallback(() => api.notifications(workspace.id).then((x) => setItems(x.data ?? [])).catch((e) => setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다")), [workspace.id]);
   useEffect(() => {
     refresh();
@@ -33,14 +32,14 @@ export function NoticesScreen({ workspace }: { workspace: Workspace }) {
     { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
   ]);
   return <FlatList style={styles.content} data={items} keyExtractor={(item) => item.id}
-    ListHeaderComponent={<>{editing ? <NoticeEditor key={editing.id} workspace={workspace} initial={editing} onCancel={() => setEditing(undefined)} onSaved={async () => { setEditing(undefined); await refresh(); }} /> : canPost ? <NoticeEditor workspace={workspace} onSaved={refresh} /> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
+    ListHeaderComponent={<>{canPost ? <Card title="공지 관리"><Button label="공지 작성" onPress={onCreate} /></Card> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
     ListEmptyComponent={<Text style={styles.empty}>새 공지가 없습니다.</Text>}
     renderItem={({ item }) => <Card title={item.title}><Text>{item.content}</Text><Text style={styles.muted}>{new Date(item.createdAt).toLocaleString()}</Text>
-      {(item.authorId === memberId || canManage) ? <View style={styles.memberActions}>{item.authorId === memberId ? <TouchableOpacity onPress={() => setEditing(item)}><Text style={styles.link}>수정</Text></TouchableOpacity> : null}<TouchableOpacity onPress={() => remove(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity></View> : null}
+      {(item.authorId === memberId || canManage) ? <View style={styles.memberActions}>{item.authorId === memberId ? <TouchableOpacity onPress={() => onEdit(item)}><Text style={styles.link}>수정</Text></TouchableOpacity> : null}<TouchableOpacity onPress={() => remove(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity></View> : null}
       <View style={styles.reactions}>{["👍", "❤️", "🎉"].map((emoji) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {(item.emojis[emoji] ?? []).length}</Text></TouchableOpacity>)}</View></Card>} />;
 }
 
-function NoticeEditor({ workspace, initial, onSaved, onCancel }: { workspace: Workspace; initial?: Notification; onSaved: () => Promise<void>; onCancel?: () => void }) {
+export function NoticeEditorScreen({ workspace, initial, onSaved, onCancel }: { workspace: Workspace; initial?: Notification; onSaved: () => Promise<void>; onCancel: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [content, setContent] = useState(initial?.content ?? "");
   const [notice, setNotice] = useState("");
@@ -56,8 +55,8 @@ function NoticeEditor({ workspace, initial, onSaved, onCancel }: { workspace: Wo
     } catch (e) { setNotice(e instanceof Error ? e.message : initial ? "공지를 수정하지 못했습니다" : "공지를 등록하지 못했습니다"); }
     finally { setBusy(false); }
   };
-  return <Card title={initial ? "공지 수정" : "공지 작성"}><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" /><TextInput value={content} onChangeText={setContent} style={styles.input} placeholder="공지 내용" multiline />
-    <Button label={busy ? "저장 중…" : initial ? "수정 저장" : "공지 등록"} onPress={submit} disabled={busy || !title.trim() || !content.trim()} />{onCancel ? <Button label="취소" kind="secondary" onPress={onCancel} disabled={busy} /> : null}{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card>;
+  return <View style={styles.content}><Card title={initial ? "공지 수정" : "공지 작성"}><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" /><TextInput value={content} onChangeText={setContent} style={styles.input} placeholder="공지 내용" multiline />
+    <Button label={busy ? "저장 중…" : initial ? "수정 저장" : "공지 등록"} onPress={submit} disabled={busy || !title.trim() || !content.trim()} /><Button label="취소" kind="secondary" onPress={onCancel} disabled={busy} />{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card></View>;
 }
 
 const styles = StyleSheet.create({

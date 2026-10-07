@@ -7,20 +7,35 @@ import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
-export function AssignmentsScreen({ workspace }: { workspace: Workspace }) {
+export function AssignmentsScreen({ workspace, onCreateTask }: { workspace: Workspace; onCreateTask: () => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState("");
   const refresh = useCallback(async () => { const result = await api.tasks(workspace.id); setTasks((result.data ?? []).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))); }, [workspace.id]);
   useEffect(() => { refresh().catch((e) => setError(e instanceof Error ? e.message : "과제를 불러오지 못했습니다")); }, [refresh]);
   return <FlatList style={styles.content} data={tasks} keyExtractor={(item) => item.id}
-    ListHeaderComponent={<><CreateTask workspace={workspace} onCreated={refresh} /><ClassroomTasks /><Card title="일반 과제"><Text>{tasks.length}개의 과제가 있습니다.</Text>{error ? <Text style={styles.error}>{error}</Text> : null}</Card></>}
+    ListHeaderComponent={<><TaskCreationLink workspace={workspace} onPress={onCreateTask} /><ClassroomTasks /><Card title="일반 과제"><Text>{tasks.length}개의 과제가 있습니다.</Text>{error ? <Text style={styles.error}>{error}</Text> : null}</Card></>}
     ListEmptyComponent={!error ? <Text style={styles.empty}>등록된 일반 과제가 없습니다.</Text> : null}
     renderItem={({ item }) => <Card title={item.title}><Text>{item.content || "내용 없음"}</Text><Text style={styles.muted}>{item.dueDate ? `마감 ${new Date(item.dueDate).toLocaleString()}` : "기한 없음"}</Text></Card>} />;
 }
 
-function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
-  const [canCreate, setCanCreate] = useState(false); const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [dueDate, setDueDate] = useState(""); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
+export function TaskCreateScreen({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
+  return <FlatList style={styles.content} data={[]} renderItem={() => null} ListHeaderComponent={<CreateTask workspace={workspace} onCreated={onCreated} />} />;
+}
+
+function useCanCreateTask(workspace: Workspace) {
+  const [canCreate, setCanCreate] = useState(false);
   useEffect(() => { let active = true; Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => active && setCanCreate(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"))).catch(() => undefined); return () => { active = false; }; }, [workspace.id, workspace.ownerId]);
+  return canCreate;
+}
+
+function TaskCreationLink({ workspace, onPress }: { workspace: Workspace; onPress: () => void }) {
+  const canCreate = useCanCreateTask(workspace);
+  return canCreate ? <Card title="과제 관리"><Button label="과제 만들기" onPress={onPress} /></Card> : null;
+}
+
+function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
+  const canCreate = useCanCreateTask(workspace);
+  const [title, setTitle] = useState(""); const [content, setContent] = useState(""); const [dueDate, setDueDate] = useState(""); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState("");
   const create = async () => {
     if (busy || !title.trim()) return;
     setBusy(true); setNotice("");
