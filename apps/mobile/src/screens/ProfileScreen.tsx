@@ -3,7 +3,7 @@ import { Alert, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share,
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
-import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
+import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { api } from "../services/api";
@@ -172,8 +172,36 @@ export function WorkspaceJoinScreen({ onReload, onDone }: { onReload: () => Prom
   }, [step, onDone]);
   const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); setStep("confirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
   const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); setStep("waiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
+  if (step === "role") {
+    return <View style={styles.joinRoleScreen}>
+      <View style={styles.joinRoleContent}>
+        <Text style={styles.joinRoleHeading}>학생이신가요?\n아니면 선생님이신가요?</Text>
+        <View style={styles.joinRoleOptions}>
+          {([
+            ["STUDENT", "학생", require("../../assets/img_student.png")],
+            ["TEACHER", "선생님", require("../../assets/img_teacher.png")],
+          ] as const).map(([role, label, image]) => {
+            const selected = joinRole === role;
+            return <TouchableOpacity
+              key={role}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              onPress={() => setJoinRole(role)}
+              style={[styles.joinRoleCard, selected && styles.joinRoleCardSelected]}
+            >
+              <View style={styles.joinRoleLabelRow}>
+                <Text style={[styles.joinRoleLabel, selected && styles.joinRoleLabelSelected]}>{label}</Text>
+                {selected ? <Text style={styles.joinRoleCheck}>✓</Text> : null}
+              </View>
+              <Image source={image} resizeMode="contain" style={styles.joinRoleImage} />
+            </TouchableOpacity>;
+          })}
+        </View>
+      </View>
+      <Button label="계속하기" onPress={() => setStep("code")} />
+    </View>;
+  }
   return <ScrollView style={styles.content}>
-    {step === "role" ? <Card title="가입 유형 선택"><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label="계속하기" onPress={() => setStep("code")} /></Card> : null}
     {step === "code" ? <Card title="초대 코드 입력"><SeugiCodeTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.inputSpacing} /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card> : null}
     {step === "confirm" && workspace ? <Card title="학교 확인"><View style={styles.schoolSummary}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text></View><Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /><Button label="다시 입력" kind="secondary" onPress={() => setStep("code")} disabled={busy} /></Card> : null}
     {step === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={onDone} /> : null}
@@ -242,6 +270,17 @@ function JoinRequests({ workspace }: { workspace: Workspace }) { type RequestRol
 
 const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
+  joinRoleScreen: { flex: 1, justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16, backgroundColor: SeugiColor.White },
+  joinRoleContent: { flex: 1, justifyContent: "center", gap: 8 },
+  joinRoleHeading: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700", lineHeight: 28, marginLeft: 4, marginBottom: 8 },
+  joinRoleOptions: { flex: 1, flexDirection: "row", gap: 8, maxHeight: 430 },
+  joinRoleCard: { flex: 1, minHeight: 240, alignItems: "center", justifyContent: "space-evenly", overflow: "hidden", backgroundColor: SeugiColor.Gray100, borderColor: SeugiColor.Gray100, borderWidth: 1, borderRadius: 12, paddingTop: 18 },
+  joinRoleCardSelected: { borderColor: SeugiColor.Primary500 },
+  joinRoleLabelRow: { minHeight: 26, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  joinRoleLabel: { color: SeugiColor.Gray500, fontSize: 16, fontWeight: "600" },
+  joinRoleLabelSelected: { color: SeugiColor.Gray800 },
+  joinRoleCheck: { color: SeugiColor.Primary500, fontSize: 18, fontWeight: "700" },
+  joinRoleImage: { width: 152, height: 152, maxWidth: "95%" },
   activeTab: { color: SeugiColor.Primary500, fontWeight: "700" },
   inactiveTab: { color: SeugiColor.Gray500 },
   rowTitle: { fontWeight: "600" },
