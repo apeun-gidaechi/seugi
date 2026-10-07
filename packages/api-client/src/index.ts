@@ -1,4 +1,4 @@
-import type { ApiResponse, ChatMessage, ClassroomTask, Meal, Member, Notification, Profile, Room, Role, Schedule, Task, Timetable, Tokens, Workspace } from "@seugi/contracts";
+import type { ApiResponse, ChatMessage, ClassroomTask, Meal, Member, Notification, Profile, Room, Role, Schedule, Task, Timetable, Tokens, Workspace, WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -44,6 +44,7 @@ export class SeugiApi {
   updateWorkspace(input: { workspaceId: string; name?: string; image?: string }) { return this.request<void>("/workspace", { method: "PATCH", body: JSON.stringify({ workspaceId: input.workspaceId, ...(input.name !== undefined ? { workspaceName: input.name } : {}), ...(input.image !== undefined ? { workspaceImgUrl: input.image } : {}) }) }); }
   joinWorkspace(input: { code: string; role?: "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" }) { return this.request<void>("/workspace/join", { method: "POST", body: JSON.stringify(input) }); }
   workspaceMembers(workspaceId: string) { return this.request<Member[]>(`/workspace/members?workspaceId=${encodeURIComponent(workspaceId)}`); }
+  workspaceMemberChart(workspaceId: string) { return this.request<WorkspaceMemberChart>(`/workspace/members/chart?workspaceId=${encodeURIComponent(workspaceId)}`); }
   workspaceNotificationPreference(workspaceId: string) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`); }
   setWorkspaceNotificationPreference(workspaceId: string, receivePush: boolean) { return this.request<boolean>(`/workspace/${encodeURIComponent(workspaceId)}/notifications`, { method: "PATCH", body: JSON.stringify({ receivePush }) }); }
   setWorkspaceMemberRole(workspaceId: string, memberId: string, role: Role) { return this.request<void>("/workspace/permission", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId, role }) }); }

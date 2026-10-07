@@ -312,6 +312,20 @@ test("workspace admins can update its name and image while students cannot", asy
   } finally { await app.close(); }
 });
 
+test("workspace member chart groups complete legacy profiles by role and department", async () => {
+  const store = new Store(); const workspaceId = "00000000-0000-4000-8000-000000000051"; const ids = ["00000000-0000-4000-8000-000000000052", "00000000-0000-4000-8000-000000000053", "00000000-0000-4000-8000-000000000054", "00000000-0000-4000-8000-000000000055"];
+  const [adminId, managerId, teacherId, studentId] = ids; const roles = ["ADMIN", "MIDDLE_ADMIN", "TEACHER", "STUDENT"] as const; const belongs = ["교무실", "학생부", "수학과", "2학년 1반"];
+  for (const [index, id] of ids.entries()) { store.members.set(id, { id, email: `chart-${index}@example.com`, name: `구성원${index}` }); store.profiles.set(`${workspaceId}:${id}`, { id, email: `chart-${index}@example.com`, name: `구성원${index}`, workspaceId, role: roles[index], belong: belongs[index], spot: index === 2 ? "담임" : "" }); }
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "CHART", name: "조직도 학교", members: ids, waitlist: [], ownerId: adminId });
+  const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: studentId })}`;
+  try {
+    const result = await app.inject({ method: "GET", url: `/workspace/members/chart?workspaceId=${workspaceId}`, headers: { authorization } }); const chart = result.json().data;
+    assert.deepEqual(Object.keys(chart).sort(), ["admin", "middleAdmin", "students", "teachers"]);
+    assert.equal(chart.admin["교무실"][0].member.name, "구성원0"); assert.equal(chart.admin["교무실"][0].permission, "ADMIN");
+    assert.equal(chart.middleAdmin["학생부"][0].permission, "MIDDLE_ADMIN"); assert.equal(chart.teachers["수학과"][0].spot, "담임"); assert.equal(chart.students["2학년 1반"][0].member.id, studentId);
+  } finally { await app.close(); }
+});
+
 test("announcements are returned newest first, matching the original descending notice feed", async () => {
   const store = new Store(); const memberId = "00000000-0000-4000-8000-000000000031"; const workspaceId = "00000000-0000-4000-8000-000000000032";
   store.members.set(memberId, { id: memberId, email: "notice-order@example.com", name: "공지 사용자" });
