@@ -98,15 +98,16 @@ export function AuthenticatedAppShell({
   const [detailStack, setDetailStack] = useState<AppDetail[]>([]);
   const detail = detailStack[detailStack.length - 1];
   const [createdRoom, setCreatedRoom] = useState<Room>();
+  const [activeConversation, setActiveConversation] = useState<Room>();
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
-  const changeTab = (next: Tab) => { setDetailStack([]); onTabChange(next); };
-  const title = detail ? detailTitles[detail] : tabTitles[tab];
+  const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); onTabChange(next); };
+  const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
 
   return (
     <SafeAreaView style={styles.page}>
-      <View style={styles.header}>
+      {!activeConversation ? <View style={styles.header}>
         {detail ? (
           <TouchableOpacity
             accessibilityRole="button"
@@ -128,7 +129,7 @@ export function AuthenticatedAppShell({
         ) : (
           <View style={styles.actionPlaceholder} />
         )}
-      </View>
+      </View> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {detail === "meals" ? <MealCalendar workspace={workspace} /> : null}
@@ -153,7 +154,7 @@ export function AuthenticatedAppShell({
       {detail === "workspaceOrganization" ? <WorkspaceOrganizationScreen workspace={workspace} /> : null}
       {detail === "workspacePending" ? <WorkspacePendingScreen onReload={onReload} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
-      {detail === "workspaceJoin" ? <WorkspaceJoinScreen /> : null}
+      {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} /> : null}
       {detail === "accountSettings" ? <AccountSettingsScreen onLogout={onLogout} /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
@@ -181,6 +182,7 @@ export function AuthenticatedAppShell({
           RoomMessagesComponent={RoomMessages}
           onCreateRoom={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}
           initialRoom={createdRoom}
+          onConversationChange={(room) => { setActiveConversation(room); if (room) setCreatedRoom(undefined); }}
         />
       ) : null}
       {!detail && tab === "notice" ? (
@@ -197,7 +199,7 @@ export function AuthenticatedAppShell({
         />
       ) : null}
 
-      {!detail ? (
+      {!detail && !activeConversation ? (
         <View style={styles.tabbar}>
           {tabs.map(([key, label]) => (
             <TouchableOpacity

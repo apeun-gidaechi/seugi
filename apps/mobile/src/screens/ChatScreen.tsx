@@ -20,12 +20,14 @@ export function ChatScreen({
   RoomMessagesComponent,
   onCreateRoom,
   initialRoom,
+  onConversationChange,
 }: {
   workspace: Workspace;
   roomType: "group" | "personal";
   RoomMessagesComponent: React.ComponentType<RoomMessagesProps>;
   onCreateRoom: () => void;
   initialRoom?: Room;
+  onConversationChange: (room?: Room) => void;
 }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selected, setSelected] = useState<Room | undefined>(initialRoom);
@@ -38,6 +40,7 @@ export function ChatScreen({
   useEffect(() => {
     refresh().catch(() => undefined);
   }, [refresh]);
+  useEffect(() => { if (initialRoom) onConversationChange(initialRoom); }, [initialRoom?.id]);
   const search = async (word = roomSearch) => {
     setMessage("");
     try {
@@ -53,7 +56,7 @@ export function ChatScreen({
     return (
       <RoomMessagesComponent
         room={selected}
-        onBack={() => setSelected(undefined)}
+      onBack={() => { setSelected(undefined); onConversationChange(undefined); }}
       />
     );
   return (
@@ -90,7 +93,7 @@ export function ChatScreen({
         </Text>
       }
       renderItem={({ item }) => (
-        <TouchableOpacity style={styles.row} onPress={() => setSelected(item)}>
+        <TouchableOpacity style={styles.row} onPress={() => { setSelected(item); onConversationChange(item); }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowTitle}>{item.name}</Text>
             <Text style={styles.muted} numberOfLines={1}>
