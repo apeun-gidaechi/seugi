@@ -6,7 +6,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { type Workspace } from "@seugi/contracts";
 import { WorkspaceSetupScreen as WorkspaceSetup } from "./src/screens/WorkspaceSetupScreen";
-import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
+import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "./src/config";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import {
   AuthenticatedAppShell,
@@ -165,6 +165,7 @@ export default function App() {
     let active = true;
     if (signedIn) void refreshHomeWidgets().catch(() => undefined);
     (async () => {
+      if (Platform.OS === "ios" && await SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY) === "false") return;
       if (!EAS_PROJECT_ID) {
         console.warn(
           "[notifications] EXPO_PUBLIC_EAS_PROJECT_ID is not configured; push registration was skipped.",
@@ -175,6 +176,7 @@ export default function App() {
       if (current.status !== "granted") return;
       const token = (await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID })).data;
       await api.registerDeviceToken(token);
+      if (Platform.OS === "ios") await SecureStore.setItemAsync(IOS_DEVICE_TOKEN_KEY, token);
       if (active) setDeviceToken(token);
     })().catch((reason: unknown) => {
       if (active)
