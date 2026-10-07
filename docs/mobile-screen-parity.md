@@ -49,3 +49,20 @@ The native projects have separate route destinations, while the TypeScript mobil
 - The meal calendar route opened, but the local API returned `NEIS_API_KEY is not configured`; real meal/timetable-backed content could not be verified.
 - Android device QA and source-vs-target capture/comparison remain outstanding. Update individual `device QA pending` rows only after those comparisons.
 - The next parity pass should capture each source and TypeScript screen on Android and iOS, compare the interaction path, and update these statuses only after runtime verification.
+
+## Design-system conversion status
+
+The native screen map above is not evidence that the UI layer is fully converted. The original Android design system contains reusable implementations for buttons, top bars, text fields, navigation, chat items/lists, avatars, dialogs, pickers, toggles, badges, loading/error states, and related modifiers. The iOS `Component` project has corresponding reusable controls plus iconography, gradients, shadows, typography, and modal/navigation helpers. Together these source trees contain over 100 component/foundation files.
+
+The TypeScript mobile target currently has shared color and font tokens in `packages/design-tokens`, a small app-local `components/ui.tsx` (button, card, workspace role picker), and a few specialized components. Most screen controls are still styled inline in screen files; there is no converted Seugi mobile component library yet. This is a real conversion gap, not merely a screen-file counting issue.
+
+| Priority | Original reusable UI | Current TypeScript state | Remaining work |
+| --- | --- | --- | --- |
+| P0 | Button variants/sizes/loading/press states | Basic primary/secondary button | Port variants, dimensions, disabled/loading and interaction states; migrate screen usage |
+| P0 | Top bar, bottom navigation, scaffold/safe-area patterns | Header and tab bar are embedded in `AuthenticatedAppShell` | Extract reusable primitives and match Android/iOS behavior separately where needed |
+| P0 | Text fields, password/code/chat inputs | Mostly inline `TextInput` styles | Port field variants, validation/error and accessory behavior |
+| P1 | Avatar, image, room image, member/chat list rows | Ad hoc per-screen rendering | Create reusable components and replace duplicated screen markup |
+| P1 | Dialogs, sheets, dropdowns, segmented controls, toggles | Several native modals and inline choices | Match original variants and interaction semantics |
+| P2 | Badges, tooltips, shadows/gradients, shimmer/loading/error states | Partial local styling | Port where used by original screens and verify on both platforms |
+
+Until this component inventory is implemented and screen captures are compared, mobile UI conversion remains incomplete even where the destination has a TypeScript target.
