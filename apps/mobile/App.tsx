@@ -10,7 +10,7 @@ import { CHAT_EMOJIS, type ChatMessage, type ChatMessageDeletedEvent, type ChatM
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "./src/components/ui";
 import { API_URL, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
-import { Home, TimetablePage } from "./src/screens/HomeScreen";
+import { Home, MealCalendar, TimetablePage } from "./src/screens/HomeScreen";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
 import { refreshHomeWidgets } from "./src/widgets/refresh";
@@ -66,34 +66,6 @@ export default function App() {
   return <SafeAreaView style={styles.page}><View style={styles.header}><Text style={styles.title}>{workspace?.name ?? "스기"}</Text><TouchableOpacity onPress={() => load().catch((reason) => setError(String(reason)))}><Text style={styles.link}>새로고침</Text></TouchableOpacity></View>{error ? <Text style={styles.error}>{error}</Text> : null}{tab === "home" && <Home workspace={workspace!} />}{tab === "meals" && <MealCalendar workspace={workspace!} />}{tab === "timetable" && <TimetablePage workspace={workspace!} />}{tab === "tasks" && <Assignments workspace={workspace!} />}{tab === "chat" && <Chat workspace={workspace!} />}{tab === "notice" && <Notices workspace={workspace!} />}{tab === "profile" && <Profile workspaces={workspaces} workspace={workspace!} onSelect={selectWorkspace} onReload={load} onLogout={async () => { if (deviceToken) await api.removeDeviceToken(deviceToken).catch(() => undefined); api.setToken(); api.setRefreshToken(); await SecureStore.deleteItemAsync(accessTokenKey); await SecureStore.deleteItemAsync(refreshTokenKey); await SecureStore.deleteItemAsync(workspaceIdKey); setDeviceToken(undefined); setWorkspace(undefined); setAuthenticated(false); void refreshHomeWidgets().catch(() => undefined); }} />}<View style={styles.tabbar}>{tabs.map(([key, label]) => <TouchableOpacity key={key} onPress={() => setTab(key)} style={styles.tab}><Text style={tab === key ? styles.activeTab : styles.inactiveTab}>{label}</Text></TouchableOpacity>)}</View></SafeAreaView>;
 }
 
-
-function MealCalendar({ workspace }: { workspace: Workspace }) {
-  const [month, setMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
-  const [selectedDate, setSelectedDate] = useState(() => localDateKey(new Date()));
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const year = month.getFullYear(); const monthNumber = month.getMonth() + 1;
-  useEffect(() => {
-    let active = true; setBusy(true); setError("");
-    api.meals(workspace.id, year, monthNumber).then((result) => { if (active) setMeals(result.data ?? []); })
-      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "급식을 불러오지 못했습니다"); })
-      .finally(() => { if (active) setBusy(false); });
-    return () => { active = false; };
-  }, [workspace.id, year, monthNumber]);
-  const daysInMonth = new Date(year, monthNumber, 0).getDate();
-  const leadingBlanks = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7;
-  const slots: Array<string | undefined> = [...Array(leadingBlanks).fill(undefined), ...Array.from({ length: daysInMonth }, (_, index) => `${year}-${String(monthNumber).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`)];
-  const selectedMeals = meals.filter((meal) => meal.date.slice(0, 10) === selectedDate);
-  const shiftMonth = (amount: number) => { const next = new Date(year, monthNumber - 1 + amount, 1); setMonth(next); setSelectedDate(localDateKey(next)); };
-  return <FlatList style={styles.content} data={selectedMeals} keyExtractor={(item) => `${item.date}-${item.type}`} ListHeaderComponent={<>
-    <Card title="급식 달력"><View style={styles.row}><TouchableOpacity onPress={() => shiftMonth(-1)}><Text style={styles.link}>‹ 이전</Text></TouchableOpacity><Text style={styles.rowTitle}>{year}년 {monthNumber}월</Text><TouchableOpacity onPress={() => shiftMonth(1)}><Text style={styles.link}>다음 ›</Text></TouchableOpacity></View>
-      <View style={{ flexDirection: "row" }}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <Text key={day} style={{ width: "14.28%", textAlign: "center", color: SeugiColor.Gray600, paddingVertical: 8 }}>{day}</Text>)}</View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>{slots.map((date, index) => date ? <TouchableOpacity key={date} onPress={() => setSelectedDate(date)} style={{ width: "14.28%", aspectRatio: 1, padding: 2, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: selectedDate === date ? SeugiColor.Primary500 : "transparent" }}><Text style={{ color: selectedDate === date ? SeugiColor.White : SeugiColor.Gray800, fontWeight: selectedDate === date ? "700" : "400" }}>{Number(date.slice(-2))}</Text>{meals.some((meal) => meal.date.slice(0, 10) === date) ? <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: selectedDate === date ? SeugiColor.White : SeugiColor.Primary500 }} /> : null}</TouchableOpacity> : <View key={`empty-${index}`} style={{ width: "14.28%", aspectRatio: 1 }} />)}</View>
-      <Button label="오늘로 이동" kind="secondary" onPress={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(localDateKey(now)); }} />
-    </Card><Card title={`${selectedDate} 급식`}>{busy ? <Text style={styles.muted}>급식 정보를 불러오는 중…</Text> : error ? <Text style={styles.error}>{error}</Text> : null}{!busy && !error && !selectedMeals.length ? <Text style={styles.muted}>이 날짜의 급식 정보가 없습니다.</Text> : null}</Card>
-  </>} renderItem={({ item }) => <Card title={item.type}>{item.calorie ? <Text style={styles.muted}>{item.calorie}</Text> : null}{item.menu.map((dish, index) => <Text key={`${index}-${dish}`}>{dish}</Text>)}</Card>} />;
-}
 
 function Assignments({ workspace }: { workspace: Workspace }) {
   const [tasks, setTasks] = useState<Task[]>([]);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, ScrollView, Text, TextInput, View, StyleSheet } from "react-native";
+import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Meal, Schedule, Task, Timetable, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
@@ -39,6 +39,34 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
   return <ScrollView style={styles.content}><Card title="주간 시간표"><Text style={styles.muted}>월요일부터 금요일까지</Text>{busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}{error ? <Text style={styles.error}>{error}</Text> : null}<TimetableWeek entries={entries} /><Button label={busy ? "불러오는 중…" : "시간표 새로고침"} kind="secondary" onPress={() => void refresh()} disabled={busy} /></Card></ScrollView>;
 }
 
+export function MealCalendar({ workspace }: { workspace: Workspace }) {
+  const [month, setMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
+  const [selectedDate, setSelectedDate] = useState(() => localDateKey(new Date()));
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const year = month.getFullYear(); const monthNumber = month.getMonth() + 1;
+  useEffect(() => {
+    let active = true; setBusy(true); setError("");
+    api.meals(workspace.id, year, monthNumber).then((result) => { if (active) setMeals(result.data ?? []); })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "급식을 불러오지 못했습니다"); })
+      .finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [workspace.id, year, monthNumber]);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const leadingBlanks = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7;
+  const slots: Array<string | undefined> = [...Array(leadingBlanks).fill(undefined), ...Array.from({ length: daysInMonth }, (_, index) => `${year}-${String(monthNumber).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`)];
+  const selectedMeals = meals.filter((meal) => meal.date.slice(0, 10) === selectedDate);
+  const shiftMonth = (amount: number) => { const next = new Date(year, monthNumber - 1 + amount, 1); setMonth(next); setSelectedDate(localDateKey(next)); };
+  return <FlatList style={styles.content} data={selectedMeals} keyExtractor={(item) => `${item.date}-${item.type}`} ListHeaderComponent={<>
+    <Card title="급식 달력"><View style={styles.row}><TouchableOpacity onPress={() => shiftMonth(-1)}><Text style={styles.link}>‹ 이전</Text></TouchableOpacity><Text style={styles.rowTitle}>{year}년 {monthNumber}월</Text><TouchableOpacity onPress={() => shiftMonth(1)}><Text style={styles.link}>다음 ›</Text></TouchableOpacity></View>
+      <View style={{ flexDirection: "row" }}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <Text key={day} style={{ width: "14.28%", textAlign: "center", color: SeugiColor.Gray600, paddingVertical: 8 }}>{day}</Text>)}</View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>{slots.map((date, index) => date ? <TouchableOpacity key={date} onPress={() => setSelectedDate(date)} style={{ width: "14.28%", aspectRatio: 1, padding: 2, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: selectedDate === date ? SeugiColor.Primary500 : "transparent" }}><Text style={{ color: selectedDate === date ? SeugiColor.White : SeugiColor.Gray800, fontWeight: selectedDate === date ? "700" : "400" }}>{Number(date.slice(-2))}</Text>{meals.some((meal) => meal.date.slice(0, 10) === date) ? <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: selectedDate === date ? SeugiColor.White : SeugiColor.Primary500 }} /> : null}</TouchableOpacity> : <View key={`empty-${index}`} style={{ width: "14.28%", aspectRatio: 1 }} />)}</View>
+      <Button label="오늘로 이동" kind="secondary" onPress={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(localDateKey(now)); }} />
+    </Card><Card title={`${selectedDate} 급식`}>{busy ? <Text style={styles.muted}>급식 정보를 불러오는 중…</Text> : error ? <Text style={styles.error}>{error}</Text> : null}{!busy && !error && !selectedMeals.length ? <Text style={styles.muted}>이 날짜의 급식 정보가 없습니다.</Text> : null}</Card>
+  </>} renderItem={({ item }) => <Card title={item.type}>{item.calorie ? <Text style={styles.muted}>{item.calorie}</Text> : null}{item.menu.map((dish, index) => <Text key={`${index}-${dish}`}>{dish}</Text>)}</Card>} />;
+}
+
 function CatSeugi() {
   const [question, setQuestion] = useState(""); const [answer, setAnswer] = useState("");
   return <Card title="캣스기"><TextInput value={question} onChangeText={setQuestion} style={styles.input} placeholder="무엇이든 물어보세요" /><Button label="질문하기" onPress={() => api.askCatSeugi(question).then((x) => setAnswer(x.data ?? "")).catch((e) => setAnswer(e.message))} />{answer ? <Text style={styles.answer}>{answer}</Text> : null}</Card>;
@@ -49,6 +77,8 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
+  row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
+  link: { color: SeugiColor.Primary500 },
   input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
 });
