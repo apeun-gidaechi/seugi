@@ -131,10 +131,12 @@ test("shared API client builds query and parameter URLs consistently from its co
       api.meals("workspace id", 2026),
       api.schedulesForMonth("workspace-id", 10),
       api.workspaceDetails("school/id"),
+      api.notifications("workspace id", 1, 5),
     ]);
     assert.deepEqual(paths.sort(), [
       "/chat/group/search?workspace=workspace%20id&word=hello%20world",
       "/message/search/room-id?timestamp=2026-10-07T12%3A00%3A00Z",
+      "/notification/workspace%20id?page=1&size=5",
       "/meal/all?workspaceId=workspace-id&year=2026&month=10",
       "/meal/all?workspaceId=workspace%20id",
       "/profile/others?workspaceId=workspace-id&memberId=member-id",

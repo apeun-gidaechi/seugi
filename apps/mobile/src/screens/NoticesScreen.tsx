@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
@@ -14,20 +14,28 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
   const [emojiTarget, setEmojiTarget] = useState<Notification>();
   const [customEmoji, setCustomEmoji] = useState("");
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const currentPage = useRef(-1);
   const loadingMoreRef = useRef(false);
+  const requestGeneration = useRef(0);
   const pageSize = 20;
   const refresh = useCallback(async () => {
+    const generation = ++requestGeneration.current;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+    setRefreshing(true);
     setError("");
     currentPage.current = -1;
     setHasNextPage(false);
     try {
       const result = await api.notifications(workspace.id, 0, pageSize);
+      if (generation !== requestGeneration.current) return;
       setItems(result.data ?? []);
       currentPage.current = 0;
       setHasNextPage((result.data?.length ?? 0) === pageSize);
-    } catch (e) { setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다"); }
+      setRefreshing(false);
+    } catch (e) { if (generation === requestGeneration.current) { setError(e instanceof Error ? e.message : "공지를 불러오지 못했습니다"); setRefreshing(false); } }
   }, [workspace.id]);
   useEffect(() => {
     refresh();
@@ -41,6 +49,7 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
     return () => { active = false; };
   }, [refresh, workspace.id, workspace.ownerId]);
   const react = async (item: Notification, emoji: string) => {
+    if (!memberId) { setError("사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     const users = item.emojis[emoji] ?? [];
     const selected = users.includes(memberId);
     const nextUsers = selected ? users.filter((id) => id !== memberId) : [...users, memberId];
@@ -58,8 +67,10 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
     setLoadingMore(true);
     setError("");
     const page = currentPage.current + 1;
+    const generation = requestGeneration.current;
     try {
       const result = await api.notifications(workspace.id, page, pageSize);
+      if (generation !== requestGeneration.current) return;
       const nextItems = result.data ?? [];
       setItems((current) => {
         const ids = new Set(current.map((item) => item.id));
@@ -67,14 +78,15 @@ export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Work
       });
       currentPage.current = page;
       setHasNextPage(nextItems.length === pageSize);
-    } catch (e) { setError(e instanceof Error ? e.message : "다음 공지를 불러오지 못했습니다"); }
-    finally { loadingMoreRef.current = false; setLoadingMore(false); }
+    } catch (e) { if (generation === requestGeneration.current) setError(e instanceof Error ? e.message : "다음 공지를 불러오지 못했습니다"); }
+    finally { if (generation === requestGeneration.current) { loadingMoreRef.current = false; setLoadingMore(false); } }
   };
   const remove = (item: Notification) => Alert.alert("공지 삭제", `‘${item.title}’ 공지를 삭제할까요?`, [
     { text: "취소", style: "cancel" },
     { text: "삭제", style: "destructive", onPress: () => { void api.deleteNotification(workspace.id, item.id).then(() => setItems((current) => current.filter((notice) => notice.id !== item.id))).catch((e) => setError(e instanceof Error ? e.message : "공지를 삭제하지 못했습니다")); } },
   ]);
   return <><FlatList style={styles.content} data={items} keyExtractor={(item) => item.id}
+    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={SeugiColor.Primary500} />}
     onEndReached={() => void loadNextPage()}
     onEndReachedThreshold={0.5}
     ListHeaderComponent={<>{canPost ? <Card title="공지 관리"><Button label="공지 작성" onPress={onCreate} /></Card> : null}{error ? <Text style={styles.error}>{error}</Text> : null}</>}
