@@ -1,4 +1,4 @@
-import { SeugiCustomAxios } from "@/axios/SeugiCutomAxios";
+import { fetchingProfile } from "@/Api/profile";
 import Cookies from "js-cookie";
 
 enum Role {
@@ -14,8 +14,7 @@ interface User {
 
 const fetchUser = async (workspaceId: string): Promise<User | undefined> => {
     try {
-        const res = await SeugiCustomAxios.get(`/profile/me?workspaceId=${workspaceId}`);
-        const data = res.data.data.permission;
+        const data = (await fetchingProfile(workspaceId)).permission;
         
         const user: User = {
             role: data as Role

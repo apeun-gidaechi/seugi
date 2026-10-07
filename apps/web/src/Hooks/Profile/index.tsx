@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Cookies from 'js-cookie';
-import { fetchingProfile, getMyInfos } from '@/Api/profile';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
+import { fetchingProfile, getMyInfos, updateProfile } from '@/Api/profile';
 
 export type ProfileField = 'status' | 'spot' | 'belong' | 'phone' | 'wire' | 'location';
 
@@ -36,7 +35,15 @@ const useProfile = () => {
                 if (workspaceId) {
                     const profiles = await fetchingProfile(workspaceId);
                     const MyInfos = await getMyInfos();
-                    setProfileData(profiles);
+                    setProfileData({
+                        status: profiles.status ?? "",
+                        spot: profiles.spot ?? "",
+                        belong: profiles.belong ?? "",
+                        phone: profiles.phone ?? "",
+                        wire: profiles.wire ?? "",
+                        location: profiles.location ?? "",
+                        nick: profiles.nick,
+                    });
                     setName(profiles.nick || MyInfos.name); // 닉이 없으면 이름으로 둘다 있으면 이름(닉)으로 
                 }
             } catch (error) {
@@ -59,7 +66,7 @@ const useProfile = () => {
                 [field]: value
             };
 
-            await SeugiCustomAxios.patch(`/profile/${workspaceId}`, updatedData);
+            await updateProfile(workspaceId, updatedData);
 
             setProfileData(updatedData);
             setIsEditing(null);
