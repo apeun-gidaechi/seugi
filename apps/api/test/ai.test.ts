@@ -9,6 +9,13 @@ test("Catseugi answers meal, timetable, and notice questions from school records
   assert.equal(answerSchoolQuestion("오늘 급식 뭐야?", { meals: [] }), "오늘 등록된 급식 정보가 없습니다.");
 });
 
+test("Catseugi picks real participants and forms balanced teams", () => {
+  const members = ["가은", "나은", "다은", "라은"].map((name, index) => ({ id: `m${index}`, email: `${index}@example.com`, name }));
+  assert.equal(answerSchoolQuestion("아무나 한 명 뽑아줘", { members }, () => 0.999), "가은님이 뽑혔어요!");
+  assert.equal(answerSchoolQuestion("2팀으로 팀 짜줘", { members }, () => 0.5), "1조: 가은, 나은\n2조: 라은, 다은");
+  assert.equal(answerSchoolQuestion("한 명 뽑아줘", { members: [] }), "참여자 정보를 확인할 수 없습니다.");
+});
+
 test("Catseugi sends a non-retained Responses API request and extracts output text", async () => {
   const previous = process.env.OPENAI_API_KEY; process.env.OPENAI_API_KEY = "test-key";
   let request: RequestInit | undefined;

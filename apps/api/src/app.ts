@@ -1855,6 +1855,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const intent = schoolQuestionIntent(input.message);
     const needsMeals = intent === "MEAL";
     const needsTimetable = intent === "TIMETABLE";
+    const needsMembers = intent === "PICK_MEMBER" || intent === "MAKE_TEAMS";
     const today = localDateString(new Date());
     let meals = store.meals.get(input.workspaceId) ?? [];
     if (needsMeals && !store.meals.has(input.workspaceId)) {
@@ -1864,10 +1865,26 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const notifications = [...store.notifications.values()]
       .filter((item) => item.workspaceId === input.workspaceId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    let members: ReturnType<typeof store.requireMember>[] = [];
+    if (needsMembers) {
+      const workspace = store.requireWorkspace(input.workspaceId);
+      const profile = store.profiles.get(`${workspace.id}:${request.user.sub}`);
+      const requestedClass = input.message.match(/(\d+)\s*학년\s*(\d+)\s*반/);
+      const grade = requestedClass?.[1] ?? (profile?.grade ? String(profile.grade) : undefined);
+      const classNum = requestedClass?.[2] ?? (profile?.class ? String(profile.class) : undefined);
+      members = workspace.members
+        .filter((memberId) => roleIn(workspace, memberId) === "STUDENT")
+        .filter((memberId) => {
+          const studentProfile = store.profiles.get(`${workspace.id}:${memberId}`);
+          return (!grade || studentProfile?.grade === Number(grade)) && (!classNum || studentProfile?.class === Number(classNum));
+        })
+        .map((memberId) => store.requireMember(memberId));
+    }
     const schoolAnswer = answerSchoolQuestion(input.message, {
       meals: meals.filter((item) => item.date.slice(0, 10) === today),
       timetable,
       notifications,
+      members,
     });
     return ok("캣스기답변", schoolAnswer ?? await answerWithCatseugi(input.message));
   });

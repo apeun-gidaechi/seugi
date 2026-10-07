@@ -1,4 +1,5 @@
-import type { Meal, Notification, Timetable } from "@seugi/contracts";
+import { randomInt } from "node:crypto";
+import type { Meal, Member, Notification, Timetable } from "@seugi/contracts";
 
 type ResponsePayload = {
   output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
@@ -8,12 +9,15 @@ export type CatseugiSchoolContext = {
   meals?: Meal[];
   timetable?: Timetable[];
   notifications?: Notification[];
+  members?: Member[];
 };
 
-export type CatseugiSchoolIntent = "MEAL" | "TIMETABLE" | "NOTICE";
+export type CatseugiSchoolIntent = "MEAL" | "TIMETABLE" | "NOTICE" | "PICK_MEMBER" | "MAKE_TEAMS";
 
 export function schoolQuestionIntent(message: string): CatseugiSchoolIntent | undefined {
   const question = message.toLocaleLowerCase("ko-KR");
+  if (/팀.{0,8}(?:짜|만들|나눠)|조.{0,8}(?:짜|만들|나눠)|\d+\s*명씩.{0,8}(?:팀|조)/.test(question)) return "MAKE_TEAMS";
+  if (/사람.{0,6}(?:뽑|골라)|(?:아무나|랜덤).{0,10}(?:한\s*명|사람|뽑)|누구.{0,8}(?:뽑|골라)|뽑아(?:줘|주세요)?|골라(?:줘|주세요)?/.test(question)) return "PICK_MEMBER";
   if (/급식|메뉴|점심|저녁|아침/.test(question)) return "MEAL";
   if (/시간표|몇\s*교시|수업.{0,8}(?:뭐|어때|알려|있)/.test(question)) return "TIMETABLE";
   if (/공지|학교 행사|학교 소식/.test(question)) return "NOTICE";
@@ -21,7 +25,7 @@ export function schoolQuestionIntent(message: string): CatseugiSchoolIntent | un
 }
 
 /** Resolve source-supported school-data intents without allowing the model to invent records. */
-export function answerSchoolQuestion(message: string, context: CatseugiSchoolContext) {
+export function answerSchoolQuestion(message: string, context: CatseugiSchoolContext, random: () => number = () => randomInt(1_000_000) / 1_000_000) {
   const intent = schoolQuestionIntent(message);
   if (intent === "MEAL") {
     const meals = context.meals ?? [];
@@ -38,6 +42,22 @@ export function answerSchoolQuestion(message: string, context: CatseugiSchoolCon
   if (intent === "NOTICE") {
     const latest = context.notifications?.[0];
     return latest ? `${latest.title}\n${latest.content}` : "등록된 공지가 없습니다.";
+  }
+  if (intent === "PICK_MEMBER" || intent === "MAKE_TEAMS") {
+    const members = [...(context.members ?? [])];
+    if (!members.length) return "참여자 정보를 확인할 수 없습니다.";
+    for (let index = members.length - 1; index > 0; index--) {
+      const target = Math.min(index, Math.floor(random() * (index + 1)));
+      [members[index], members[target]] = [members[target]!, members[index]!];
+    }
+    if (intent === "PICK_MEMBER") return `${members[0]!.name}님이 뽑혔어요!`;
+    const requestedPerTeam = message.match(/(\d+)\s*명씩/);
+    const requestedTeams = message.match(/(\d+)\s*(?:팀|조)/);
+    const perTeam = requestedPerTeam ? Math.max(1, Number(requestedPerTeam[1])) : undefined;
+    const teamCount = perTeam ? Math.ceil(members.length / perTeam) : Math.max(1, Math.min(members.length, requestedTeams ? Number(requestedTeams[1]) : 2));
+    const teams = Array.from({ length: teamCount }, () => [] as Member[]);
+    members.forEach((member, index) => teams[index % teamCount]!.push(member));
+    return teams.map((team, index) => `${index + 1}조: ${team.map((member) => member.name).join(", ")}`).join("\n");
   }
   return undefined;
 }

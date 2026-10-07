@@ -191,6 +191,7 @@ test("member can register, create a workspace, and retrieve it", async () => {
 test("Catseugi school-data answers use the selected workspace and enforce membership", async () => {
   const store = new Store();
   store.emailCodes.set("catseugi-owner@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  store.emailCodes.set("catseugi-student@example.com", { code: "222222", expiresAt: Date.now() + 60_000 });
   store.emailCodes.set("catseugi-outsider@example.com", { code: "654321", expiresAt: Date.now() + 60_000 });
   const app = await buildApp(store);
   try {
@@ -204,6 +205,14 @@ test("Catseugi school-data answers use the selected workspace and enforce member
     const answer = await app.inject({ method: "POST", url: "/ai", headers: ownerHeaders, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
     assert.equal(answer.statusCode, 200);
     assert.match(answer.json().data, /김치볶음밥/);
+
+    const student = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-student@example.com", password: "password123", name: "민지", code: "222222" } });
+    const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)!.sub;
+    store.requireWorkspace(workspaceId).members.push(studentId);
+    store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT", grade: 2, class: 4 });
+    const picked = await app.inject({ method: "POST", url: "/ai", headers: ownerHeaders, payload: { workspaceId, message: "2학년 4반에서 아무나 한 명 뽑아줘" } });
+    assert.equal(picked.statusCode, 200);
+    assert.equal(picked.json().data, "민지님이 뽑혔어요!");
 
     const outsider = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-outsider@example.com", password: "password123", name: "외부인", code: "654321" } });
     const forbidden = await app.inject({ method: "POST", url: "/ai", headers: { authorization: `Bearer ${outsider.json().data.accessToken}` }, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
@@ -863,6 +872,10 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const schoolBotRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 오늘 급식 뭐야?", mention: [-1] }, resolve));
     assert.equal(schoolBotRequest.message, "메시지 전송 성공");
     assert.match(JSON.parse((await schoolBotReply).message).data, /김치볶음밥/);
+    const participantBotReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi participant reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT" && message.message.includes("님이 뽑혔어요")) { clearTimeout(timer); resolve(message); } }); });
+    const participantBotRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 사람 한 명 뽑아줘", mention: [-1] }, resolve));
+    assert.equal(participantBotRequest.message, "메시지 전송 성공");
+    assert.match(JSON.parse((await participantBotReply).message).data, new RegExp(`${store.requireMember(app.jwt.decode<{ sub: string }>(token)!.sub).name}님이 뽑혔어요`));
     let receivedAfterLeaving = false;
     const afterLeaveListener = () => { receivedAfterLeaving = true; };
     socket.on("chat:message", afterLeaveListener);

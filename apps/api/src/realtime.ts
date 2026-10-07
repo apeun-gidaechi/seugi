@@ -5,7 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
 import type { MessageEmojiEvent, Store } from "./store.js";
 import { PushNotifications } from "./push.js";
-import { answerSchoolQuestion, answerWithCatseugi } from "./ai.js";
+import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 
@@ -22,10 +22,12 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
     const timetable = room && profile?.grade && profile.class
       ? [...store.timetables.values()].filter((item) => item.workspaceId === room.workspaceId && item.date.slice(0, 10) === today && item.grade === String(profile.grade) && item.classNum === String(profile.class))
       : [];
+    const intent = schoolQuestionIntent(message.message);
     const schoolAnswer = room ? answerSchoolQuestion(message.message, {
       meals: (store.meals.get(room.workspaceId) ?? []).filter((meal) => meal.date.slice(0, 10) === today),
       timetable,
       notifications: [...store.notifications.values()].filter((item) => item.workspaceId === room.workspaceId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      members: intent === "PICK_MEMBER" || intent === "MAKE_TEAMS" ? room.memberIds.map((id) => store.requireMember(id)) : [],
     }) : undefined;
     void Promise.resolve(schoolAnswer ?? answerWithCatseugi(message.message)).then((answer) => store.withMutation(() => {
       const room = store.rooms.get(message.roomId);
