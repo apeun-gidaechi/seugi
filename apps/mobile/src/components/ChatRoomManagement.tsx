@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Member, Room } from "@seugi/contracts";
@@ -9,7 +9,9 @@ import { absoluteApiUrl } from "../utils/url";
 export function ChatRoomManagement({ room, memberId, onRoomChange, onLeave, onOpenPersonalChat }: { room: Room; memberId: string; onRoomChange: (room: Room) => void; onLeave: () => void; onOpenPersonalChat: (room: Room) => void }) {
   const [workspaceMembers, setWorkspaceMembers] = useState<Member[]>([]); const [selectedIds, setSelectedIds] = useState<string[]>([]); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [inviting, setInviting] = useState(false); const isAdmin = room.adminId === memberId;
   const [profile, setProfile] = useState<LegacyProfile>();
-  const refresh = useCallback(async () => { const [updated, members] = await Promise.all([api.groupRoom(room.id), api.workspaceMembers(room.workspaceId)]); onRoomChange(updated.data ?? room); setWorkspaceMembers(members.data ?? []); }, [room.id, room.workspaceId, onRoomChange]);
+  const onRoomChangeRef = useRef(onRoomChange);
+  onRoomChangeRef.current = onRoomChange;
+  const refresh = useCallback(async () => { const [updated, members] = await Promise.all([api.groupRoom(room.id), api.workspaceMembers(room.workspaceId)]); if (updated.data) onRoomChangeRef.current(updated.data); setWorkspaceMembers(members.data ?? []); }, [room.id, room.workspaceId]);
   useEffect(() => { refresh().catch((e) => setNotice(e instanceof Error ? e.message : "구성원 정보를 불러오지 못했습니다")); }, [refresh]);
   const run = async (action: () => Promise<unknown>) => { if (busy) return false; setBusy(true); setNotice(""); try { await action(); setSelectedIds([]); await refresh(); return true; } catch (e) { setNotice(e instanceof Error ? e.message : "채팅방을 변경하지 못했습니다"); return false; } finally { setBusy(false); } };
   const leave = () => Alert.alert("채팅방 나가기", "이 채팅방에서 나갈까요?", [{ text: "취소", style: "cancel" }, { text: "나가기", style: "destructive", onPress: () => { void run(async () => { await api.leaveGroupRoom(room.id); onLeave(); }); } }]);
