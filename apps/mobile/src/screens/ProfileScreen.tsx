@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Linking, Modal, Platform, ScrollView, Share, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
@@ -162,21 +162,18 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <View style={styles.notificationScreen}><WorkspaceNotificationSettings workspace={workspace} /></View>; }
 export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <CreateWorkspaceCard onCreated={onReload} presentation="screen" />; }
-export function WorkspaceJoinScreen({ onReload, onDone }: { onReload: () => Promise<void>; onDone: () => void }) {
-  const [step, setStep] = useState<"role" | "code" | "confirm" | "waiting">("role");
+export function WorkspaceJoinScreen({ step, onReload, onNavigate, onBack, onDone }: {
+  step: "role" | "code" | "confirm" | "waiting";
+  onReload: () => Promise<void>;
+  onNavigate: (route: "workspaceJoinCode" | "workspaceJoinConfirm" | "workspaceJoinWaiting") => void;
+  onBack: () => void;
+  onDone: () => void;
+}) {
   const [inviteCode, setInviteCode] = useState(""); const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT"); const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
-  const back = () => { if (step === "waiting") setStep("confirm"); else if (step === "confirm") setStep("code"); else if (step === "code") setStep("role"); else onDone(); };
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      back();
-      return true;
-    });
-    return () => subscription.remove();
-  }, [step, onDone]);
-  const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); setStep("confirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
-  const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); setStep("waiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
-  return <View style={styles.joinScreen}><SeugiTopBar backgroundColor={SeugiColor.White} leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={back}><Text style={styles.joinBack}>‹</Text></TouchableOpacity>} title={<Text style={styles.joinTitle}>학교 가입</Text>} trailing={null} />
-    {step === "role" ? <WorkspaceRoleSelection value={joinRole} onChange={setJoinRole} onContinue={() => setStep("code")} /> : null}
+  const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); onNavigate("workspaceJoinConfirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
+  const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); onNavigate("workspaceJoinWaiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
+  return <View style={styles.joinScreen}><SeugiTopBar backgroundColor={SeugiColor.White} leading={<TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack}><Text style={styles.joinBack}>‹</Text></TouchableOpacity>} title={<Text style={styles.joinTitle}>학교 가입</Text>} trailing={null} />
+    {step === "role" ? <WorkspaceRoleSelection value={joinRole} onChange={setJoinRole} onContinue={() => onNavigate("workspaceJoinCode")} /> : null}
     {step === "confirm" && workspace ? <WorkspaceJoinConfirmation workspace={workspace} busy={busy} error={message} onContinue={() => void join()} /> : null}
     {step === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={onDone} /> : null}
     {step === "code" ? <ScrollView style={styles.content}><Card title="초대 코드 입력"><SeugiCodeTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.inputSpacing} /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card>{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView> : null}

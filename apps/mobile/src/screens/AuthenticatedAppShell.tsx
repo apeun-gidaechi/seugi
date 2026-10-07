@@ -47,7 +47,7 @@ const tabTitles: Record<SeugiTab, string> = {
   notice: "공지",
   profile: "내 프로필",
 };
-type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
+type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | "workspaceJoinCode" | "workspaceJoinConfirm" | "workspaceJoinWaiting" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
@@ -65,6 +65,9 @@ const detailTitles: Record<AppDetail, string> = {
   workspaceNotifications: "알림 설정",
   workspaceCreate: "새 학교 등록",
   workspaceJoin: "학교 가입",
+  workspaceJoinCode: "학교 가입",
+  workspaceJoinConfirm: "학교 가입",
+  workspaceJoinWaiting: "학교 가입",
 };
 
 type AuthenticatedAppShellProps = {
@@ -103,6 +106,7 @@ export function AuthenticatedAppShell({
   const changeTab = (next: SeugiTab) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange(next); };
   const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onSelectWorkspace(selected); onTabChange("home"); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
+  const workspaceJoinRoute = detail === "workspaceJoin" || detail === "workspaceJoinCode" || detail === "workspaceJoinConfirm" || detail === "workspaceJoinWaiting";
 
   useEffect(() => {
     let active = true;
@@ -130,7 +134,7 @@ export function AuthenticatedAppShell({
 
   return (
     <SafeAreaView style={styles.page}>
-      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createTask" && detail !== "workspaceJoin" ? <SeugiTopBar
+      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createTask" && !workspaceJoinRoute ? <SeugiTopBar
         backgroundColor={tab === "chat" || tab === "group" ? SeugiColor.White : SeugiColor.Primary050}
         shadow={tab === "chat" || tab === "group"}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
@@ -182,7 +186,13 @@ export function AuthenticatedAppShell({
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
       {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
-      {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} onDone={() => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange("home"); }} /> : null}
+      {workspaceJoinRoute ? <WorkspaceJoinScreen
+        step={detail === "workspaceJoin" ? "role" : detail === "workspaceJoinCode" ? "code" : detail === "workspaceJoinConfirm" ? "confirm" : "waiting"}
+        onReload={onReload}
+        onNavigate={(next) => pushDetail(next)}
+        onBack={goBack}
+        onDone={() => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange("home"); }}
+      /> : null}
       {detail === "accountSettings" ? <AccountSettingsScreen workspace={workspace} onLogout={onLogout} /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
