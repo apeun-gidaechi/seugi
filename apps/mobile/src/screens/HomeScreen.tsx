@@ -278,7 +278,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
     setBusy(true);
     setError("");
     try {
-      const result = await api.weeklyTimetable(workspace.id);
+      const result = await api.weeklyTimetable(workspace.id, canEdit ? grade : undefined, canEdit ? classNum : undefined);
       setEntries(result.data ?? []);
     } catch (reason) {
       setError(
@@ -289,19 +289,27 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
     } finally {
       setBusy(false);
     }
-  }, [workspace.id]);
+  }, [workspace.id, canEdit, grade, classNum]);
   useEffect(() => {
-    void refresh();
+    const timer = setTimeout(() => void refresh(), 250);
+    return () => clearTimeout(timer);
   }, [refresh]);
   useEffect(() => {
     let active = true;
     Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
-      if (active) setCanEdit(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(profile.data?.role ?? ""));
+      if (!active) return;
+      setCanEdit(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(profile.data?.role ?? ""));
+      if (profile.data?.grade && profile.data.grade > 0) setGrade(String(profile.data.grade));
+      if (profile.data?.class && profile.data.class > 0) setClassNum(String(profile.data.class));
     }).catch(() => undefined);
     return () => { active = false; };
   }, [workspace.id, workspace.ownerId]);
   const saveSubject = async () => {
     if (!draft.trim() || busy) return;
+    if (slot && (![grade, classNum].every((value) => /^\d+$/.test(value)) || Number(grade) < 1 || Number(classNum) < 1)) {
+      setError("학년과 반을 1 이상의 숫자로 입력해 주세요.");
+      return;
+    }
     setBusy(true); setError("");
     try {
       if (editing) await api.updateTimetable(editing.id, draft.trim());
@@ -320,7 +328,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
         <Text style={styles.muted}>월요일부터 금요일까지</Text>
         {busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {canEdit ? <View style={styles.manageRow}><TextInput value={grade} onChangeText={setGrade} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><TextInput value={classNum} onChangeText={setClassNum} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
+        {canEdit ? <View style={styles.manageRow}><TextInput value={grade} onChangeText={(value) => setGrade(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><TextInput value={classNum} onChangeText={(value) => setClassNum(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
         <TimetableWeek entries={entries.filter((entry) => !canEdit || (entry.grade === grade && entry.classNum === classNum))} onSelectCell={canEdit ? (date, time) => { setSlot({ date, time }); setDraft(""); } : undefined} onSelectEntry={canEdit ? (entry) => { Alert.alert(entry.subject, `${entry.date} · ${entry.time}교시`, [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => removeEntry(entry) }, { text: "수정", onPress: () => { setEditing(entry); setDraft(entry.subject); } }]); } : undefined} />
         <Button
           label={busy ? "불러오는 중…" : "시간표 새로고침"}

@@ -127,6 +127,7 @@ test("shared API client builds query and parameter URLs consistently from its co
       api.searchRooms("workspace id", "hello world"),
       api.profileOfOther("workspace-id", "member-id"),
       api.messages("room-id", "2026-10-07T12:00:00Z"),
+      api.weeklyTimetable("workspace-id", "2", "4"),
       api.meals("workspace-id", 2026, 10),
       api.meals("workspace id", 2026),
       api.schedulesForMonth("workspace-id", 10),
@@ -141,6 +142,7 @@ test("shared API client builds query and parameter URLs consistently from its co
       "/meal/all?workspaceId=workspace%20id",
       "/profile/others?workspaceId=workspace-id&memberId=member-id",
       "/schedule/month?workspaceId=workspace-id&month=10",
+      "/timetable/weekend?workspaceId=workspace-id&grade=2&classNum=4",
       "/workspace/school%2Fid",
     ].sort());
   } finally {
@@ -206,6 +208,41 @@ test("Catseugi school-data answers use the selected workspace and enforce member
     const outsider = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-outsider@example.com", password: "password123", name: "외부인", code: "654321" } });
     const forbidden = await app.inject({ method: "POST", url: "/ai", headers: { authorization: `Bearer ${outsider.json().data.accessToken}` }, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
     assert.equal(forbidden.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test("timetable query can target a class only for workspace staff", async () => {
+  const store = new Store();
+  store.emailCodes.set("timetable-owner@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  store.emailCodes.set("timetable-student@example.com", { code: "654321", expiresAt: Date.now() + 60_000 });
+  const app = await buildApp(store);
+  try {
+    const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "timetable-owner@example.com", password: "password123", name: "교사", code: "123456" } });
+    const ownerToken = owner.json().data.accessToken as string;
+    const ownerId = app.jwt.decode<{ sub: string }>(ownerToken)!.sub;
+    const headers = { authorization: `Bearer ${ownerToken}` };
+    const created = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "시간표 학교" } });
+    const workspaceId = created.json().data as string;
+    const todayDate = new Date();
+    const today = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, "0")}-${String(todayDate.getDate()).padStart(2, "0")}`;
+    const wanted = { id: randomUUID(), workspaceId, grade: "2", classNum: "3", time: "1", subject: "과학", date: today };
+    store.timetables.set(wanted.id, wanted);
+    const other = { ...wanted, id: randomUUID(), grade: "1", classNum: "1", subject: "수학" };
+    store.timetables.set(other.id, other);
+
+    const target = await app.inject({ url: `/timetable/weekend?workspaceId=${workspaceId}&grade=2&classNum=3`, headers });
+    assert.equal(target.statusCode, 200);
+    assert.deepEqual(target.json().data.map((item: { subject: string }) => item.subject), ["과학"]);
+    assert.equal((await app.inject({ url: `/timetable/weekend?workspaceId=${workspaceId}&grade=2`, headers })).statusCode, 400);
+
+    const student = await app.inject({ method: "POST", url: "/member/register", payload: { email: "timetable-student@example.com", password: "password123", name: "학생", code: "654321" } });
+    const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)!.sub;
+    store.requireWorkspace(workspaceId).members.push(studentId);
+    store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT", grade: 1, class: 1 });
+    const denied = await app.inject({ url: `/timetable/weekend?workspaceId=${workspaceId}&grade=2&classNum=3`, headers: { authorization: `Bearer ${student.json().data.accessToken}` } });
+    assert.equal(denied.statusCode, 403);
   } finally {
     await app.close();
   }

@@ -86,7 +86,7 @@ export class SeugiApi {
   createTask(input: CreateTaskInput) { return this.request<void>(API_SPEC.createTask.path, { method: API_SPEC.createTask.method, body: JSON.stringify(input) }); }
   classroomTasks() { return this.request<ClassroomTask[]>(API_SPEC.classroomTasks.path); }
   timetable(workspaceId: string) { return this.request<Timetable[]>(API_SPEC.dailyTimetable.pathFor(workspaceId)); }
-  weeklyTimetable(workspaceId: string) { return this.request<Timetable[]>(API_SPEC.weeklyTimetable.pathFor(workspaceId)); }
+  weeklyTimetable(workspaceId: string, grade?: string, classNum?: string) { return this.request<Timetable[]>(API_SPEC.weeklyTimetable.pathFor(workspaceId, grade, classNum)); }
   createTimetable(input: CreateTimetableInput) { return this.request<void>(API_SPEC.createTimetable.path, { method: API_SPEC.createTimetable.method, body: JSON.stringify(input) }); }
   updateTimetable(id: string, subject: string) { const input: UpdateTimetableInput = { id, subject }; return this.request<void>(API_SPEC.updateTimetable.path, { method: API_SPEC.updateTimetable.method, body: JSON.stringify(input) }); }
   deleteTimetable(id: string) { return this.request<void>(API_SPEC.deleteTimetable.pathFor(id), { method: API_SPEC.deleteTimetable.method }); }

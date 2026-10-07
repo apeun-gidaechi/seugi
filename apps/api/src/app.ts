@@ -34,6 +34,7 @@ import {
   memberDeviceTokenSchema,
   messageHistoryQuerySchema,
   monthScheduleQuerySchema,
+  timetableQuerySchema,
   notificationEmojiSchema,
   notificationPageQuerySchema,
   oauthProviderSchema,
@@ -1460,6 +1461,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     workspaceId: string,
     memberId: string,
     weekly: boolean,
+    targetClass?: { grade: string; classNum: string },
   ) => {
     if (!store.canAccess(workspaceId, memberId))
       throw new Error("권한이 없습니다");
@@ -1472,13 +1474,16 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         (entry) => entry.workspaceId === workspaceId,
       );
     }
-    const profile = store.profiles.get(`${workspaceId}:${memberId}`);
-    if (!profile?.grade || !profile.class) return [];
-    rows = rows.filter(
-      (entry) =>
-        entry.grade === String(profile.grade) &&
-        entry.classNum === String(profile.class),
-    );
+    if (targetClass) {
+      const role = roleIn(store.requireWorkspace(workspaceId), memberId);
+      if (!["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(role ?? ""))
+        throw new Error("권한이 없습니다");
+      rows = rows.filter((entry) => entry.grade === targetClass.grade && entry.classNum === targetClass.classNum);
+    } else {
+      const profile = store.profiles.get(`${workspaceId}:${memberId}`);
+      if (!profile?.grade || !profile.class) return [];
+      rows = rows.filter((entry) => entry.grade === String(profile.grade) && entry.classNum === String(profile.class));
+    }
     if (!weekly) {
       const today = localDateString(new Date());
       return rows
@@ -1566,13 +1571,11 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     API_SPEC.weeklyTimetable.path,
     { preHandler: auth },
     async (request) => {
-      const workspaceId = query(
-        profileWorkspaceQuerySchema,
-        request,
-      ).workspaceId;
+      const input = query(timetableQuerySchema, request);
+      const workspaceId = input.workspaceId;
       return ok(
         "시간표 조회 성공",
-        await timetableForMember(workspaceId, request.user.sub, true),
+        await timetableForMember(workspaceId, request.user.sub, true, input.grade && input.classNum ? { grade: input.grade, classNum: input.classNum } : undefined),
       );
     },
   );
