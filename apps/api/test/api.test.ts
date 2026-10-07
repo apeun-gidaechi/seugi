@@ -299,6 +299,19 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   await app.close();
 });
 
+test("workspace admins can update its name and image while students cannot", async () => {
+  const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000041"; const studentId = "00000000-0000-4000-8000-000000000042"; const workspaceId = "00000000-0000-4000-8000-000000000043";
+  store.members.set(ownerId, { id: ownerId, email: "workspace-owner@example.com", name: "관리자" }); store.members.set(studentId, { id: studentId, email: "workspace-student@example.com", name: "학생" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "UPDATES", name: "변경 전", members: [ownerId, studentId], waitlist: [], ownerId });
+  const app = await buildApp(store); const ownerAuth = { authorization: `Bearer ${app.jwt.sign({ sub: ownerId })}` }; const studentAuth = { authorization: `Bearer ${app.jwt.sign({ sub: studentId })}` };
+  try {
+    const updated = await app.inject({ method: "PATCH", url: "/workspace", headers: ownerAuth, payload: { workspaceId, workspaceName: "변경 후", workspaceImgUrl: "https://example.test/school.png" } });
+    assert.equal(updated.statusCode, 200); assert.equal(store.workspaces.get(workspaceId)?.name, "변경 후"); assert.equal(store.workspaces.get(workspaceId)?.image, "https://example.test/school.png");
+    assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers: studentAuth, payload: { workspaceId, name: "불가" } })).statusCode, 403);
+    assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers: ownerAuth, payload: { workspaceId } })).statusCode, 400);
+  } finally { await app.close(); }
+});
+
 test("announcements are returned newest first, matching the original descending notice feed", async () => {
   const store = new Store(); const memberId = "00000000-0000-4000-8000-000000000031"; const workspaceId = "00000000-0000-4000-8000-000000000032";
   store.members.set(memberId, { id: memberId, email: "notice-order@example.com", name: "공지 사용자" });
