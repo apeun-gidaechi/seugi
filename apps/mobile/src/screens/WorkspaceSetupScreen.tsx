@@ -3,9 +3,10 @@ import { BackHandler, Image, SafeAreaView, ScrollView, StyleSheet, Text, Touchab
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
-import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
+import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { api } from "../services/api";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
+import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 
 export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
   const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting" | "requests">("start");
@@ -42,14 +43,16 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); }
     finally { setBusy(false); }
   };
-  return <SafeAreaView style={styles.auth}>
-    {screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
-    <Text style={styles.logo}>스기</Text>
+  const joinFlow = screen === "role" || screen === "code" || screen === "confirm";
+  return <SafeAreaView style={joinFlow ? styles.joinFlowPage : styles.auth}>
+    {joinFlow ? <View style={styles.joinFlowTopBar}><TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={back} style={styles.joinFlowBack}><Text style={styles.link}>‹</Text></TouchableOpacity><Text style={styles.joinFlowTitle}>학교 가입</Text><View style={styles.joinFlowBack} /></View> : null}
+    {screen === "start" ? <Text style={styles.logo}>스기</Text> : null}
+    {!joinFlow && screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
     {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="가입 신청 내역" kind="secondary" onPress={() => setScreen("requests")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
     {screen === "requests" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>가입 신청 내역</Text><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView> : null}
-    {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
+    {screen === "role" ? <WorkspaceRoleSelection value={role} onChange={setRole} onContinue={() => setScreen("code")} /> : null}
     {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiCodeTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.codeSpacing} />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
     {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
     {screen === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={() => setScreen("start")} /> : null}
@@ -99,6 +102,10 @@ export function PendingWorkspaceRequests({ onChanged }: { onChanged?: () => Prom
 
 const styles = StyleSheet.create({
   auth: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: SeugiColor.Primary050 },
+  joinFlowPage: { flex: 1, backgroundColor: SeugiColor.White },
+  joinFlowTopBar: { height: 56, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", backgroundColor: SeugiColor.White },
+  joinFlowBack: { width: 40, fontSize: 30, lineHeight: 34 },
+  joinFlowTitle: { flex: 1, textAlign: "center", color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700" },
   logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" },
   subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 },
   fieldSpacing: { marginBottom: 10 },
@@ -122,10 +129,6 @@ const styles = StyleSheet.create({
   approvalSchoolName: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700", textAlign: "center", marginTop: 12 },
   approvalTooltip: { alignSelf: "flex-end", marginTop: 16, backgroundColor: SeugiColor.Primary100, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
   approvalTooltipText: { color: SeugiColor.Primary700, fontSize: 13 },
-  roleCard: { backgroundColor: SeugiColor.Gray100, borderRadius: 12, borderWidth: 1, borderColor: SeugiColor.Gray100, padding: 20, marginBottom: 10 },
-  roleCardSelected: { borderColor: SeugiColor.Primary500 },
-  roleText: { color: SeugiColor.Gray600, textAlign: "center", fontSize: 16 },
-  selectedRole: { color: SeugiColor.Primary500, textAlign: "center", fontSize: 16, fontWeight: "700" },
   schoolCard: { backgroundColor: SeugiColor.White, borderRadius: 14, padding: 20, alignItems: "center", gap: 8 },
   schoolImage: { width: 76, height: 76, borderRadius: 38 },
   schoolName: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700" },

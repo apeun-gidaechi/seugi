@@ -24,7 +24,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace notification settings | `WorkspaceNotificationsScreen` | device QA pending |
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
-| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps | device QA pending |
+| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; role step uses shared illustrated `WorkspaceRoleSelection` | implementation aligned to Android student/teacher cards; device QA pending |
 | Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | device QA pending |
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
@@ -66,7 +66,7 @@ The TypeScript mobile target currently has shared color and font tokens in `pack
 | P0 | Top bar, bottom navigation, scaffold/safe-area patterns | `SeugiTopBar` and `SeugiBottomNavigation` are reusable; the five original tabs and iOS icon-only/Android labeled behavior are preserved | Compare on-device safe-area, shadow, and touch behavior |
 | P0 | Text fields, password/code/chat inputs | `SeugiTextField`, visibility-toggle password field, six-cell numeric code field, and `SeugiChatTextField` now cover auth, school create/join, profile, room creation, timetable, chat/message search, notice reactions/editor, assignment, CatSeugi, and chat conversation | Compare original field geometry, validation, keyboard/accessory behavior, focus, and multiline editing on Android and iOS |
 | P1 | Avatar, image, room image, member/chat list rows | Ad hoc per-screen rendering | Create reusable components and replace duplicated screen markup |
-| P1 | Dialogs, sheets, dropdowns, segmented controls, toggles | Role selection uses shared `SeugiSegmentedControl`; other choices remain inline/native modals | Match remaining variants and interaction semantics |
+| P1 | Dialogs, sheets, dropdowns, segmented controls, toggles | Role choice is a shared illustrated two-card screen used by both join entry points; other choices remain inline/native modals | Match remaining variants and interaction semantics; role screen still needs device capture comparison |
 | P2 | Badges, tooltips, shadows/gradients, shimmer/loading/error states | Partial local styling | Port where used by original screens and verify on both platforms |
 
 Until this component inventory is implemented and screen captures are compared, mobile UI conversion remains incomplete even where the destination has a TypeScript target.
