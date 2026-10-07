@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ActivityIndicator, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, BackHandler, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button } from "../components/ui";
@@ -29,6 +29,14 @@ type AuthScreenProps = {
 
 export function AuthScreen({ hydrated, appleAvailable, loading, error, email, password, name, code, onEmailChange, onPasswordChange, onNameChange, onCodeChange, onGoogleCode, onAppleSignIn, onError, onSendVerification, onLogin, onRegister }: AuthScreenProps) {
   const [screen, setScreen] = useState<"start" | "login" | "signup" | "verification">("start");
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (screen === "start") return false;
+      setScreen(screen === "verification" ? "signup" : "start");
+      return true;
+    });
+    return () => subscription.remove();
+  }, [screen]);
   if (!hydrated) return <SafeAreaView style={styles.auth}><ActivityIndicator size="large" color={SeugiColor.Primary500} /><Text style={styles.subtitle}>로그인 정보를 확인하는 중…</Text></SafeAreaView>;
   return <SafeAreaView style={styles.auth}>
     {screen !== "start" ? <TouchableOpacity accessibilityRole="button" onPress={() => setScreen(screen === "verification" ? "signup" : "start")}><Text style={styles.back}>‹ 뒤로</Text></TouchableOpacity> : null}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { BackHandler, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
@@ -19,6 +19,14 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     return () => clearInterval(timer);
   }, [screen, onCreated]);
   const back = () => setScreen((current) => current === "confirm" ? "code" : current === "code" ? "role" : current === "role" || current === "create" ? "start" : "start");
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (screen === "start" || screen === "waiting") return false;
+      back();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [screen]);
   const search = async () => {
     if (code.trim().length !== 6 || busy) return;
     setBusy(true); setMessage("");
