@@ -1,26 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { type Room, type Workspace } from "@seugi/contracts";
-import { SeugiColor } from "@seugi/design-tokens";
-import { AssignmentsScreen as Assignments } from "./src/screens/AssignmentsScreen";
+import { type Workspace } from "@seugi/contracts";
 import { WorkspaceSetupScreen as WorkspaceSetup } from "./src/screens/WorkspaceSetupScreen";
-import { NoticesScreen as Notices } from "./src/screens/NoticesScreen";
-import { ChatScreen } from "./src/screens/ChatScreen";
-import { ChatConversationScreen } from "./src/screens/ChatConversationScreen";
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "./src/config";
-import { Home, MealCalendar, TimetablePage } from "./src/screens/HomeScreen";
-import { ProfileScreen as Profile } from "./src/screens/ProfileScreen";
 import { AuthScreen } from "./src/screens/AuthScreen";
+import { AuthenticatedAppShell, type Tab } from "./src/screens/AuthenticatedAppShell";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
 import { refreshHomeWidgets } from "./src/widgets/refresh";
 
-type Tab = "home" | "meals" | "timetable" | "tasks" | "chat" | "notice" | "profile";
-const tabs: Array<[Tab, string]> = [["home", "홈"], ["meals", "급식"], ["timetable", "시간표"], ["tasks", "과제"], ["chat", "채팅"], ["notice", "공지"], ["profile", "프로필"]];
 const accessTokenKey = "seugi.access-token";
 const refreshTokenKey = "seugi.refresh-token";
 const workspaceIdKey = "seugi.workspace-id";
@@ -60,14 +52,5 @@ export default function App() {
   }, [loading, name, persistSession]);
   if (!authenticated) return <AuthScreen hydrated={hydrated} appleAvailable={appleAvailable} loading={loading} error={error} email={email} password={password} name={name} code={code} onEmailChange={setEmail} onPasswordChange={setPassword} onNameChange={setName} onCodeChange={setCode} onGoogleCode={authenticateGoogle} onAppleSignIn={authenticateApple} onError={setError} onSendVerification={() => { void api.sendVerification(email).then(() => setError("인증 코드를 발송했습니다.")).catch((e) => setError(e.message)); }} onLogin={() => { void authenticate(false); }} onRegister={() => { void authenticate(true); }} />;
   if (!workspace) return <WorkspaceSetup onCreated={load} onLogout={async () => { api.setToken(); api.setRefreshToken(); await SecureStore.deleteItemAsync(accessTokenKey); await SecureStore.deleteItemAsync(refreshTokenKey); setAuthenticated(false); }} />;
-  return <SafeAreaView style={styles.page}><View style={styles.header}><Text style={styles.title}>{workspace?.name ?? "스기"}</Text><TouchableOpacity onPress={() => load().catch((reason) => setError(String(reason)))}><Text style={styles.link}>새로고침</Text></TouchableOpacity></View>{error ? <Text style={styles.error}>{error}</Text> : null}{tab === "home" && <Home workspace={workspace!} />}{tab === "meals" && <MealCalendar workspace={workspace!} />}{tab === "timetable" && <TimetablePage workspace={workspace!} />}{tab === "tasks" && <Assignments workspace={workspace!} />}{tab === "chat" && <Chat workspace={workspace!} />}{tab === "notice" && <Notices workspace={workspace!} />}{tab === "profile" && <Profile workspaces={workspaces} workspace={workspace!} onSelect={selectWorkspace} onReload={load} onLogout={async () => { if (deviceToken) await api.removeDeviceToken(deviceToken).catch(() => undefined); api.setToken(); api.setRefreshToken(); await SecureStore.deleteItemAsync(accessTokenKey); await SecureStore.deleteItemAsync(refreshTokenKey); await SecureStore.deleteItemAsync(workspaceIdKey); setDeviceToken(undefined); setWorkspace(undefined); setAuthenticated(false); void refreshHomeWidgets().catch(() => undefined); }} />}<View style={styles.tabbar}>{tabs.map(([key, label]) => <TouchableOpacity key={key} onPress={() => setTab(key)} style={styles.tab}><Text style={tab === key ? styles.activeTab : styles.inactiveTab}>{label}</Text></TouchableOpacity>)}</View></SafeAreaView>;
+  return <AuthenticatedAppShell tab={tab} workspace={workspace} workspaces={workspaces} error={error} onTabChange={setTab} onReload={load} onSelectWorkspace={selectWorkspace} onLogout={async () => { if (deviceToken) await api.removeDeviceToken(deviceToken).catch(() => undefined); api.setToken(); api.setRefreshToken(); await SecureStore.deleteItemAsync(accessTokenKey); await SecureStore.deleteItemAsync(refreshTokenKey); await SecureStore.deleteItemAsync(workspaceIdKey); setDeviceToken(undefined); setWorkspace(undefined); setAuthenticated(false); void refreshHomeWidgets().catch(() => undefined); }} />;
 }
-
-
-function Chat({ workspace }: { workspace: Workspace }) {
-  return <ChatScreen workspace={workspace} RoomMessagesComponent={RoomMessages} />;
-}
-function RoomMessages({ room, onBack }: { room: Room; onBack: () => void }) {
-  return <ChatConversationScreen room={room} onBack={onBack} />;
-}
-const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: SeugiColor.Primary050 }, header: { height: 58, backgroundColor: SeugiColor.White, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, title: { fontSize: 20, fontWeight: "700" }, link: { color: SeugiColor.Primary500 }, tabbar: { height: 64, flexDirection: "row", backgroundColor: SeugiColor.White, borderTopWidth: 1, borderColor: SeugiColor.Gray300 }, tab: { flex: 1, justifyContent: "center", alignItems: "center" }, activeTab: { color: SeugiColor.Primary500, fontWeight: "700" }, inactiveTab: { color: SeugiColor.Gray500 }, error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" } });
