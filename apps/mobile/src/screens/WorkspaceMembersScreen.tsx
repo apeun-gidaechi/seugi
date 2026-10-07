@@ -67,7 +67,7 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
     <View style={styles.tabs}>{(["TEACHER", "STUDENT"] as const).map((value) => <TouchableOpacity key={value} accessibilityRole="tab" accessibilityState={{ selected: tab === value }} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><Text style={tab === value ? styles.tabLabelSelected : styles.tabLabel}>{value === "TEACHER" ? "선생님" : "학생"}</Text></TouchableOpacity>)}</View>
     <ScrollView contentContainerStyle={styles.list}>
       {loading ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loading} /> : null}
-      {!loading && members.length === 0 ? <Text style={styles.empty}>멤버가 없어요</Text> : null}
+      {!loading && !notice && members.length === 0 ? <Text style={styles.empty}>멤버가 없어요</Text> : null}
       {!loading ? visibleMembers.map((member) => <View key={member.id} style={styles.member}>
         <TouchableOpacity accessibilityRole="button" onPress={() => void openProfile(member)} style={styles.identity}>
           {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Text style={styles.avatarInitial}>{member.name.slice(0, 1)}</Text></View>}
