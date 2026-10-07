@@ -1,4 +1,4 @@
-import { API_SPEC, type ApiResponse, type ChatMessage, type ClassroomTask, type CreateTaskInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
+import { API_SPEC, type ApiResponse, type ChatMessage, type ChatMemberEventInput, type ClassroomTask, type CreateChatRoomInput, type CreateNotificationInput, type CreateTaskInput, type CreateWorkspaceInput, type EditMemberInput, type EditProfileInput, type EditStudentNumberInput, type JoinWorkspaceInput, type LoginMemberInput, type Meal, type Member, type Notification, type Profile, type RegisterMemberInput, type Room, type Role, type Schedule, type Task, type Timetable, type Tokens, type UpdateNotificationInput, type UpdateWorkspaceInput, type Workspace, type WorkspaceMemberChart } from "@seugi/contracts";
 
 export class SeugiApi {
   private refreshToken?: string;
@@ -55,24 +55,24 @@ export class SeugiApi {
   waitlist(workspaceId: string, role: Exclude<Role, "ADMIN">) { return this.request<Member[]>(`/workspace/wait-list?workspaceId=${encodeURIComponent(workspaceId)}&role=${role}`); }
   approveWorkspaceMember(workspaceId: string, memberId: string, role: Exclude<Role, "ADMIN">) { return this.request<void>("/workspace/add", { method: "PATCH", body: JSON.stringify({ workspaceId, memberId, role }) }); }
   rejectWorkspaceMember(workspaceId: string, memberId: string, role: Exclude<Role, "ADMIN">) { return this.request<void>("/workspace/cancel", { method: "DELETE", body: JSON.stringify({ workspaceId, memberId, role }) }); }
-  rooms(workspaceId: string, type: "group" | "personal" = "group") { return this.request<Room[]>(`/chat/${type}/search/${workspaceId}`); }
-  searchRooms(workspaceId: string, word: string, type: "group" | "personal" = "group") { return this.request<Room[]>(`/chat/${type}/search?workspace=${encodeURIComponent(workspaceId)}&word=${encodeURIComponent(word)}`); }
-  createRoom(type: "group" | "personal", input: { workspaceId: string; name: string; memberIds: string[] }) { return this.request<string>(`/chat/${type}/create`, { method: "POST", body: JSON.stringify(input) }); }
-  groupRoom(roomId: string) { return this.request<Room>(`/chat/group/search/room/${encodeURIComponent(roomId)}`); }
-  addGroupMembers(roomId: string, memberIds: string[]) { return this.request<void>("/chat/group/member/add", { method: "POST", body: JSON.stringify({ roomId, memberIds }) }); }
-  removeGroupMembers(roomId: string, memberIds: string[]) { return this.request<void>("/chat/group/member/kick", { method: "PATCH", body: JSON.stringify({ roomId, memberIds }) }); }
-  transferGroupAdmin(roomId: string, memberId: string) { return this.request<void>("/chat/group/member/toss", { method: "PATCH", body: JSON.stringify({ roomId, memberId, memberIds: [] }) }); }
-  leaveGroupRoom(roomId: string) { return this.request<void>(`/chat/group/left/${encodeURIComponent(roomId)}`, { method: "PATCH" }); }
+  rooms(workspaceId: string, type: "group" | "personal" = "group") { const endpoint = type === "group" ? API_SPEC.groupRooms : API_SPEC.personalRooms; return this.request<Room[]>(endpoint.pathFor(workspaceId)); }
+  searchRooms(workspaceId: string, word: string, type: "group" | "personal" = "group") { const endpoint = type === "group" ? API_SPEC.searchGroupRooms : API_SPEC.searchPersonalRooms; return this.request<Room[]>(`${endpoint.path}?workspace=${encodeURIComponent(workspaceId)}&word=${encodeURIComponent(word)}`); }
+  createRoom(type: "group" | "personal", input: CreateChatRoomInput) { const endpoint = type === "group" ? API_SPEC.createGroupRoom : API_SPEC.createPersonalRoom; return this.request<string>(endpoint.path, { method: endpoint.method, body: JSON.stringify(input) }); }
+  groupRoom(roomId: string) { return this.request<Room>(API_SPEC.groupRoom.pathFor(roomId)); }
+  addGroupMembers(roomId: string, memberIds: string[]) { const input: ChatMemberEventInput = { roomId, memberIds }; return this.request<void>(API_SPEC.addGroupMembers.path, { method: API_SPEC.addGroupMembers.method, body: JSON.stringify(input) }); }
+  removeGroupMembers(roomId: string, memberIds: string[]) { const input: ChatMemberEventInput = { roomId, memberIds }; return this.request<void>(API_SPEC.removeGroupMembers.path, { method: API_SPEC.removeGroupMembers.method, body: JSON.stringify(input) }); }
+  transferGroupAdmin(roomId: string, memberId: string) { const input: ChatMemberEventInput = { roomId, memberId, memberIds: [] }; return this.request<void>(API_SPEC.transferGroupAdmin.path, { method: API_SPEC.transferGroupAdmin.method, body: JSON.stringify(input) }); }
+  leaveGroupRoom(roomId: string) { return this.request<void>(API_SPEC.leaveGroupRoom.pathFor(roomId), { method: API_SPEC.leaveGroupRoom.method }); }
   uploadFile(type: "IMAGE" | "FILE" | "PROFILE", form: FormData) { return this.request<{ name: string; type: string; mimeType: string; size: number; url: string }>(`/file/upload/${type}`, { method: "POST", body: form }); }
-  messages(roomId: string, timestamp?: string) { const cursor = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : ""; return this.request<{ messages: ChatMessage[]; hasNext: boolean }>(`/message/search/${roomId}${cursor}`); }
-  addMessageEmoji(messageId: string, emoji: string) { return this.request<void>("/message/emoji", { method: "PUT", body: JSON.stringify({ messageId, emoji }) }); }
-  removeMessageEmoji(messageId: string, emoji: string) { return this.request<void>("/message/emoji", { method: "DELETE", body: JSON.stringify({ messageId, emoji }) }); }
-  deleteMessage(roomId: string, messageId: string) { return this.request<void>("/message/delete", { method: "DELETE", body: JSON.stringify({ roomId, messageId }) }); }
-  notifications(workspaceId: string) { return this.request<Notification[]>(`/notification/${workspaceId}`); }
-  createNotification(input: { workspaceId: string; title: string; content: string }) { return this.request<Notification>("/notification", { method: "POST", body: JSON.stringify(input) }); }
-  updateNotification(input: { id: string; title: string; content: string }) { return this.request<void>("/notification", { method: "PATCH", body: JSON.stringify(input) }); }
-  deleteNotification(workspaceId: string, id: string) { return this.request<void>(`/notification/${encodeURIComponent(workspaceId)}/${encodeURIComponent(id)}`, { method: "DELETE" }); }
-  toggleNotificationEmoji(notificationId: string, emoji: string) { return this.request<void>("/notification/emoji", { method: "PATCH", body: JSON.stringify({ notificationId, emoji }) }); }
+  messages(roomId: string, timestamp?: string) { const cursor = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : ""; return this.request<{ messages: ChatMessage[]; hasNext: boolean }>(`${API_SPEC.messages.pathFor(roomId)}${cursor}`); }
+  addMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.addMessageEmoji.path, { method: API_SPEC.addMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
+  removeMessageEmoji(messageId: string, emoji: string) { return this.request<void>(API_SPEC.removeMessageEmoji.path, { method: API_SPEC.removeMessageEmoji.method, body: JSON.stringify({ messageId, emoji }) }); }
+  deleteMessage(roomId: string, messageId: string) { return this.request<void>(API_SPEC.deleteMessage.path, { method: API_SPEC.deleteMessage.method, body: JSON.stringify({ roomId, messageId }) }); }
+  notifications(workspaceId: string) { return this.request<Notification[]>(API_SPEC.listNotifications.pathFor(workspaceId)); }
+  createNotification(input: CreateNotificationInput) { return this.request<Notification>(API_SPEC.createNotification.path, { method: API_SPEC.createNotification.method, body: JSON.stringify(input) }); }
+  updateNotification(input: UpdateNotificationInput) { return this.request<void>(API_SPEC.updateNotification.path, { method: API_SPEC.updateNotification.method, body: JSON.stringify(input) }); }
+  deleteNotification(workspaceId: string, id: string) { return this.request<void>(API_SPEC.deleteNotification.pathFor(workspaceId, id), { method: API_SPEC.deleteNotification.method }); }
+  toggleNotificationEmoji(notificationId: string, emoji: string) { return this.request<void>(API_SPEC.toggleNotificationEmoji.path, { method: API_SPEC.toggleNotificationEmoji.method, body: JSON.stringify({ notificationId, emoji }) }); }
   tasks(workspaceId: string) { return this.request<Task[]>(API_SPEC.listTasks.pathFor(workspaceId)); }
   createTask(input: CreateTaskInput) { return this.request<void>(API_SPEC.createTask.path, { method: API_SPEC.createTask.method, body: JSON.stringify(input) }); }
   classroomTasks() { return this.request<ClassroomTask[]>("/task/classroom"); }
