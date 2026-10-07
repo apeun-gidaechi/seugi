@@ -1,6 +1,5 @@
 import { SeugiApi } from "@seugi/api-client";
 import Cookies from "js-cookie";
-import { SeugiCustomAxios } from "@/axios/SeugiCutomAxios";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 const tokenValue = (token?: string) => token?.replace(/^Bearer\s+/i, "");
@@ -14,7 +13,6 @@ export async function withSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ da
     const refreshedToken = api.accessToken();
     if (refreshedToken && refreshedToken !== initialToken) {
       Cookies.set("accessToken", refreshedToken);
-      SeugiCustomAxios.defaults.headers.common.Authorization = `Bearer ${refreshedToken}`;
     }
   }
 }
