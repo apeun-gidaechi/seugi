@@ -96,6 +96,7 @@ export function AuthenticatedAppShell({
   const [roomSearch, setRoomSearch] = useState("");
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const [canCreateNotice, setCanCreateNotice] = useState(false);
+  const [canManageNotices, setCanManageNotices] = useState(false);
   const [homeRefreshToken, setHomeRefreshToken] = useState(0);
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
@@ -109,7 +110,8 @@ export function AuthenticatedAppShell({
     Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
       if (!active) return;
       setCanCreateNotice(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
-    }).catch(() => { if (active) setCanCreateNotice(false); });
+      setCanManageNotices(workspace.ownerId === member.data?.id || profile.data?.role === "ADMIN" || profile.data?.role === "MIDDLE_ADMIN");
+    }).catch(() => { if (active) { setCanCreateNotice(false); setCanManageNotices(false); } });
     return () => { active = false; };
   }, [workspace.id, workspace.ownerId]);
 
@@ -202,7 +204,9 @@ export function AuthenticatedAppShell({
           onOpenWorkspace={() => pushDetail("workspace")}
           onOpenNotices={() => changeTab("notice")}
           onCreateNotice={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}
+          onEditNotice={(notice) => { setEditingNotice(notice); pushDetail("editNotice"); }}
           canCreateNotice={canCreateNotice}
+          canManageNotices={canManageNotices}
         />
       ) : null}
       {!detail && (tab === "chat" || tab === "group") ? (

@@ -42,7 +42,9 @@ export function HomeScreen({
   onOpenWorkspace,
   onOpenNotices,
   onCreateNotice,
+  onEditNotice,
   canCreateNotice,
+  canManageNotices,
 }: {
   workspace: Workspace;
   refreshToken?: number;
@@ -53,7 +55,9 @@ export function HomeScreen({
   onOpenWorkspace: () => void;
   onOpenNotices: () => void;
   onCreateNotice: () => void;
+  onEditNotice: (notice: import("@seugi/contracts").Notification) => void;
   canCreateNotice: boolean;
+  canManageNotices: boolean;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
@@ -139,7 +143,7 @@ export function HomeScreen({
           <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
         )}
       </HomeCard>
-      <HomeNoticesCard workspace={workspace} canCreate={canCreateNotice} onOpen={onOpenNotices} onCreate={onCreateNotice} />
+      <HomeNoticesCard workspace={workspace} canCreate={canCreateNotice} canManage={canManageNotices} onOpen={onOpenNotices} onCreate={onCreateNotice} onEdit={onEditNotice} />
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
         {meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
           {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
