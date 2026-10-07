@@ -1,26 +1,14 @@
 import React from 'react';
 import { SeugiTextControl } from '@/Components/ui';
 
-interface SeugiTextFieldProps {
+interface SeugiTextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value'> {
     text?: string;
-    onChange?: React.ChangeEventHandler<HTMLInputElement>;
-    placeholder?: string;
-    type?: React.HTMLInputTypeAttribute;
-    onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
-    style: React.CSSProperties;
     value: string;
 }
 
-const TextField: React.FC<SeugiTextFieldProps> = ({ onChange, placeholder, type = 'text', onKeyDown, style, value }) => {
+const TextField: React.FC<SeugiTextFieldProps> = ({ text: _text, ...inputProps }) => {
     return (
-        <SeugiTextControl
-            onChange={onChange}
-            placeholder={placeholder}
-            type={type}
-            onKeyDown={onKeyDown}
-            style={style}
-            value={value}
-        />
+        <SeugiTextControl {...inputProps} />
     );
 }
 
