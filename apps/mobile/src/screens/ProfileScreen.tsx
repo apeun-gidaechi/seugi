@@ -5,6 +5,7 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Member, Role, Workspace, WorkspaceMemberChart, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
+import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 import { SeugiTopBar } from "../design-system/TopBar";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
@@ -242,7 +243,104 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
   </Card>;
 }
 
-function JoinRequests({ workspace }: { workspace: Workspace }) { type RequestRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN"; const [role, setRole] = useState<Role>(); const [requestRole, setRequestRole] = useState<RequestRole>("STUDENT"); const [members, setMembers] = useState<Member[]>([]); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false); useEffect(() => { let active = true; Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => { if (active) setRole(workspace.ownerId === member.data?.id ? "ADMIN" : profile.data?.role ?? "STUDENT"); }).catch(() => active && setRole("STUDENT")); return () => { active = false; }; }, [workspace.id, workspace.ownerId]); const options: RequestRole[] = role === "ADMIN" ? ["STUDENT", "TEACHER", "MIDDLE_ADMIN"] : role === "MIDDLE_ADMIN" ? ["STUDENT", "TEACHER"] : role === "TEACHER" ? ["STUDENT"] : []; useEffect(() => { if (!options.includes(requestRole)) { setRequestRole("STUDENT"); setMembers([]); return; } let active = true; api.waitlist(workspace.id, requestRole).then((result) => active && setMembers(result.data ?? [])).catch(() => active && setMembers([])); return () => { active = false; }; }, [workspace.id, requestRole, role]); const update = async (memberId: string, approve: boolean) => { setBusy(true); setMessage(""); try { if (approve) await api.approveWorkspaceMember(workspace.id, memberId, requestRole); else await api.rejectWorkspaceMember(workspace.id, memberId, requestRole); setMembers((current) => current.filter((member) => member.id !== memberId)); } catch (e) { setMessage(e instanceof Error ? e.message : "요청 처리에 실패했습니다"); } finally { setBusy(false); } }; if (!role || options.length === 0) return null; return <Card title="가입 신청 관리"><View style={styles.row}>{options.map((option) => <TouchableOpacity key={option} onPress={() => setRequestRole(option)}><Text style={requestRole === option ? styles.activeTab : styles.inactiveTab}>{option === "STUDENT" ? "학생" : option === "TEACHER" ? "교사" : "관리자"}</Text></TouchableOpacity>)}</View>{members.length ? members.map((member) => <View key={member.id} style={styles.row}><Text style={styles.rowTitle}>{member.name} · {member.email}</Text><View><Button label="승인" onPress={() => update(member.id, true)} disabled={busy} /><Button label="거절" kind="secondary" onPress={() => update(member.id, false)} disabled={busy} /></View></View>) : <Text style={styles.muted}>대기 중인 가입 신청이 없습니다.</Text>}{message ? <Text style={styles.error}>{message}</Text> : null}</Card>; }
+function JoinRequests({ workspace }: { workspace: Workspace }) {
+  type RequestRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN";
+  const [role, setRole] = useState<Role>();
+  const [requestRole, setRequestRole] = useState<RequestRole>("STUDENT");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)])
+      .then(([member, profile]) => {
+        if (active) setRole(workspace.ownerId === member.data?.id ? "ADMIN" : profile.data?.role ?? "STUDENT");
+      })
+      .catch(() => active && setRole("STUDENT"));
+    return () => { active = false; };
+  }, [workspace.id, workspace.ownerId]);
+
+  const options: RequestRole[] = role === "ADMIN"
+    ? ["TEACHER", "STUDENT", "MIDDLE_ADMIN"]
+    : role === "MIDDLE_ADMIN"
+      ? ["TEACHER", "STUDENT"]
+      : role === "TEACHER" ? ["STUDENT"] : [];
+
+  useEffect(() => {
+    if (!options.includes(requestRole)) {
+      setRequestRole(options[0] ?? "STUDENT");
+      setMembers([]);
+      setSelectedIds([]);
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setMessage("");
+    setSelectedIds([]);
+    api.waitlist(workspace.id, requestRole)
+      .then((result) => { if (active) setMembers(result.data ?? []); })
+      .catch((error) => { if (active) { setMembers([]); setMessage(error instanceof Error ? error.message : "가입 신청을 불러오지 못했습니다"); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [workspace.id, requestRole, role]);
+
+  const processSelection = (approve: boolean) => {
+    if (!selectedIds.length || busy) return;
+    const verb = approve ? "승인" : "거절";
+    Alert.alert(`가입 신청 ${verb}`, `선택한 ${selectedIds.length}명의 신청을 ${verb}할까요?`, [
+      { text: "취소", style: "cancel" },
+      { text: verb, style: approve ? "default" : "destructive", onPress: () => {
+        void (async () => {
+          const ids = [...selectedIds];
+          setBusy(true);
+          setMessage("");
+          try {
+            if (approve) await api.approveWorkspaceMembers(workspace.id, ids, requestRole);
+            else await api.rejectWorkspaceMembers(workspace.id, ids, requestRole);
+            setMembers((current) => current.filter((member) => !ids.includes(member.id)));
+            setSelectedIds((current) => current.filter((id) => !ids.includes(id)));
+            setMessage(`${ids.length}명의 가입 신청을 ${verb}했습니다.`);
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : `가입 신청을 ${verb}하지 못했습니다`);
+          } finally { setBusy(false); }
+        })();
+      } },
+    ]);
+  };
+
+  if (!role || options.length === 0) return null;
+  return <Card title={`가입 신청 관리 · ${members.length}명`}>
+    <SeugiSegmentedControl
+      value={requestRole}
+      options={options.map((value) => ({ value, label: value === "STUDENT" ? "학생" : value === "TEACHER" ? "선생님" : "관리자" }))}
+      onChange={(value) => { if (!busy) setRequestRole(value); }}
+    />
+    {loading ? <Text style={styles.muted}>가입 신청을 불러오는 중…</Text> : members.length ? members.map((member) => {
+      const checked = selectedIds.includes(member.id);
+      return <TouchableOpacity
+        key={member.id}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked, disabled: busy }}
+        onPress={() => setSelectedIds((current) => checked ? current.filter((id) => id !== member.id) : [...current, member.id])}
+        disabled={busy}
+        style={styles.requestMemberRow}
+      >
+        {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.requestAvatar} /> : <View style={styles.requestAvatarFallback}><Text style={styles.muted}>{member.name.slice(0, 1)}</Text></View>}
+        <View style={styles.requestMemberInfo}><Text style={styles.rowTitle}>{member.name}</Text>{member.email ? <Text numberOfLines={1} style={styles.muted}>{member.email}</Text> : null}</View>
+        <Text style={[styles.requestCheckbox, checked && styles.requestCheckboxChecked]}>{checked ? "✓" : ""}</Text>
+      </TouchableOpacity>;
+    }) : <Text style={styles.muted}>대기 중인 가입 신청이 없습니다.</Text>}
+    {selectedIds.length ? <View style={styles.requestActions}>
+      <Button label={busy ? "처리 중…" : "거절"} kind="secondary" onPress={() => processSelection(false)} disabled={busy} />
+      <Button label={busy ? "처리 중…" : `${selectedIds.length}명 수락`} onPress={() => processSelection(true)} disabled={busy} />
+    </View> : null}
+    {message ? <Text style={message.includes("했습니다") ? styles.answer : styles.error}>{message}</Text> : null}
+  </Card>;
+}
 
 const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
@@ -262,6 +360,13 @@ const styles = StyleSheet.create({
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   memberRow: { borderBottomWidth: 1, borderColor: SeugiColor.Gray100, paddingVertical: 12, gap: 8 },
+  requestMemberRow: { minHeight: 68, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderColor: SeugiColor.Gray100 },
+  requestAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: SeugiColor.Gray100 },
+  requestAvatarFallback: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Gray100 },
+  requestMemberInfo: { flex: 1, minWidth: 0, gap: 3 },
+  requestCheckbox: { width: 24, height: 24, borderWidth: 1, borderColor: SeugiColor.Gray400, borderRadius: 5, color: SeugiColor.White, fontSize: 16, lineHeight: 21, textAlign: "center" },
+  requestCheckboxChecked: { backgroundColor: SeugiColor.Primary500, borderColor: SeugiColor.Primary500 },
+  requestActions: { flexDirection: "row", gap: 8, paddingTop: 12 },
   generalAction: { minHeight: 56, paddingHorizontal: 4, borderBottomWidth: 1, borderColor: SeugiColor.Gray100, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   leaveWorkspace: { color: SeugiColor.Red500, fontSize: 15, fontWeight: "600" },
   memberActions: { flexDirection: "row", gap: 14 },

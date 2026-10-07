@@ -21,7 +21,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | CatSeugi | `CatSeugiScreen` | device QA pending |
 | Workspace detail | `WorkspaceDetailScreen` | device QA pending |
 | Workspace members | `WorkspaceMembersScreen` | Teacher/student segmented list, member avatars/admin marks, profile sheet, and start-personal-chat action now match native interaction structure; device QA pending |
-| Workspace invitation | `WorkspaceInviteScreen` | device QA pending |
+| Workspace invitation / join requests | `WorkspaceInviteScreen` with role-filtered multi-select and bulk approve/reject actions | Batch request handling and selection-state clearing match the existing web/API contract; native avatar rows and confirmation prompts restored; device QA pending |
 | Workspace notification settings | `WorkspaceNotificationsScreen` | Replaced generic settings card/button with the native single-row “전체 알림 허용” toggle layout; device QA pending |
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
