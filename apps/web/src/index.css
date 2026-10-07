@@ -3,18 +3,3 @@
     padding: 0;
     box-sizing: border-box;
 }
-
-html, body, #root {
-    min-height: 100%;
-}
-
-body {
-    color: #17253B;
-    font-family: Pretendard, "Apple SD Gothic Neo", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-}
-
-button, input, textarea, select {
-    font: inherit;
-}

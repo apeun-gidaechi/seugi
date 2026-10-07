@@ -12,7 +12,7 @@ const GOOGLE_PREVIEW_CLIENT_ID = "local-preview.apps.googleusercontent.com";
 const LoginPage = () => {
   return (
     <GoogleOAuthProvider clientId={CLIENT_ID || GOOGLE_PREVIEW_CLIENT_ID}>
-      <Login googleLoginEnabled={Boolean(CLIENT_ID)} />
+      <Login />
     </GoogleOAuthProvider>
   );
 };

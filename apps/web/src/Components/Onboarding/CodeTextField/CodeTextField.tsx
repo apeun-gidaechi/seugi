@@ -14,7 +14,7 @@ const CodeTextField: React.FC<CodeTextFieldProps> = ({ onChange, onKeyDown }) =>
         const handlePaste = (e: ClipboardEvent) => {
             const pasteText = e.clipboardData?.getData('text');
             if (pasteText) {
-                const newValues = pasteText.split('').slice(0, 6).filter(char => char !== ' ');
+                const newValues = pasteText.replace(/\D/g, '').slice(0, 6).split('');
                 setInputValues(newValues);
                 onChange(newValues);
             }
@@ -28,7 +28,7 @@ const CodeTextField: React.FC<CodeTextFieldProps> = ({ onChange, onKeyDown }) =>
     }, [onChange]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-        const value = e.target.value;
+        const value = e.target.value.replace(/\D/g, '').slice(0, 1);
         if (value === ' ') return;
         const updatedValues = [...inputValues];
         if (value.length <= 1) {
@@ -57,6 +57,10 @@ const CodeTextField: React.FC<CodeTextFieldProps> = ({ onChange, onKeyDown }) =>
                     key={index}
                     type="text"
                     value={value}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete={index === 0 ? "one-time-code" : "off"}
+                    aria-label={`인증 코드 ${index + 1}번째 자리`}
                     onChange={(e) => handleChange(e, index)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
                     ref={(el) => (inputRefs.current[index] = el)}

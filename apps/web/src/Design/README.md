@@ -13,4 +13,4 @@ The web app keeps screen composition in `Pages/` and feature behavior in the exi
 - `TextControl`: bare input primitive for legacy forms that already provide their own labels and containers.
 - `Surface` and `Eyebrow`: shared building blocks for cards and section labels.
 
-The login screen is the first complete screen using the refreshed system. Signup and workspace forms reuse the same button and input primitives through their existing compatibility wrappers; migrate other screens as they are redesigned.
+These foundations are intentionally not wired into existing screen compositions yet. Current screens retain their original Seugi structure, styles, and visual behavior; adopt shared primitives only when they can reproduce that presentation without visible changes.

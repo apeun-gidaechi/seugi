@@ -1,72 +1,106 @@
-import React from "react";
 import * as S from "./login.style";
-import { Button, TextField } from "@/Components/ui";
+import React from "react";
+import LoginButton from "@/Components/Button/Button";
+import TextField from "@/Components/common/TextField/TextField";
 import CustomAlert from "@/Components/Alert/Alert";
 import seugiImg from "@/Assets/image/onbording/Start/seugilogo.svg";
-import showPasswordImg from "@/Assets/image/onbording/show_fill.svg";
-import hidePasswordImg from "@/Assets/image/onbording/hide_fill.svg";
-import appleLogo from "@/Assets/image/onbording/Start/apple.svg";
-import googleLogo from "@/Assets/image/onbording/Start/googlelogo.svg";
-import useLogin from "@/Hooks/OnBording/LoginHook/index";
+import showPasswordimg from "@/Assets/image/onbording/show_fill.svg";
+import hidePasswordimg from "@/Assets/image/onbording/hide_fill.svg";
+import AppleLogo from "@/Assets/image/onbording/Start/apple.svg";
+import GoogleLogo from "@/Assets/image/onbording/Start/googlelogo.svg";
+import Cloud1 from "@/Assets/image/onbording/Start/LoginCloud1.svg";
+import Cloud2 from "@/Assets/image/onbording/Start/LoginCloud2.svg";
+import Sun from "@/Assets/image/onbording/Start/LoginSun.svg";
+import Divider from "@/Assets/image/onbording/Start/Divider.svg";
 
-const Login = ({ googleLoginEnabled = true }: { googleLoginEnabled?: boolean }) => {
-  const login = useLogin();
+import useLogin from '@/Hooks/OnBording/LoginHook/index';
+
+const Login = () => {
+  const { ...Login } = useLogin();
 
   return (
     <S.LoginMain>
-      <S.LoginFrame>
-        <S.WelcomePanel aria-label="Seugi 소개">
-          <S.Brand><img src={seugiImg} alt="" /> Seugi</S.Brand>
-          <S.WelcomeCopy>
-            <h1>학교의 하루를<br />더 가볍게.</h1>
-            <p>수업과 소통, 학교 생활에 필요한 모든 것을 한곳에서 시작해 보세요.</p>
-          </S.WelcomeCopy>
-        </S.WelcomePanel>
-
-        <S.FormPanel>
-          <S.FormContent>
-            <h2>다시 만나 반가워요</h2>
-            <p>Seugi 계정으로 로그인하고 학교 공간으로 이동하세요.</p>
-            <S.LoginForm onSubmit={(event) => { event.preventDefault(); void login.handleLogin(); }}>
-              <TextField
-                id="login-email"
-                label="이메일"
-                autoComplete="username"
-                type="email"
-                value={login.email}
-                onChange={(event) => login.setEmail(event.target.value)}
-                placeholder="name@school.kr"
-                required
-              />
-              <TextField
-                id="login-password"
-                label="비밀번호"
-                autoComplete="current-password"
-                type={login.showPassword ? "text" : "password"}
-                value={login.password}
-                onChange={(event) => login.setPassword(event.target.value)}
-                placeholder="비밀번호를 입력해 주세요"
-                required
-                trailing={(
-                  <S.PasswordToggle type="button" onClick={() => login.setShowPassword(!login.showPassword)} aria-label={login.showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}>
-                    <img src={login.showPassword ? hidePasswordImg : showPasswordImg} alt="" />
-                  </S.PasswordToggle>
-                )}
-              />
-              <Button type="submit" fullWidth>로그인</Button>
-            </S.LoginForm>
-            <S.SignupHint>아직 계정이 없으신가요?<a href="https://www.seugi.com/emailsignup">회원가입</a></S.SignupHint>
-            <S.Divider>또는 간편 로그인</S.Divider>
-            <S.OAuthActions>
-              <S.OAuthButton type="button" onClick={login.handleGoogleLogin} disabled={!googleLoginEnabled} title={!googleLoginEnabled ? "Google 로그인 설정이 필요합니다" : undefined}><img src={googleLogo} alt="" />Google</S.OAuthButton>
-              <S.OAuthButton type="button" onClick={login.handleAppleLogin}><img src={appleLogo} alt="" />Apple</S.OAuthButton>
-            </S.OAuthActions>
-            <S.FooterNote>로그인하면 Seugi 서비스 이용약관에 동의한 것으로 간주됩니다.</S.FooterNote>
-          </S.FormContent>
-        </S.FormPanel>
-      </S.LoginFrame>
-      {login.showAlert && (
-        <CustomAlert position="" titletext="로그인 오류" subtext={login.alertMessage} onClose={login.handleCloseAlert} />
+      <S.Cloud1 src={Cloud1} />
+      <S.Cloud2 src={Cloud2} />
+      <S.Sun src={Sun} />
+      <S.LoginFirstWrap>
+        <S.Fheader>
+          <S.Header>
+            <S.SeugiImg data={seugiImg} />
+            <S.Title2> 반가워요! </S.Title2>
+          </S.Header>
+        </S.Fheader>
+        <S.Inputarea>
+          <S.Inputpart>
+            <S.Enterinfo>
+              <S.Subtitle2>
+                이메일 <S.Redstar>*</S.Redstar>
+              </S.Subtitle2>
+              <S.InputContainer>
+                <TextField
+                  value={Login.email}
+                  type="email"
+                  onChange={(e) => Login.setEmail(e.target.value)}
+                  placeholder="이메일을 입력해주세요"
+                  onKeyDown={Login.handleKeyDown}
+                  style={{ border: "none" }}
+                />
+              </S.InputContainer>
+            </S.Enterinfo>
+            <S.Enterinfo>
+              <S.Subtitle2>
+                비밀번호 <S.Redstar>*</S.Redstar>
+              </S.Subtitle2>
+              <S.InputContainer>
+                <TextField
+                  value={Login.password}
+                  type={Login.showPassword ? "text" : "password"}
+                  onChange={(e) => Login.setPassword(e.target.value)}
+                  placeholder="비밀번호를 입력해주세요"
+                  onKeyDown={Login.handleKeyDown}
+                  style={{ border: "none" }}
+                />
+                <S.Btnview onClick={() => Login.setShowPassword(!Login.showPassword)}>
+                  {Login.showPassword ? (
+                    <img src={hidePasswordimg} alt="숨기기" />
+                  ) : (
+                    <img src={showPasswordimg} alt="보이기" />
+                  )}
+                </S.Btnview>
+              </S.InputContainer>
+            </S.Enterinfo>
+          </S.Inputpart>
+          <S.Buttonpart>
+            <LoginButton text="로그인" onClick={Login.handleLogin} />
+            <S.Body1>
+              계정이 없으시다면?{" "}
+              <S.Gosignup href="https://www.seugi.com/emailsignup">
+                가입하기
+              </S.Gosignup>{" "}
+            </S.Body1>
+          </S.Buttonpart>
+          <S.Orpart>
+            <S.Dividerimg src={Divider} />
+            <S.Caption1>또는</S.Caption1>
+            <S.Dividerimg src={Divider} />
+          </S.Orpart>
+          <S.Oauthpart>
+            <S.Authlogin onClick={Login.handleAppleLogin}>
+              <S.LogoImg src={AppleLogo} />
+            </S.Authlogin>
+            <S.Authlogin onClick={Login.handleGoogleLogin}>
+              <S.LogoImg src={GoogleLogo} />
+            </S.Authlogin>
+          </S.Oauthpart>
+        </S.Inputarea>
+      </S.LoginFirstWrap>
+      {Login.showAlert && (
+        <CustomAlert
+          position=""
+          titletext="로그인 에러"
+          subtext={Login.alertMessage}
+          onClose={Login.handleCloseAlert}
+        />
       )}
     </S.LoginMain>
   );
