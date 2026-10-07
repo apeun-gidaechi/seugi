@@ -88,7 +88,6 @@ export function HomeScreen({
   const upcoming = schedules
     .filter((item) => item.date.slice(0, 10) >= today)
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 5);
 
   return (
     <ScrollView style={styles.homeContent}>
@@ -155,35 +154,33 @@ export function HomeScreen({
       </HomeCard>
       <HomeCard title="다가오는 일정" icon="schedule">
         {upcoming.length ? (
-          upcoming.map((item) => (
-            <Text key={`${item.date}-${item.name}`}>
-              {item.date.slice(0, 10)} · {item.name}
-            </Text>
-          ))
+          <View style={styles.homeList}>{upcoming.map((item) => {
+            const days = daysUntil(today, item.date);
+            return <View key={`${item.date}-${item.name}`} style={styles.homeCalendarRow}>
+              <Text style={styles.homeCalendarDate}>{monthDay(item.date)}</Text>
+              <Text numberOfLines={1} style={styles.homeCalendarTitle}>{item.name}</Text>
+              <Text style={styles.homeCalendarDDay}>{days === 0 ? "D-Day" : `D-${days}`}</Text>
+            </View>;
+          })}</View>
         ) : (
           <Text style={styles.muted}>학교를 등록하고 일정을 확인하세요</Text>
         )}
       </HomeCard>
       <HomeCard title="다가오는 과제" icon="task" onPress={onOpenTasks}>
         {classroomTasks.length || tasks.length ? (
-          [...classroomTasks, ...tasks]
-            .filter((item) => !item.dueDate || item.dueDate.slice(0, 10) >= today)
-            .slice(0, 3)
-            .map((item, index) => (
-            <View key={`${"link" in item ? "classroom" : "task"}-${item.id}-${index}`}>
-              <Text style={styles.rowTitle}>{item.title}</Text>
-              <Text style={styles.muted}>
-                {item.dueDate
-                  ? `마감 ${new Date(item.dueDate).toLocaleDateString()}`
-                  : "기한없음"}
-              </Text>
+          <View style={styles.homeList}>{[...classroomTasks, ...tasks].map((item, index) => {
+            const days = item.dueDate ? daysUntil(today, item.dueDate) : undefined;
+            return <View key={`${"link" in item ? "classroom" : "task"}-${item.id}-${index}`} style={styles.homeCalendarRow}>
+              <Text style={[styles.homeCalendarDate, !item.dueDate && styles.homeCalendarNoDate]}>{item.dueDate ? monthDay(item.dueDate) : "기한없음"}</Text>
+              <Text numberOfLines={1} style={styles.homeCalendarTitle}>{item.title}</Text>
+              <Text style={styles.homeCalendarDDay}>{days === undefined ? "기한없음" : days > 0 ? `D-${days}` : days < 0 ? `D+${Math.abs(days)}` : "D-Day"}</Text>
               {"link" in item && item.link ? (
                 <TouchableOpacity onPress={() => Linking.openURL(item.link!).catch(() => undefined)}>
                   <Text style={styles.link}>과제 열기 ↗</Text>
                 </TouchableOpacity>
               ) : null}
-            </View>
-          ))
+            </View>;
+          })}</View>
         ) : (
           <Text style={styles.muted}>학교를 등록하고 과제를 확인하세요</Text>
         )}
@@ -193,6 +190,17 @@ export function HomeScreen({
 }
 
 export { HomeScreen as Home };
+
+function daysUntil(from: string, to: string) {
+  const fromDate = new Date(`${from.slice(0, 10)}T00:00:00`);
+  const toDate = new Date(`${to.slice(0, 10)}T00:00:00`);
+  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000);
+}
+
+function monthDay(value: string) {
+  const [, month = "", day = ""] = value.slice(0, 10).split("-");
+  return `${Number(month)}/${day}`;
+}
 
 type HomeCardIcon = "school" | "timetable" | "meal" | "cat" | "schedule" | "task";
 const homeCardPaths: Record<HomeCardIcon, string> = {
@@ -564,6 +572,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   workspaceName: { color: SeugiColor.Gray600, fontSize: 16, fontWeight: "600", paddingVertical: 6.5 },
+  homeList: { gap: 16 },
+  homeCalendarRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  homeCalendarDate: { color: SeugiColor.Primary500, fontSize: 14 },
+  homeCalendarNoDate: { color: SeugiColor.Gray600 },
+  homeCalendarTitle: { flex: 1, minWidth: 0, color: SeugiColor.Gray800, fontSize: 14 },
+  homeCalendarDDay: { color: SeugiColor.Gray600, fontSize: 12 },
   homeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
