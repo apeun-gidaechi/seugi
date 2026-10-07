@@ -104,7 +104,7 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
       {busy ? <Text style={styles.muted}>변경 사항을 저장하는 중…</Text> : null}
       {message ? <Text style={message.includes("변경") ? styles.answer : styles.error}>{message}</Text> : null}
     </Card>
-    <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder="이름을 입력해 주세요" maxLength={40} /><View style={styles.dialogActions}><TouchableOpacity onPress={() => setEditingName(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => void saveName()} disabled={busy || !draft.trim()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
+    <Modal visible={editingName} transparent animationType="slide" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={Platform.OS === "ios" ? undefined : "이름을 입력해주세요"} /><Button label={busy ? "저장 중…" : "저장"} onPress={() => void saveName()} disabled={busy || !draft.trim()} /></View></View></Modal>
   </>;
 }
 
@@ -241,9 +241,10 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
   const [editing, setEditing] = useState<"status" | "nick" | "studentNumber" | "spot" | "belong" | "phone" | "wire" | "location">();
   const [draft, setDraft] = useState("");
   useEffect(() => { let active = true; Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => { if (!active) return; setName(member.data?.name ?? ""); setPicture(member.data?.picture ?? ""); setStatus(profile.data?.status ?? ""); setNick(profile.data?.nick ?? ""); setSpot(profile.data?.spot ?? ""); setBelong(profile.data?.belong ?? ""); setPhone(profile.data?.phone ?? ""); setWire(profile.data?.wire ?? ""); setLocation(profile.data?.location ?? ""); }).catch(() => undefined); return () => { active = false; }; }, [workspace.id]);
+  const locationLabel = Platform.OS === "ios" ? "근무위치" : "근무 위치";
   const profileRows: Array<[NonNullable<typeof editing>, string, string, (value: string) => void]> = [
     ["status", "상태메세지", status, setStatus], ["nick", "닉네임", nick, setNick],
-    ["spot", "직위", spot, setSpot], ["belong", "소속", belong, setBelong], ["phone", "휴대전화번호", phone, setPhone], ["wire", "유선전화번호", wire, setWire], ["location", "근무 위치", location, setLocation],
+    ["spot", "직위", spot, setSpot], ["belong", "소속", belong, setBelong], ["phone", "휴대전화번호", phone, setPhone], ["wire", "유선전화번호", wire, setWire], ["location", locationLabel, location, setLocation],
   ];
   const openEditor = (key: typeof editing, value: string) => { setEditing(key); setDraft(value); };
   const fieldTitle = profileRows.find(([key]) => key === editing)?.[1] ?? "프로필";
@@ -265,7 +266,7 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
     <View style={styles.profileHeader}><SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} imageStyle={styles.profilePicture} fallbackStyle={styles.profilePictureEmpty} /><View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
     {profileRows.map(([key, title, value]) => <TouchableOpacity key={key} accessibilityRole="button" style={styles.profileRow} onPress={() => openEditor(key as NonNullable<typeof editing>, value)}><View><Text style={styles.profileLabel}>{title}</Text><Text style={styles.profileValue}>{value || "미설정"}</Text></View><Text style={styles.profileEdit}>✎</Text></TouchableOpacity>)}
     {notice ? <Text style={notice.endsWith("수정 성공") ? styles.answer : styles.error}>{notice}</Text> : null}
-    <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => { if (!busy) setEditing(undefined); }}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>{fieldTitle} 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={`${fieldTitle} 입력`} multiline={editing === "status"} keyboardType={editing === "phone" || editing === "wire" ? Platform.OS === "ios" ? "number-pad" : "phone-pad" : "default"} editable={!busy} maxLength={editing === "status" ? 160 : editing === "nick" ? 40 : editing === "spot" ? 80 : editing === "belong" || editing === "location" ? 120 : Platform.OS === "ios" && (editing === "phone" || editing === "wire") ? 11 : 40} /><View style={styles.dialogActions}><TouchableOpacity disabled={busy} onPress={() => setEditing(undefined)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity disabled={busy} onPress={() => void commitDraft()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
+    <Modal visible={!!editing} transparent animationType="slide" onRequestClose={() => { if (!busy) setEditing(undefined); }}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>{fieldTitle} 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={Platform.OS === "ios" ? undefined : `${fieldTitle}${editing === "belong" || editing === "nick" ? "을" : "를"} 입력해주세요`} keyboardType={Platform.OS === "ios" && (editing === "phone" || editing === "wire") ? "number-pad" : "default"} editable={!busy} maxLength={Platform.OS === "ios" && (editing === "phone" || editing === "wire") ? 11 : undefined} /><Button label={busy ? "저장 중…" : "저장"} onPress={() => void commitDraft()} disabled={busy} /></View></View></Modal>
   </Card>;
 }
 
@@ -437,8 +438,7 @@ const styles = StyleSheet.create({
   profileLabel: { color: SeugiColor.Gray500, fontSize: 14 },
   profileValue: { color: SeugiColor.Gray800, fontSize: 15, marginTop: 5 },
   profileEdit: { color: SeugiColor.Gray500, fontSize: 19, paddingHorizontal: 8 },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center", padding: 24 },
-  editDialog: { width: "100%", backgroundColor: SeugiColor.White, borderRadius: 14, padding: 20, gap: 12 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  editDialog: { width: "100%", minHeight: 220, backgroundColor: SeugiColor.White, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32, gap: 12 },
   dialogTitle: { color: SeugiColor.Gray800, fontSize: 17, fontWeight: "700" },
-  dialogActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 24, paddingTop: 4 },
 });
