@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { type Workspace } from "@seugi/contracts";
+import { type Room, type Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { AssignmentsScreen } from "./AssignmentsScreen";
 import { CatSeugiScreen } from "./CatSeugiScreen";
 import { ChatScreen } from "./ChatScreen";
 import { ChatConversationScreen } from "./ChatConversationScreen";
+import { CreateRoomScreen } from "./CreateRoomScreen";
 import {
   Home,
   MealCalendar,
@@ -36,11 +37,13 @@ const tabTitles: Record<Tab, string> = {
   notice: "알림",
   profile: "프로필",
 };
-const detailTitles: Record<HomeDetail, string> = {
+type AppDetail = HomeDetail | "createRoom";
+const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
   tasks: "과제",
   catSeugi: "캣스기",
+  createRoom: "멤버 선택",
 };
 
 type AuthenticatedAppShellProps = {
@@ -64,7 +67,8 @@ export function AuthenticatedAppShell({
   onSelectWorkspace,
   onLogout,
 }: AuthenticatedAppShellProps) {
-  const [detail, setDetail] = useState<HomeDetail>();
+  const [detail, setDetail] = useState<AppDetail>();
+  const [createdRoom, setCreatedRoom] = useState<Room>();
   const title = detail ? detailTitles[detail] : tabTitles[tab];
 
   return (
@@ -98,6 +102,14 @@ export function AuthenticatedAppShell({
       {detail === "timetable" ? <TimetablePage workspace={workspace} /> : null}
       {detail === "tasks" ? <AssignmentsScreen workspace={workspace} /> : null}
       {detail === "catSeugi" ? <CatSeugiScreen /> : null}
+      {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
+        <CreateRoomScreen
+          workspace={workspace}
+          roomType={tab === "group" ? "group" : "personal"}
+          onBack={() => setDetail(undefined)}
+          onCreated={(room) => { setCreatedRoom(room); setDetail(undefined); }}
+        />
+      ) : null}
       {!detail && tab === "home" ? (
         <Home
           workspace={workspace}
@@ -114,6 +126,8 @@ export function AuthenticatedAppShell({
           workspace={workspace}
           roomType={tab === "group" ? "group" : "personal"}
           RoomMessagesComponent={RoomMessages}
+          onCreateRoom={() => { setCreatedRoom(undefined); setDetail("createRoom"); }}
+          initialRoom={createdRoom}
         />
       ) : null}
       {!detail && tab === "notice" ? (

@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
-import type { Member, Room, Workspace } from "@seugi/contracts";
+import type { Room, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
@@ -18,29 +18,24 @@ export function ChatScreen({
   workspace,
   roomType,
   RoomMessagesComponent,
+  onCreateRoom,
+  initialRoom,
 }: {
   workspace: Workspace;
   roomType: "group" | "personal";
   RoomMessagesComponent: React.ComponentType<RoomMessagesProps>;
+  onCreateRoom: () => void;
+  initialRoom?: Room;
 }) {
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selected, setSelected] = useState<Room>();
-  const [roomName, setRoomName] = useState("");
+  const [selected, setSelected] = useState<Room | undefined>(initialRoom);
   const [roomSearch, setRoomSearch] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
   const refresh = useCallback(async () => {
-    const [x, m] = await Promise.all([
-      api.rooms(workspace.id, roomType),
-      api.workspaceMembers(workspace.id),
-    ]);
+    const x = await api.rooms(workspace.id, roomType);
     setRooms(x.data ?? []);
-    setMembers(m.data ?? []);
   }, [workspace.id, roomType]);
   useEffect(() => {
-    setSelected(undefined);
     refresh().catch(() => undefined);
   }, [refresh]);
   const search = async (word = roomSearch) => {
@@ -52,28 +47,6 @@ export function ChatScreen({
       setRooms(result.data ?? []);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "채팅방 검색에 실패했습니다");
-    }
-  };
-  const create = async () => {
-    if (!roomName.trim() || busy) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      const result = await api.createRoom(roomType, {
-        workspaceId: workspace.id,
-        name: roomName.trim(),
-        memberIds: selectedIds,
-      });
-      const list = await api.rooms(workspace.id, roomType);
-      setRooms(list.data ?? []);
-      setSelected(list.data?.find((room) => room.id === result.data));
-      setRoomName("");
-      setRoomSearch("");
-      setSelectedIds([]);
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "채팅방 생성에 실패했습니다");
-    } finally {
-      setBusy(false);
     }
   };
   if (selected)
@@ -89,7 +62,8 @@ export function ChatScreen({
       data={rooms}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={
-        <Card title={roomType === "group" ? "그룹 채팅방 만들기" : "채팅"}>
+        <Card title={roomType === "group" ? "단체 채팅" : "채팅"}>
+          <Button label={roomType === "group" ? "단체 채팅방 만들기" : "새 채팅 시작"} onPress={onCreateRoom} />
           <View style={styles.row}>
             <TextInput
               value={roomSearch}
@@ -105,41 +79,6 @@ export function ChatScreen({
               onPress={() => void search()}
             />
           </View>
-          <TextInput
-            value={roomName}
-            onChangeText={setRoomName}
-            style={styles.input}
-            placeholder="새 채팅방 이름"
-          />
-          <Text style={styles.muted}>초대할 구성원</Text>
-          {members.map((member) => (
-            <TouchableOpacity
-              key={member.id}
-              onPress={() =>
-                setSelectedIds((current) =>
-                  current.includes(member.id)
-                    ? current.filter((id) => id !== member.id)
-                    : [...current, member.id],
-                )
-              }
-            >
-              <Text
-                style={
-                  selectedIds.includes(member.id)
-                    ? styles.activeTab
-                    : styles.rowTitle
-                }
-              >
-                {selectedIds.includes(member.id) ? "☑ " : "☐ "}
-                {member.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          <Button
-            label={busy ? "만드는 중…" : "채팅방 만들기"}
-            onPress={create}
-            disabled={busy || !roomName.trim()}
-          />
           {message ? <Text style={styles.error}>{message}</Text> : null}
         </Card>
       }
