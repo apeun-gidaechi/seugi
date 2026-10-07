@@ -9,6 +9,7 @@ import { CHAT_EMOJIS, type ChatMemberReadEvent, type ChatMessage, type ChatMessa
 import { Button } from "../components/ui";
 import { SeugiTextField } from "../design-system/TextField";
 import { SeugiAvatar } from "../design-system/Avatar";
+import { ChatNotificationToggle } from "../design-system/ChatNotificationToggle";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { ChatRoomManagement } from "../components/ChatRoomManagement";
 import { api } from "../services/api";
@@ -26,6 +27,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [otherProfile, setOtherProfile] = useState<LegacyProfile>();
   const [openingOtherChat, setOpeningOtherChat] = useState(false);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage>();
@@ -139,8 +141,8 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     return [item.message, ...(item.files ?? [])].some((part) => part.toLocaleLowerCase().includes(query));
   });
   return <View style={styles.chatPage}>
-    <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <SeugiTextField autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" fieldStyle={styles.searchField} style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : <TouchableOpacity accessibilityRole="button" onPress={() => void openOtherProfile()}><Text style={styles.link}>프로필</Text></TouchableOpacity>}</>}</View>
-    {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} onRoomChange={setCurrentRoom} onLeave={onBack} onOpenPersonalChat={(nextRoom) => { setManageMembers(false); onOpenRoom(nextRoom); }} /> : <>
+    <View style={styles.chatHeader}><TouchableOpacity onPress={back}><Text style={styles.link}>{searchMode ? "취소" : "‹ 목록"}</Text></TouchableOpacity>{searchMode ? <SeugiTextField autoFocus value={searchText} onChangeText={setSearchText} placeholder="메시지, 이미지, 파일 검색" fieldStyle={styles.searchField} style={styles.searchInput} returnKeyType="search" /> : <Text numberOfLines={1} style={[styles.rowTitle, styles.chatTitle]}>{currentRoom.name}</Text>}{searchMode ? <TouchableOpacity onPress={closeSearch}><Text style={styles.link}>완료</Text></TouchableOpacity> : <><TouchableOpacity onPress={() => setSearchMode(true)}><Text style={styles.link}>⌕</Text></TouchableOpacity>{Platform.OS === "android" && currentRoom.type !== "GROUP" ? <ChatNotificationToggle enabled={notificationEnabled} onToggle={() => setNotificationEnabled((value) => !value)} /> : null}{currentRoom.type === "GROUP" ? <TouchableOpacity onPress={() => setManageMembers((value) => !value)}><Text style={styles.link}>{manageMembers ? "닫기" : "구성원"}</Text></TouchableOpacity> : <TouchableOpacity accessibilityRole="button" onPress={() => void openOtherProfile()}><Text style={styles.link}>프로필</Text></TouchableOpacity>}</>}</View>
+    {manageMembers ? <ChatRoomManagement room={currentRoom} memberId={memberId} notificationEnabled={notificationEnabled} onNotificationToggle={() => setNotificationEnabled((value) => !value)} showNotificationToggle={Platform.OS === "android"} onRoomChange={setCurrentRoom} onLeave={onBack} onOpenPersonalChat={(nextRoom) => { setManageMembers(false); onOpenRoom(nextRoom); }} /> : <>
       <FlatList style={styles.content} data={visibleMessages} keyExtractor={(item) => item.id} ListEmptyComponent={searchText.trim() ? <Text style={styles.emptySearch}>검색 결과가 없습니다.</Text> : null} ListHeaderComponent={hasOlderMessages ? <Button label={loadingOlderMessages ? "불러오는 중…" : "이전 대화 불러오기"} kind="secondary" onPress={() => void loadOlderMessages()} disabled={loadingOlderMessages} /> : null}
         ListFooterComponent={failedOutgoing.length ? <View>{failedOutgoing.map((failed) => <View key={failed.id} style={styles.failedMessage}><View style={styles.failedMessageText}><Text style={styles.error}>메시지를 보내지 못했습니다.</Text><Text numberOfLines={2} style={styles.muted}>{failed.type === "IMG" ? "사진 첨부" : failed.type === "FILE" ? "파일 첨부" : failed.message}</Text></View><TouchableOpacity disabled={sending} onPress={() => deliver(failed.message, failed.files, failed.type, failed.id)}><Text style={styles.link}>{sending ? "재전송 중…" : "재전송"}</Text></TouchableOpacity><TouchableOpacity disabled={sending} onPress={() => setFailedOutgoing((items) => items.filter((item) => item.id !== failed.id))}><Text style={styles.muted}>닫기</Text></TouchableOpacity></View>)}</View> : null}
         renderItem={({ item, index }) => {
