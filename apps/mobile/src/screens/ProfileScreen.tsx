@@ -8,7 +8,11 @@ import { CreateWorkspaceCard, PendingWorkspaceRequests } from "./WorkspaceSetupS
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
-export function ProfileScreen({ workspace, onLogout }: { workspace: Workspace; onLogout: () => void | Promise<void> }) {
+export function ProfileScreen({ workspace, onOpenSettings }: { workspace: Workspace; onOpenSettings: () => void }) {
+  return <ScrollView style={styles.content}><ProfileEditor workspace={workspace} /><Card title="계정"><Button label="설정" kind="secondary" onPress={onOpenSettings} /></Card></ScrollView>;
+}
+
+export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Promise<void> }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const signOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
@@ -17,11 +21,7 @@ export function ProfileScreen({ workspace, onLogout }: { workspace: Workspace; o
     { text: "취소", style: "cancel" },
     { text: "탈퇴", style: "destructive", onPress: () => { void (async () => { setBusy(true); setMessage(""); try { await api.removeMember(); await onLogout(); } catch (e) { setMessage(e instanceof Error ? e.message : "회원 탈퇴에 실패했습니다"); } finally { setBusy(false); } })(); } },
   ]);
-  return <ScrollView style={styles.content}><ProfileEditor workspace={workspace} />
-    <Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card>
-    <Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} />
-    <Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />
-  </ScrollView>;
+  return <ScrollView style={styles.content}><Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card><Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} /><Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView>;
 }
 
 export type WorkspaceSection = "workspaceEdit" | "workspaceMembers" | "workspaceJoinRequests" | "workspaceInvite" | "workspaceNotifications" | "workspaceOrganization" | "workspacePending" | "workspaceCreate" | "workspaceJoin";

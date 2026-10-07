@@ -22,6 +22,7 @@ import {
 import { NoticeEditorScreen, NoticesScreen } from "./NoticesScreen";
 import {
   ProfileScreen,
+  AccountSettingsScreen,
   WorkspaceCreateScreen,
   WorkspaceDetailScreen,
   WorkspaceEditScreen,
@@ -50,7 +51,7 @@ const tabTitles: Record<Tab, string> = {
   notice: "알림",
   profile: "프로필",
 };
-type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | WorkspaceSection;
+type AppDetail = HomeDetail | "createRoom" | "createTask" | "createNotice" | "editNotice" | "accountSettings" | WorkspaceSection;
 const detailTitles: Record<AppDetail, string> = {
   meals: "급식",
   timetable: "시간표",
@@ -61,6 +62,7 @@ const detailTitles: Record<AppDetail, string> = {
   createTask: "과제 만들기",
   createNotice: "공지 작성",
   editNotice: "공지 수정",
+  accountSettings: "설정",
   workspaceEdit: "학교 정보 수정",
   workspaceMembers: "구성원",
   workspaceJoinRequests: "가입 신청 관리",
@@ -152,6 +154,7 @@ export function AuthenticatedAppShell({
       {detail === "workspacePending" ? <WorkspacePendingScreen onReload={onReload} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
       {detail === "workspaceJoin" ? <WorkspaceJoinScreen /> : null}
+      {detail === "accountSettings" ? <AccountSettingsScreen onLogout={onLogout} /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
           workspace={workspace}
@@ -190,7 +193,7 @@ export function AuthenticatedAppShell({
       {!detail && tab === "profile" ? (
         <ProfileScreen
           workspace={workspace}
-          onLogout={onLogout}
+          onOpenSettings={() => pushDetail("accountSettings")}
         />
       ) : null}
 
