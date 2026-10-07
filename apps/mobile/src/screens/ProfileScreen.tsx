@@ -156,7 +156,16 @@ function WorkspaceNavigationRow({ title, onPress }: { title: string; onPress: ()
 }
 
 export function WorkspaceGeneralScreen() {
-  const leaveWorkspace = () => Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
+  const leaveWorkspace = () => {
+    if (Platform.OS === "ios") {
+      Alert.alert("정말 학교를 나가시겠습니까?", "나간 후에는\n다시 정보를 되돌릴 수 없습니다", [
+        { text: "나가기", style: "destructive", onPress: () => undefined },
+        { text: "취소", style: "cancel" },
+      ]);
+      return;
+    }
+    Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
+  };
   return <ScrollView style={styles.content}><TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}><Text style={styles.leaveWorkspace}>학교 나가기</Text><Text style={styles.muted}>›</Text></TouchableOpacity></ScrollView>;
 }
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: import("@seugi/contracts").Room) => void }) { return <WorkspaceMembersDestination workspace={workspace} onOpenRoom={onOpenRoom} />; }

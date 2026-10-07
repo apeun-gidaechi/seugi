@@ -23,7 +23,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace members | `WorkspaceMembersScreen` | Teacher/student segmented list, member avatars/admin marks, profile sheet, and start-personal-chat action now match native interaction structure; device QA pending |
 | Workspace invitation / join requests | `WorkspaceInviteScreen` with role-filtered multi-select and bulk approve/reject actions | Batch request handling and selection-state clearing match the existing web/API contract; native avatar rows and confirmation prompts restored; device QA pending |
 | Workspace notification settings | `WorkspaceNotificationsScreen` | Replaced generic settings card/button with the native single-row “전체 알림 허용” toggle layout; device QA pending |
-| Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
+| Workspace general settings | `WorkspaceGeneralScreen` | Android demo-mode failure alert and iOS confirmation-only alert now follow their platform sources; device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
 | Join workspace / role | `workspaceJoin` destination with shared illustrated `WorkspaceRoleSelection` | Standalone shell destination; device QA pending |
 | Join workspace / invite code | `workspaceJoinCode` destination | Standalone shell destination; code search transitions to confirmation; device QA pending |
