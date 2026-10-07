@@ -48,14 +48,18 @@ test("shared API client builds query and parameter URLs consistently from its co
       api.profileOfOther("workspace-id", "member-id"),
       api.messages("room-id", "2026-10-07T12:00:00Z"),
       api.meals("workspace-id", 2026, 10),
+      api.meals("workspace id", 2026),
       api.schedulesForMonth("workspace-id", 10),
+      api.workspaceDetails("school/id"),
     ]);
     assert.deepEqual(paths.sort(), [
       "/chat/group/search?workspace=workspace%20id&word=hello%20world",
       "/message/search/room-id?timestamp=2026-10-07T12%3A00%3A00Z",
       "/meal/all?workspaceId=workspace-id&year=2026&month=10",
+      "/meal/all?workspaceId=workspace%20id",
       "/profile/others?workspaceId=workspace-id&memberId=member-id",
       "/schedule/month?workspaceId=workspace-id&month=10",
+      "/workspace/school%2Fid",
     ].sort());
   } finally {
     globalThis.fetch = originalFetch;
