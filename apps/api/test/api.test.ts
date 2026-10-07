@@ -288,8 +288,9 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   const notification = await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } });
   assert.equal(notification.statusCode, 200);
   const notificationId = notification.json().data.id as string;
-  assert.equal((await app.inject({ method: "PATCH", url: "/notification", headers: teacherHeaders, payload: { id: notificationId, workspaceId, title: "시험 일정", content: "다음 주 시험입니다" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: "/notification", headers: teacherHeaders, payload: { id: notificationId, workspaceId: "00000000-0000-4000-8000-000000000099", title: "시험 일정", content: "다음 주 시험입니다" } })).statusCode, 200);
   assert.equal(store.notifications.get(notificationId)?.title, "시험 일정");
+  assert.equal(store.notifications.get(notificationId)?.workspaceId, workspaceId);
   assert.equal((await app.inject({ method: "DELETE", url: `/notification/${workspaceId}/${notificationId}`, headers: teacherHeaders })).statusCode, 200);
   assert.equal(store.notifications.has(notificationId), false);
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "교사 방", memberIds: [teacherId] } })).json().data as string;

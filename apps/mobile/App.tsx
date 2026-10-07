@@ -220,7 +220,7 @@ function NoticeEditor({ workspace, initial, onSaved, onCancel }: { workspace: Wo
     if (!title.trim() || !content.trim() || busy) return;
     setBusy(true); setNotice("");
     try {
-      if (initial) await api.updateNotification({ id: initial.id, workspaceId: workspace.id, title: title.trim(), content: content.trim() });
+      if (initial) await api.updateNotification({ id: initial.id, title: title.trim(), content: content.trim() });
       else await api.createNotification({ workspaceId: workspace.id, title: title.trim(), content: content.trim() });
       if (!initial) { setTitle(""); setContent(""); }
       await onSaved();

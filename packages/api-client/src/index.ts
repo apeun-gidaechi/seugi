@@ -70,7 +70,7 @@ export class SeugiApi {
   deleteMessage(roomId: string, messageId: string) { return this.request<void>("/message/delete", { method: "DELETE", body: JSON.stringify({ roomId, messageId }) }); }
   notifications(workspaceId: string) { return this.request<Notification[]>(`/notification/${workspaceId}`); }
   createNotification(input: { workspaceId: string; title: string; content: string }) { return this.request<Notification>("/notification", { method: "POST", body: JSON.stringify(input) }); }
-  updateNotification(input: { id: string; workspaceId: string; title: string; content: string }) { return this.request<void>("/notification", { method: "PATCH", body: JSON.stringify(input) }); }
+  updateNotification(input: { id: string; title: string; content: string }) { return this.request<void>("/notification", { method: "PATCH", body: JSON.stringify(input) }); }
   deleteNotification(workspaceId: string, id: string) { return this.request<void>(`/notification/${encodeURIComponent(workspaceId)}/${encodeURIComponent(id)}`, { method: "DELETE" }); }
   toggleNotificationEmoji(notificationId: string, emoji: string) { return this.request<void>("/notification/emoji", { method: "PATCH", body: JSON.stringify({ notificationId, emoji }) }); }
   tasks(workspaceId: string) { return this.request<Task[]>(`/task/${workspaceId}`); }
