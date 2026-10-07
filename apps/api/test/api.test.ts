@@ -289,7 +289,9 @@ test("workspace endpoints accept and return the original desktop and Android fie
   assert.equal(listed.json().data[0].workspaceName, "호환 학교");
   assert.equal(listed.json().data[0].workspaceImageUrl, "https://example.com/school.png");
   const code = store.workspaces.get(workspaceId)?.code;
-  assert.equal((await app.inject({ url: `/workspace/search/${code}` })).statusCode, 401);
+  const publicSearch = await app.inject({ url: `/workspace/search/${code}` });
+  assert.equal(publicSearch.statusCode, 200);
+  assert.equal(publicSearch.json().data.workspaceId, workspaceId);
   const searched = await app.inject({ url: `/workspace/search/${code}`, headers });
   assert.deepEqual(Object.keys(searched.json().data).sort(), ["studentCount", "teacherCount", "workspaceId", "workspaceImageUrl", "workspaceName"]);
   assert.equal(searched.json().data.workspaceName, "호환 학교");
@@ -636,6 +638,9 @@ test("workspace admins can approve or reject matching join requests, while membe
   const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const applicantHeaders = { authorization: `Bearer ${applicant.json().data.accessToken}` }; const outsiderHeaders = { authorization: `Bearer ${outsider.json().data.accessToken}` };
   const created = await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "가입 흐름 학교" } }); const workspaceId = created.json().data as string;
   const code = (await app.inject({ method: "GET", url: `/workspace/code/${workspaceId}`, headers: ownerHeaders })).json().data as string;
+  const publicSearch = await app.inject({ url: `/workspace/search/${code}` });
+  assert.equal(publicSearch.statusCode, 200);
+  assert.equal(publicSearch.json().data.workspaceId, workspaceId);
   const applicantId = app.jwt.decode<{ sub: string }>(applicant.json().data.accessToken)?.sub; assert.ok(applicantId);
   const unsupportedRole = await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code, role: "MIDDLE_ADMIN" } });
   assert.equal(unsupportedRole.statusCode, 400);
@@ -689,13 +694,29 @@ test("failed multi-member approval rolls back every workspace change", async () 
 
 test("workspace data rejects unauthenticated and non-member access with HTTP semantics", async () => {
   const store = new Store(); const app = await buildApp(store);
-  for (const email of ["owner@example.com", "other@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  for (const email of ["owner@example.com", "other@example.com", "student@example.com", "teacher@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
   const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "owner@example.com", password: "password123", code: "123456" } });
   const other = await app.inject({ method: "POST", url: "/member/register", payload: { email: "other@example.com", password: "password123", code: "123456" } });
+  const student = await app.inject({ method: "POST", url: "/member/register", payload: { email: "student@example.com", password: "password123", code: "123456" } });
+  const teacher = await app.inject({ method: "POST", url: "/member/register", payload: { email: "teacher@example.com", password: "password123", code: "123456" } });
   const workspace = await app.inject({ method: "POST", url: "/workspace", headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { name: "권한 학교" } });
   const ownerId = app.jwt.decode<{ sub: string }>(owner.json().data.accessToken)?.sub; assert.ok(ownerId);
   const otherId = app.jwt.decode<{ sub: string }>(other.json().data.accessToken)?.sub; assert.ok(otherId);
-  const workspaceUrl = `/workspace/${workspace.json().data}/notifications`;
+  const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)?.sub; assert.ok(studentId);
+  const teacherId = app.jwt.decode<{ sub: string }>(teacher.json().data.accessToken)?.sub; assert.ok(teacherId);
+  const workspaceId = workspace.json().data as string;
+  const workspaceRecord = store.workspaces.get(workspaceId); assert.ok(workspaceRecord);
+  workspaceRecord.members.push(studentId, teacherId);
+  store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT" });
+  store.profiles.set(`${workspaceId}:${teacherId}`, { ...store.requireMember(teacherId), workspaceId, role: "TEACHER" });
+  const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` };
+  const studentHeaders = { authorization: `Bearer ${student.json().data.accessToken}` };
+  const teacherHeaders = { authorization: `Bearer ${teacher.json().data.accessToken}` };
+  const workspaceUrl = `/workspace/${workspaceId}/notifications`;
+  const codeUrl = `/workspace/code/${workspaceId}`;
+  assert.equal((await app.inject({ url: codeUrl, headers: ownerHeaders })).statusCode, 200);
+  assert.equal((await app.inject({ url: codeUrl, headers: teacherHeaders })).statusCode, 200);
+  assert.equal((await app.inject({ url: codeUrl, headers: studentHeaders })).statusCode, 403);
   assert.equal((await app.inject({ method: "GET", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` } })).json().data, true);
   assert.equal((await app.inject({ method: "PATCH", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` }, payload: { receivePush: false } })).json().data, false);
   assert.equal((await app.inject({ method: "GET", url: workspaceUrl, headers: { authorization: `Bearer ${owner.json().data.accessToken}` } })).json().data, false);

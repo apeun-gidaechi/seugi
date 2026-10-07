@@ -535,14 +535,17 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       const workspace = store.requireWorkspace(
         workspaceParam.parse(request.params).workspaceId,
       );
-      if (!workspace.members.includes(request.user.sub))
+      const role = roleIn(workspace, request.user.sub);
+      if (
+        !workspace.members.includes(request.user.sub) ||
+        !["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(role ?? "")
+      )
         throw new Error("권한이 없습니다");
       return ok("초대 코드 조회 성공", workspace.code);
     },
   );
   app.get(
     API_SPEC.searchWorkspace.path,
-    { preHandler: auth },
     async (request) => {
       const workspace = [...store.workspaces.values()].find(
         (item) =>
