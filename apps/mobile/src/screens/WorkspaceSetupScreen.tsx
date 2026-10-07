@@ -1,15 +1,48 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
-import type { Workspace } from "@seugi/contracts";
+import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
 import { api } from "../services/api";
 
 export function WorkspaceSetupScreen({ onCreated, onLogout }: { onCreated: () => Promise<void>; onLogout: () => Promise<void> }) {
-  const [code, setCode] = useState(""); const [joinRole, setJoinRole] = useState<WorkspaceJoinRole>("STUDENT"); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
-  const join = async () => { if (!code.trim() || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: code.trim().toUpperCase(), role: joinRole }); setMessage("가입 신청을 보냈습니다. 아래 대기 목록에서 상태를 확인할 수 있습니다."); setCode(""); } catch (e) { setMessage(e instanceof Error ? e.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
-  return <SafeAreaView style={styles.auth}><Text style={styles.logo}>스기</Text><Text style={styles.subtitle}>학교 워크스페이스를 만들거나 초대 코드로 가입하세요.</Text><CreateWorkspaceCard onCreated={onCreated} /><Card title="초대 코드로 가입"><TextInput value={code} onChangeText={setCode} style={styles.input} autoCapitalize="characters" placeholder="초대 코드" /><WorkspaceRolePicker value={joinRole} onChange={setJoinRole} /><Button label={busy ? "처리 중…" : "가입 신청"} onPress={join} disabled={busy || !code.trim()} /></Card>{message ? <Text style={styles.answer}>{message}</Text> : null}<PendingWorkspaceRequests onChanged={onCreated} /><Button label="새로고침" kind="secondary" onPress={onCreated} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></SafeAreaView>;
+  const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting">("start");
+  const [role, setRole] = useState<WorkspaceJoinRole>("STUDENT");
+  const [code, setCode] = useState("");
+  const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (screen !== "waiting") return;
+    const timer = setInterval(() => { void onCreated().catch(() => undefined); }, 10_000);
+    return () => clearInterval(timer);
+  }, [screen, onCreated]);
+  const back = () => setScreen((current) => current === "confirm" ? "code" : current === "code" ? "role" : current === "role" || current === "create" ? "start" : "start");
+  const search = async () => {
+    if (code.trim().length !== 6 || busy) return;
+    setBusy(true); setMessage("");
+    try { const result = await api.searchWorkspace(code.trim().toUpperCase()); setWorkspace(result.data); setScreen("confirm"); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); }
+    finally { setBusy(false); }
+  };
+  const join = async () => {
+    if (!workspace || busy) return;
+    setBusy(true); setMessage("");
+    try { await api.joinWorkspace({ code: code.trim().toUpperCase(), role }); await onCreated(); setScreen("waiting"); }
+    catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); }
+    finally { setBusy(false); }
+  };
+  return <SafeAreaView style={styles.auth}>
+    {screen !== "start" && screen !== "waiting" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
+    <Text style={styles.logo}>스기</Text>
+    {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
+    {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
+    {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
+    {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><TextInput value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} style={styles.input} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
+    {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
+    {screen === "waiting" ? <><Text style={styles.subtitle}>가입 승인 대기</Text><Text style={styles.muted}>관리자가 가입 신청을 승인하면 학교 화면으로 이동합니다.</Text><ScrollView style={styles.flow}><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView><Button label="새로고침" kind="secondary" onPress={onCreated} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
+  </SafeAreaView>;
 }
 
 export function CreateWorkspaceCard({ onCreated }: { onCreated: () => Promise<void> }) {
@@ -44,6 +77,14 @@ const styles = StyleSheet.create({
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   link: { color: SeugiColor.Primary500 },
+  flow: { flexGrow: 0, maxHeight: "70%" },
+  roleCard: { backgroundColor: SeugiColor.Gray100, borderRadius: 12, borderWidth: 1, borderColor: SeugiColor.Gray100, padding: 20, marginBottom: 10 },
+  roleCardSelected: { borderColor: SeugiColor.Primary500 },
+  roleText: { color: SeugiColor.Gray600, textAlign: "center", fontSize: 16 },
+  selectedRole: { color: SeugiColor.Primary500, textAlign: "center", fontSize: 16, fontWeight: "700" },
+  schoolCard: { backgroundColor: SeugiColor.White, borderRadius: 14, padding: 20, alignItems: "center", gap: 8 },
+  schoolImage: { width: 76, height: 76, borderRadius: 38 },
+  schoolName: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700" },
   memberRow: { borderBottomWidth: 1, borderColor: SeugiColor.Gray100, paddingVertical: 12, gap: 8 },
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
