@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  BackHandler,
   SafeAreaView,
   Platform,
   StyleSheet,
@@ -106,6 +107,17 @@ export function AuthenticatedAppShell({
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
   const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); onTabChange(next); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (detailStack.length > 0) {
+        setDetailStack((current) => current.slice(0, -1));
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [activeConversation, detailStack.length]);
 
   return (
     <SafeAreaView style={styles.page}>

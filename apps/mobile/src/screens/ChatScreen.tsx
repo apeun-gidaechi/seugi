@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
   FlatList,
   StyleSheet,
   Text,
@@ -43,6 +44,15 @@ export function ChatScreen({
     refresh().catch(() => undefined);
   }, [refresh]);
   useEffect(() => { if (initialRoom) onConversationChange(initialRoom); }, [initialRoom?.id]);
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (!selected) return false;
+      setSelected(undefined);
+      onConversationChange(undefined);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [onConversationChange, selected]);
   const search = async (word = roomSearch) => {
     const requestId = ++searchRequest.current;
     setMessage("");
