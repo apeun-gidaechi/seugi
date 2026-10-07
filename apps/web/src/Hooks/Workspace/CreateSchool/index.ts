@@ -1,9 +1,11 @@
 import { useState, ChangeEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import createSchoolImg from '@/Assets/image/join-school/createshoolimg.svg';
 import { paths } from '@/Constants/paths';
 import Cookies from 'js-cookie';
+import { SeugiApiError } from '@seugi/api-client';
+import { uploadImage } from '@/Api/files';
+import { createWorkspace } from '@/Api/workspace';
 
 const index = () => {
     const navigate = useNavigate();
@@ -27,19 +29,15 @@ const index = () => {
         }
 
         try {
-            await SeugiCustomAxios.post(`/workspace/`, {
+            await createWorkspace({
                 workspaceName,
                 workspaceImageUrl: workspaceImageUrl ?? ''
             });
             navigate(paths.home);
 
         } catch (error) {
-            if (isAxiosError(error)) {
-                if (error.response && error.response.status === 401) {
-                    navigate(paths.login);
-                } else {
-                    console.error('Error sending code:', error.response?.data);
-                }
+            if (error instanceof SeugiApiError && error.status === 401) {
+                navigate(paths.login);
             } else {
                 console.error('Error:', error);
             }
@@ -57,27 +55,15 @@ const index = () => {
         formData.append('file', e.target.files[0]);
 
         try {
-            const res = await SeugiCustomAxios.post(`/file/upload/IMG`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            setWorkspaceImageUrl(res.data.data.url);
+            const uploaded = await uploadImage(formData);
+            setWorkspaceImageUrl(uploaded.url);
         } catch (error) {
-            if (isAxiosError(error)) {
-                if (error.response && error.response.status === 401) {
-                    navigate(paths.login);
-                } else {
-                    console.error('Error uploading image:', error.response?.data);
-                }
+            if (error instanceof SeugiApiError && error.status === 401) {
+                navigate(paths.login);
             } else {
                 console.error('Error:', error);
             }
         }
-    };
-
-    const isAxiosError = (error: unknown): error is { response: { status: number, data: any } } => {
-        return (error as any).isAxiosError === true;
     };
 
     const Backclick = () => {

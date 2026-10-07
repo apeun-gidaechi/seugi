@@ -19,7 +19,7 @@ export class SeugiApi {
       const renewed = await this.refreshInFlight;
       if (renewed) return this.request<T>(path, init, false);
     }
-    if (!response.ok) throw new Error(payload.message);
+    if (!response.ok) throw new SeugiApiError(payload.message, response.status, payload);
     return payload;
   }
   sendVerification(email: string) { return this.request<void>(API_SPEC.sendVerification.pathFor(email)); }
@@ -34,7 +34,7 @@ export class SeugiApi {
   refreshAccessToken(refreshToken: string) { return this.request<string>(API_SPEC.refreshMember.pathFor(refreshToken), {}, false); }
   registerDeviceToken(token: string) { return this.request<void>(API_SPEC.addDeviceToken.path, { method: API_SPEC.addDeviceToken.method, body: JSON.stringify({ token }) }); }
   removeDeviceToken(token: string) { return this.request<void>(API_SPEC.removeDeviceToken.path, { method: API_SPEC.removeDeviceToken.method, body: JSON.stringify({ token }) }); }
-  logout(deviceToken?: string) { const input: LogoutMemberInput = { deviceToken }; return this.request<void>(API_SPEC.logoutMember.path, { method: API_SPEC.logoutMember.method, body: JSON.stringify(input) }); }
+  logout(deviceToken?: string, fcmToken?: string) { const input: LogoutMemberInput = { deviceToken, fcmToken }; return this.request<void>(API_SPEC.logoutMember.path, { method: API_SPEC.logoutMember.method, body: JSON.stringify(input) }); }
   removeMember() { return this.request<void>(API_SPEC.removeMember.path, { method: API_SPEC.removeMember.method }); }
   workspaces() { return this.request<Workspace[]>(API_SPEC.listWorkspaces.path); }
   myWaitingWorkspaces() { return this.request<Workspace[]>(API_SPEC.myWaitingWorkspaces.path); }
@@ -97,4 +97,11 @@ export class SeugiApi {
   schedules(workspaceId: string) { return this.request<Schedule[]>(API_SPEC.schedules.pathFor(workspaceId)); }
   schedulesForMonth(workspaceId: string, month: number) { return this.request<Schedule[]>(API_SPEC.monthSchedules.pathFor(workspaceId, month)); }
   askCatSeugi(message: string) { return this.request<string>(API_SPEC.askCatseugi.path, { method: API_SPEC.askCatseugi.method, body: JSON.stringify({ message }) }); }
+}
+
+export class SeugiApiError extends Error {
+  constructor(message: string, readonly status: number, readonly response: ApiResponse<unknown>) {
+    super(message);
+    this.name = "SeugiApiError";
+  }
 }

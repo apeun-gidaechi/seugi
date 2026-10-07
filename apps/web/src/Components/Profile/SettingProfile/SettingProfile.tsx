@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import * as S from '@/Components/Profile/SettingProfile/SettingProfile.style';
 import Correction from '@/Components/Profile/Correction/Correction';
 import PlusButtonImg from '@/Assets/image/profile/add_fill.svg';
@@ -7,7 +6,8 @@ import ProfileImg from '@/Assets/image/profile/Avatar.svg';
 import CorrectionImg from '@/Assets/image/profile/CorrectionImg.svg';
 import Arrow from '@/Assets/image/profile/arrow.svg';
 import Divider from '@/Assets/image/profile/ProflieDivider.svg';
-import { fetchingProfile, getMyInfos } from '@/Api/profile';
+import { fetchingProfile, logoutMember, removeMember, updateMember, updateProfile } from '@/Api/profile';
+import { uploadImage } from '@/Api/files';
 import Cookies from 'js-cookie';
 import Avatar from "@/Components/common/Avatar/Avatar";
 import { paths } from '@/Constants/paths';
@@ -34,7 +34,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
             try {
                 if (workspaceId) {
                     const profileRes = await fetchingProfile(workspaceId);
-                    setName(profileRes.nick);
+                    setName(profileRes.nick ?? '');
                     setBirth(profileRes.birth || birth);
                     setProfileImage(profileRes.profileImage || ProfileImg); 
                 } else {
@@ -55,12 +55,8 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
             formData.append('file', files[0]);
 
             try {
-                const res = await SeugiCustomAxios.post(`/file/upload/IMG`, formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                });
-                const newImageUrl = res.data.data.url;
+                const uploaded = await uploadImage(formData);
+                const newImageUrl = uploaded.url;
                 setProfileImage(newImageUrl);
 
                 await handleImageChange(newImageUrl);
@@ -74,8 +70,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
 
     const handleImageChange = async (newImageUrl: string) => {
         try {
-            const res = await SeugiCustomAxios.patch(`/member/edit`, { name, birth, picture: newImageUrl });
-            console.log('Image uploaded successfully', res.data);
+            await updateMember({ name, birth, picture: newImageUrl });
         } catch (error) {
             console.error('이미지 업로드 실패', error);
         }
@@ -90,7 +85,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
         }
 
         try {
-            await SeugiCustomAxios.post(`/member/logout`, { fcmToken });
+            await logoutMember(fcmToken);
             Cookies.remove('accessToken');
             Cookies.remove('refreshToken');
             Cookies.remove('workspaceId');
@@ -107,7 +102,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
                 return;
             }
 
-            await SeugiCustomAxios.patch(`/profile/${workspaceId}`, { nick: newName });
+            await updateProfile(workspaceId, { nick: newName });
             setName(newName);
             setIsEditing(false);
             onNameChange(newName);
@@ -119,7 +114,7 @@ const SettingProfile = ({ onClose, onNameChange }: SettingProfileProps) => {
     const handleSecession = async () => {
         window.confirm('정말 삭제하시겠습니까? 삭제하면 되돌릴 수 없습니다.');
         try {
-            await SeugiCustomAxios.delete(`/member/remove`);
+            await removeMember();
             localStorage.clear();
             window.location.href = paths.login;
         } catch (error) {

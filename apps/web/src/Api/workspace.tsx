@@ -23,3 +23,7 @@ export const getWorkspaceCode = async (verificationCode: string) => {
 export const joinWorkspace = async (input: { workspaceId?: string; workspaceCode?: string; role: "STUDENT" | "TEACHER" }) => {
     return withSeugiApi((api) => api.joinWorkspace(input));
 }
+
+export const createWorkspace = async (input: { workspaceName: string; workspaceImageUrl: string }) => {
+    return withSeugiApi((api) => api.createWorkspace(input));
+}

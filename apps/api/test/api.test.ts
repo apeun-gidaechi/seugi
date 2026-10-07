@@ -6,7 +6,7 @@ import test from "node:test";
 import { io } from "socket.io-client";
 import WebSocket from "ws";
 import type { ChatMessage } from "@seugi/contracts";
-import { SeugiApi } from "../../../packages/api-client/src/index.js";
+import { SeugiApi, SeugiApiError } from "../../../packages/api-client/src/index.js";
 import { buildApp } from "../src/app.js";
 import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
@@ -61,6 +61,21 @@ test("shared API client builds query and parameter URLs consistently from its co
       "/schedule/month?workspaceId=workspace-id&month=10",
       "/workspace/school%2Fid",
     ].sort());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("shared API client preserves HTTP status codes in typed errors", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response(JSON.stringify({ message: "권한이 없습니다" }), { status: 403, headers: { "content-type": "application/json" } })) as typeof fetch;
+  try {
+    await assert.rejects(new SeugiApi("https://api.example.com").workspaces(), (error: unknown) => {
+      assert.ok(error instanceof SeugiApiError);
+      assert.equal(error.status, 403);
+      assert.equal(error.message, "권한이 없습니다");
+      return true;
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
