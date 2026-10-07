@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, BackHandler, FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Member, Room } from "@seugi/contracts";
 import { Button, Card } from "./ui";
@@ -10,6 +10,15 @@ import { absoluteApiUrl } from "../utils/url";
 export function ChatRoomManagement({ room, memberId, onRoomChange, onLeave, onOpenPersonalChat }: { room: Room; memberId: string; onRoomChange: (room: Room) => void; onLeave: () => void; onOpenPersonalChat: (room: Room) => void }) {
   const [workspaceMembers, setWorkspaceMembers] = useState<Member[]>([]); const [selectedIds, setSelectedIds] = useState<string[]>([]); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [inviting, setInviting] = useState(false); const isAdmin = room.adminId === memberId;
   const [profile, setProfile] = useState<LegacyProfile>();
+  useEffect(() => {
+    if (!inviting) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      setInviting(false);
+      setSelectedIds([]);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [inviting]);
   const onRoomChangeRef = useRef(onRoomChange);
   onRoomChangeRef.current = onRoomChange;
   const refresh = useCallback(async () => { const [updated, members] = await Promise.all([api.groupRoom(room.id), api.workspaceMembers(room.workspaceId)]); if (updated.data) onRoomChangeRef.current(updated.data); setWorkspaceMembers(members.data ?? []); }, [room.id, room.workspaceId]);
