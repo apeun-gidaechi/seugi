@@ -424,6 +424,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       const input = normalizeWorkspaceInput(
         body(createWorkspaceSchema, request),
       );
+      const schoolInfo = await neis.schoolInfo(input.name);
       let code = createWorkspaceCode();
       while ([...store.workspaces.values()].some((workspace) => workspace.code === code)) {
         code = createWorkspaceCode();
@@ -435,6 +436,9 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         members: [request.user.sub],
         waitlist: [],
         ...input,
+        schoolCode: input.schoolCode ?? schoolInfo.schoolCode,
+        educationOfficeCode: input.educationOfficeCode ?? schoolInfo.educationOfficeCode,
+        schoolType: input.schoolType ?? schoolInfo.schoolType,
       };
       store.workspaces.set(workspace.id, workspace);
       return ok("워크스페이스 생성 성공", workspace.id);

@@ -4,6 +4,23 @@ import { NeisClient } from "../src/neis.js";
 
 const workspace = { id: "workspace", code: "CODE", name: "스기고", ownerId: "owner", members: [], waitlist: [], educationOfficeCode: "G10", schoolCode: "7010569" };
 
+test("NEIS school info resolves the workspace identifiers used by meals and timetables", async () => {
+  let requested = "";
+  const client = new NeisClient("test-key", async (input) => {
+    requested = String(input);
+    return new Response(JSON.stringify({ schoolInfo: [{}, { row: [{ ATPT_OFCDC_SC_CODE: "G10", SD_SCHUL_CODE: "7010569", SCHUL_KND_SC_NM: "고등학교" }] }] }));
+  });
+  assert.deepEqual(await client.schoolInfo("스기고"), { educationOfficeCode: "G10", schoolCode: "7010569", schoolType: "고등학교" });
+  const url = new URL(requested);
+  assert.equal(url.pathname, "/hub/schoolInfo");
+  assert.equal(url.searchParams.get("SCHUL_NM"), "스기고");
+});
+
+test("NEIS school info preserves the native unknown-school fallback when unavailable", async () => {
+  const client = new NeisClient("");
+  assert.deepEqual(await client.schoolInfo("없는 학교"), { educationOfficeCode: "x", schoolCode: "x", schoolType: "기타" });
+});
+
 test("NEIS client converts meal rows into Seugi meal contracts", async () => {
   const client = new NeisClient("test-key", async () => new Response(JSON.stringify({ mealServiceDietInfo: [{}, { row: [{ MLSV_YMD: "20260102", MMEAL_SC_NM: "중식", DDISH_NM: "밥.1.2.<br/>국.3.", CAL_INFO: "500 Kcal" }] }] }))); 
   const meals = await client.meals(workspace, "20260101", "20260131");

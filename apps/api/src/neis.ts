@@ -6,6 +6,18 @@ type NeisPayload = Record<string, Array<{ row?: NeisRow[] }>>;
 /** Minimal adapter for the public Korean NEIS Open API used by the Kotlin server. */
 export class NeisClient {
   constructor(private readonly key = process.env.NEIS_API_KEY, private readonly fetcher = fetch) {}
+  async schoolInfo(name: string): Promise<Pick<Workspace, "educationOfficeCode" | "schoolCode" | "schoolType">> {
+    const fallback = { educationOfficeCode: "x", schoolCode: "x", schoolType: "기타" };
+    if (!this.key) return fallback;
+    const rows = await this.rows("schoolInfo", { KEY: this.key, Type: "json", pIndex: "1", pSize: "5", SCHUL_NM: name });
+    const school = rows[0];
+    if (!school) return fallback;
+    return {
+      educationOfficeCode: school.ATPT_OFCDC_SC_CODE || fallback.educationOfficeCode,
+      schoolCode: school.SD_SCHUL_CODE || fallback.schoolCode,
+      schoolType: school.SCHUL_KND_SC_NM || fallback.schoolType,
+    };
+  }
   private school(workspace: Workspace) {
     if (!this.key) throw new Error("NEIS_API_KEY is not configured");
     if (!workspace.educationOfficeCode || !workspace.schoolCode) throw new Error("워크스페이스에 교육청 코드와 학교 코드가 필요합니다");
