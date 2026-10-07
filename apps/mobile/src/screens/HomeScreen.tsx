@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  Alert,
   FlatList,
   Linking,
+  Modal,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   StyleSheet,
@@ -185,7 +188,7 @@ function HomeCard({ title, icon, children, onPress }: { title: string; icon: Hom
   </View>;
 }
 
-export function TimetableWeek({ entries }: { entries: Timetable[] }) {
+export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entries: Timetable[]; onSelectCell?: (date: string, time: string) => void; onSelectEntry?: (entry: Timetable) => void }) {
   const today = new Date();
   const monday = new Date(
     today.getFullYear(),
@@ -239,24 +242,24 @@ export function TimetableWeek({ entries }: { entries: Timetable[] }) {
           </Text>
         ))}
       </View>
-      {periods.length ? (
-        periods.map((period) => (
+      {(periods.length ? periods : ["1", "2", "3", "4", "5", "6", "7"]).map((period) => (
           <View key={period} style={rowStyle}>
             <Text style={periodStyle}>{period}</Text>
             {days.map((date) => (
-              <Text
+              <TouchableOpacity
                 key={`${date}-${period}`}
                 style={cellStyle}
-                numberOfLines={2}
+                onPress={() => {
+                  const entry = entries.find((item) => item.date.slice(0, 10) === date && item.time === period);
+                  if (entry) onSelectEntry?.(entry);
+                  else onSelectCell?.(date, period);
+                }}
               >
-                {subjectAt(date, period)}
-              </Text>
+                <Text numberOfLines={2}>{subjectAt(date, period) || (onSelectCell ? "+" : "")}</Text>
+              </TouchableOpacity>
             ))}
           </View>
-        ))
-      ) : (
-        <Text style={styles.muted}>이번 주 시간표가 없습니다.</Text>
-      )}
+        ))}
     </View>
   );
 }
@@ -265,6 +268,12 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
   const [entries, setEntries] = useState<Timetable[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [canEdit, setCanEdit] = useState(false);
+  const [grade, setGrade] = useState("1");
+  const [classNum, setClassNum] = useState("1");
+  const [editing, setEditing] = useState<Timetable>();
+  const [draft, setDraft] = useState("");
+  const [slot, setSlot] = useState<{ date: string; time: string }>();
   const refresh = useCallback(async () => {
     setBusy(true);
     setError("");
@@ -284,13 +293,35 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
+      if (active) setCanEdit(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(profile.data?.role ?? ""));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [workspace.id, workspace.ownerId]);
+  const saveSubject = async () => {
+    if (!draft.trim() || busy) return;
+    setBusy(true); setError("");
+    try {
+      if (editing) await api.updateTimetable(editing.id, draft.trim());
+      else if (slot) await api.createTimetable({ workspaceId: workspace.id, grade, classNum, time: slot.time, subject: draft.trim(), date: slot.date });
+      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 저장하지 못했습니다"); }
+    finally { setBusy(false); }
+  };
+  const removeEntry = (entry: Timetable) => Alert.alert("시간표 삭제", `${entry.date} ${entry.time}교시 ${entry.subject}을(를) 삭제할까요?`, [
+    { text: "취소", style: "cancel" },
+    { text: "삭제", style: "destructive", onPress: () => { void api.deleteTimetable(entry.id).then(refresh).catch((reason) => setError(reason instanceof Error ? reason.message : "시간표를 삭제하지 못했습니다")); } },
+  ]);
   return (
     <ScrollView style={styles.content}>
       <Card title="주간 시간표">
         <Text style={styles.muted}>월요일부터 금요일까지</Text>
         {busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TimetableWeek entries={entries} />
+        {canEdit ? <View style={styles.manageRow}><TextInput value={grade} onChangeText={setGrade} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><TextInput value={classNum} onChangeText={setClassNum} keyboardType="number-pad" style={styles.classInput} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
+        <TimetableWeek entries={entries.filter((entry) => !canEdit || (entry.grade === grade && entry.classNum === classNum))} onSelectCell={canEdit ? (date, time) => { setSlot({ date, time }); setDraft(""); } : undefined} onSelectEntry={canEdit ? (entry) => { Alert.alert(entry.subject, `${entry.date} · ${entry.time}교시`, [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => removeEntry(entry) }, { text: "수정", onPress: () => { setEditing(entry); setDraft(entry.subject); } }]); } : undefined} />
         <Button
           label={busy ? "불러오는 중…" : "시간표 새로고침"}
           kind="secondary"
@@ -298,6 +329,7 @@ export function TimetablePage({ workspace }: { workspace: Workspace }) {
           disabled={busy}
         />
       </Card>
+      <Modal visible={!!slot || !!editing} transparent animationType="fade" onRequestClose={() => { setSlot(undefined); setEditing(undefined); }}><View style={styles.timetableModal}><View style={styles.timetableDialog}><Text style={styles.dialogTitle}>{editing ? "시간표 수정" : "시간표 만들기"}</Text><Text style={styles.muted}>{editing ? `${editing.date} · ${editing.time}교시` : slot ? `${slot.date} · ${slot.time}교시 · ${grade}학년 ${classNum}반` : ""}</Text><TextInput value={draft} onChangeText={setDraft} style={styles.subjectInput} placeholder="과목 이름" maxLength={120} /><View style={styles.modalActions}><Button label="취소" kind="secondary" onPress={() => { setSlot(undefined); setEditing(undefined); }} /><Button label={busy ? "저장 중…" : "완료"} onPress={() => void saveSubject()} disabled={busy || !draft.trim()} />{editing ? <Button label="삭제" kind="secondary" onPress={() => { removeEntry(editing); setEditing(undefined); }} /> : null}</View></View></View></Modal>
     </ScrollView>
   );
 }
@@ -504,6 +536,13 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
+  manageRow: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 10 },
+  classInput: { width: 42, textAlign: "center", borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 8, padding: 6 },
+  timetableModal: { flex: 1, justifyContent: "center", padding: 22, backgroundColor: "rgba(0,0,0,0.38)" },
+  timetableDialog: { backgroundColor: SeugiColor.White, padding: 20, borderRadius: 16, gap: 12 },
+  dialogTitle: { color: SeugiColor.Gray800, fontWeight: "700", fontSize: 18 },
+  subjectInput: { borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 12 },
+  modalActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   mealPanel: { backgroundColor: SeugiColor.White, borderRadius: 18, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, marginTop: 8 },
   mealSection: { borderTopWidth: 1, borderTopColor: SeugiColor.Gray100, marginTop: 12, paddingTop: 12 },
