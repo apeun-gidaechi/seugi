@@ -7,6 +7,7 @@ import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 import { SeugiTopBar } from "../design-system/TopBar";
+import { SeugiAvatar } from "../design-system/Avatar";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
@@ -80,7 +81,7 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
     <Card title="프로필 정보">
       <View style={styles.settingsIdentity}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="프로필 사진 변경" onPress={() => void changePhoto()} disabled={busy}>
-          {picture ? <Image source={{ uri: absoluteApiUrl(picture) }} style={styles.settingsAvatar} /> : <View style={styles.settingsAvatarPlaceholder}><Text style={styles.link}>사진 추가</Text></View>}
+          <SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} fallbackText="사진 추가" imageStyle={styles.settingsAvatar} fallbackStyle={styles.settingsAvatarPlaceholder} labelStyle={styles.link} />
         </TouchableOpacity>
         <View style={styles.settingsIdentityName}><Text style={styles.profileNameText}>{name || "이름"}</Text><TouchableOpacity accessibilityRole="button" onPress={() => { setDraft(name); setEditingName(true); }} disabled={busy}><Text style={styles.link}>이름 수정</Text></TouchableOpacity></View>
       </View>
@@ -245,7 +246,7 @@ function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; on
     } finally { setBusy(false); }
   };
   return <Card title="내 프로필">
-    <View style={styles.profileHeader}>{picture ? <Image source={{ uri: absoluteApiUrl(picture) }} style={styles.profilePicture} /> : <View style={styles.profilePictureEmpty}><Text style={styles.link}>프로필</Text></View>}<View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
+    <View style={styles.profileHeader}><SeugiAvatar uri={picture ? absoluteApiUrl(picture) : undefined} name={name} fallbackText="프로필" imageStyle={styles.profilePicture} fallbackStyle={styles.profilePictureEmpty} labelStyle={styles.link} /><View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
     {profileRows.map(([key, title, value]) => <TouchableOpacity key={key} accessibilityRole="button" style={styles.profileRow} onPress={() => openEditor(key as NonNullable<typeof editing>, value)}><View><Text style={styles.profileLabel}>{title}</Text><Text style={styles.profileValue}>{value || "미설정"}</Text></View><Text style={styles.profileEdit}>✎</Text></TouchableOpacity>)}
     {notice ? <Text style={notice.endsWith("수정 성공") ? styles.answer : styles.error}>{notice}</Text> : null}
     <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => { if (!busy) setEditing(undefined); }}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>{fieldTitle} 수정</Text><SeugiTextField autoFocus value={draft} onChangeText={setDraft} containerStyle={styles.inputSpacing} placeholder={`${fieldTitle} 입력`} multiline={editing === "status"} keyboardType={editing === "phone" || editing === "wire" ? Platform.OS === "ios" ? "number-pad" : "phone-pad" : "default"} editable={!busy} maxLength={editing === "status" ? 160 : editing === "nick" ? 40 : editing === "spot" ? 80 : editing === "belong" || editing === "location" ? 120 : Platform.OS === "ios" && (editing === "phone" || editing === "wire") ? 11 : 40} /><View style={styles.dialogActions}><TouchableOpacity disabled={busy} onPress={() => setEditing(undefined)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity disabled={busy} onPress={() => void commitDraft()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
@@ -338,7 +339,7 @@ function JoinRequests({ workspace }: { workspace: Workspace }) {
         disabled={busy}
         style={styles.requestMemberRow}
       >
-        {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.requestAvatar} /> : <View style={styles.requestAvatarFallback}><Text style={styles.muted}>{member.name.slice(0, 1)}</Text></View>}
+        <SeugiAvatar uri={member.picture ? absoluteApiUrl(member.picture) : undefined} name={member.name} imageStyle={styles.requestAvatar} fallbackStyle={styles.requestAvatarFallback} labelStyle={styles.muted} />
         <View style={styles.requestMemberInfo}><Text style={styles.rowTitle}>{member.name}</Text>{member.email ? <Text numberOfLines={1} style={styles.muted}>{member.email}</Text> : null}</View>
         <Text style={[styles.requestCheckbox, checked && styles.requestCheckboxChecked]}>{checked ? "✓" : ""}</Text>
       </TouchableOpacity>;

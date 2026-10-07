@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Member, Room, Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { SeugiTextField } from "../design-system/TextField";
 import { SeugiTopBar } from "../design-system/TopBar";
+import { SeugiAvatar } from "../design-system/Avatar";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
@@ -81,7 +82,7 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
     <FlatList style={styles.content} data={members} keyExtractor={(member) => member.id}
     ListHeaderComponent={<View style={styles.memberSelection}><ScrollView style={styles.selected} contentContainerStyle={styles.selectedContent} nestedScrollEnabled><View style={styles.selectedMembers}>{selectedMembers.length ? selectedMembers.map((member) => <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${member.name} 선택 해제`} onPress={() => setSelectedIds((current) => current.filter((id) => id !== member.id))} style={styles.selectedMember}><Text style={styles.selectedName}>{member.name}</Text><Text style={styles.removeSelected}>×</Text></TouchableOpacity>) : <Text style={styles.muted}>멤버를 선택해 주세요</Text>}</View></ScrollView>{error ? <Text style={styles.error}>{error}</Text> : null}</View>}
     ListEmptyComponent={<Text style={styles.empty}>초대할 구성원이 없습니다.</Text>}
-    renderItem={({ item }) => <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: selectedIds.includes(item.id) }} style={styles.member} onPress={() => setSelectedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])}><View style={styles.memberAvatar}>{item.picture ? <Image source={{ uri: absoluteApiUrl(item.picture) }} style={styles.memberAvatarImage} /> : <Text style={styles.memberInitial}>{item.name.slice(0, 1)}</Text>}</View><Text style={styles.memberName}>{item.name}</Text><Text style={styles.check}>{selectedIds.includes(item.id) ? "☑" : "□"}</Text></TouchableOpacity>} />
+    renderItem={({ item }) => <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: selectedIds.includes(item.id) }} style={styles.member} onPress={() => setSelectedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])}><View style={styles.memberAvatar}><SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.memberAvatarImage} fallbackStyle={styles.memberAvatar} labelStyle={styles.memberInitial} /></View><Text style={styles.memberName}>{item.name}</Text><Text style={styles.check}>{selectedIds.includes(item.id) ? "☑" : "□"}</Text></TouchableOpacity>} />
   </>;
 }
 
