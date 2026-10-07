@@ -23,6 +23,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
   const [hasOlderMessages, setHasOlderMessages] = useState(false); const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string }>();
   const [imageDraft, setImageDraft] = useState<DocumentPicker.DocumentPickerAsset>();
+  const [uploadedImage, setUploadedImage] = useState<{ url: string; name: string }>();
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [otherProfile, setOtherProfile] = useState<LegacyProfile>();
   const [openingOtherChat, setOpeningOtherChat] = useState(false);
@@ -66,7 +67,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
       if (result.message === "메시지 전송 성공") {
         setDraft("");
         if (retryId) setFailedOutgoing((items) => items.filter((item) => item.id !== retryId));
-        if (type === "IMG") setImageDraft(undefined);
+        if (type === "IMG") { setImageDraft(undefined); setUploadedImage(undefined); }
       } else {
         setFailedOutgoing((items) => retryId
           ? items.map((item) => item.id === retryId ? { ...item, message, files, type } : item)
@@ -81,8 +82,51 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
   const send = () => deliver(draft.trim());
   const attachFile = async () => { setShowAttachmentOptions(false); if (uploading || sending) return; try { const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) await sendFile(result.assets[0]); } catch (error) { Alert.alert("파일을 불러오지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요"); } };
   const sendFile = async (file: DocumentPicker.DocumentPickerAsset) => { if (uploading || sending) return; setUploading(true); try { const form = new FormData(); form.append("file", { uri: file.uri, name: file.name, type: file.mimeType ?? "application/octet-stream" } as unknown as Blob); const uploaded = await api.uploadFile("FILE", form); if (!uploaded.data?.url) throw new Error("파일 업로드 응답이 올바르지 않습니다"); deliver(`${uploaded.data.url}::${file.name}::${file.size ?? uploaded.data.size}`, [], "FILE"); } catch (error) { Alert.alert("파일 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요"); } finally { setUploading(false); } };
-  const selectImage = async () => { setShowAttachmentOptions(false); if (uploading || sending) return; try { const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false }); if (!result.canceled && result.assets[0]) setImageDraft(result.assets[0]); } catch (error) { Alert.alert("사진을 불러오지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요"); } };
-  const sendImage = async () => { if (!imageDraft || uploading || sending) return; setUploading(true); try { const form = new FormData(); form.append("file", { uri: imageDraft.uri, name: imageDraft.name, type: imageDraft.mimeType ?? "image/jpeg" } as unknown as Blob); const uploaded = await api.uploadFile("IMG", form); if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다"); deliver(`${uploaded.data.url}::${imageDraft.name}`, [], "IMG"); } catch (error) { Alert.alert("사진 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요"); } finally { setUploading(false); } };
+  const selectImage = async () => {
+    setShowAttachmentOptions(false);
+    if (uploading || sending) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
+      const asset = result.canceled ? undefined : result.assets[0];
+      if (!asset) return;
+      if (Platform.OS === "ios") {
+        setUploading(true);
+        try {
+          const form = new FormData();
+          form.append("file", { uri: asset.uri, name: asset.name, type: asset.mimeType ?? "image/jpeg" } as unknown as Blob);
+          const uploaded = await api.uploadFile("IMG", form);
+          if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다");
+          setUploadedImage({ url: uploaded.data.url, name: asset.name });
+          setImageDraft(asset);
+        } finally {
+          setUploading(false);
+        }
+      } else {
+        setImageDraft(asset);
+      }
+    } catch (error) {
+      Alert.alert("사진 업로드 실패", error instanceof Error ? error.message : "다시 시도해 주세요");
+    }
+  };
+  const sendImage = async () => {
+    if (!imageDraft || uploading || sending) return;
+    if (uploadedImage) {
+      deliver(`${uploadedImage.url}::${uploadedImage.name}`, [], "IMG");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", { uri: imageDraft.uri, name: imageDraft.name, type: imageDraft.mimeType ?? "image/jpeg" } as unknown as Blob);
+      const uploaded = await api.uploadFile("IMG", form);
+      if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다");
+      deliver(`${uploaded.data.url}::${imageDraft.name}`, [], "IMG");
+    } catch (error) {
+      Alert.alert("사진 전송 실패", error instanceof Error ? error.message : "다시 시도해 주세요");
+    } finally {
+      setUploading(false);
+    }
+  };
   const downloadFile = async (url: string, name?: string) => {
     if (Platform.OS === "web") {
       await Linking.openURL(absoluteApiUrl(url));
@@ -178,7 +222,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
       <SeugiChatTextField value={draft} onChangeText={setDraft} placeholder="메시지 입력" onAddClick={() => setShowAttachmentOptions(true)} onSendClick={() => void send()} sendEnabled={!sending && !!draft.trim()} editable={!sending} />
     </>}
     <Modal visible={showAttachmentOptions} transparent animationType="slide" onRequestClose={() => setShowAttachmentOptions(false)}><View style={styles.sheetBackdrop}><TouchableOpacity style={styles.sheetDismiss} activeOpacity={1} onPress={() => setShowAttachmentOptions(false)} /><View style={styles.attachmentSheet}><Text style={styles.sheetTitle}>첨부하기</Text><TouchableOpacity style={styles.attachmentOption} onPress={() => void selectImage()}><Text style={styles.attachmentIcon}>▧</Text><Text style={styles.rowTitle}>사진 또는 이미지</Text></TouchableOpacity><TouchableOpacity style={styles.attachmentOption} onPress={() => void attachFile()}><Text style={styles.attachmentIcon}>↧</Text><Text style={styles.rowTitle}>파일</Text></TouchableOpacity></View></View></Modal>
-    <Modal visible={!!imageDraft} transparent animationType="fade" onRequestClose={() => setImageDraft(undefined)}><View style={styles.imagePreviewBackdrop}><View style={styles.imagePreviewHeader}><TouchableOpacity onPress={() => setImageDraft(undefined)}><Text style={styles.previewButton}>취소</Text></TouchableOpacity><Text style={styles.previewTitle}>사진 미리보기</Text><TouchableOpacity onPress={() => void sendImage()} disabled={uploading || sending}><Text style={[styles.previewButton, (uploading || sending) && styles.disabledText]}>{uploading ? "전송 중…" : "전송"}</Text></TouchableOpacity></View>{imageDraft ? <ZoomableImage uri={imageDraft.uri} accessibilityLabel="전송할 사진 미리보기" /> : null}</View></Modal>
+    <Modal visible={!!imageDraft} transparent animationType="fade" onRequestClose={() => { setImageDraft(undefined); setUploadedImage(undefined); }}><View style={styles.imagePreviewBackdrop}><View style={styles.imagePreviewHeader}><TouchableOpacity onPress={() => { setImageDraft(undefined); setUploadedImage(undefined); }}><Text style={styles.previewButton}>취소</Text></TouchableOpacity><Text style={styles.previewTitle}>사진 미리보기</Text><TouchableOpacity onPress={() => void sendImage()} disabled={uploading || sending}><Text style={[styles.previewButton, (uploading || sending) && styles.disabledText]}>{uploading ? "전송 중…" : "전송"}</Text></TouchableOpacity></View>{imageDraft ? <ZoomableImage uri={uploadedImage?.url ? absoluteApiUrl(uploadedImage.url) : imageDraft.uri} accessibilityLabel="전송할 사진 미리보기" /> : null}</View></Modal>
     <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(undefined)}><View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.94)", padding: 16 }}><View style={styles.imagePreviewHeader}><TouchableOpacity accessibilityRole="button" onPress={() => setPreviewImage(undefined)}><Text style={styles.imagePreviewCloseText}>닫기 ✕</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" onPress={() => { if (previewImage) openFile(previewImage.url, previewImage.name); }}><Text style={styles.imagePreviewCloseText}>저장/공유 ↓</Text></TouchableOpacity></View>{previewImage ? <ZoomableImage uri={absoluteApiUrl(previewImage.url)} accessibilityLabel="채팅 이미지 미리보기" /> : null}</View></Modal>
     <Modal visible={!!otherProfile} transparent animationType="slide" onRequestClose={() => setOtherProfile(undefined)}><View style={styles.profileBackdrop}><TouchableOpacity style={styles.profileDismiss} activeOpacity={1} onPress={() => setOtherProfile(undefined)} /><View style={styles.profileSheet}><View style={styles.profileHeader}><SeugiAvatar uri={otherProfile?.member.picture ? absoluteApiUrl(otherProfile.member.picture) : undefined} name={otherProfile?.member.name} imageStyle={styles.profileAvatar} fallbackStyle={styles.profileAvatarPlaceholder} labelStyle={styles.link} /><View style={{ flex: 1 }}><Text style={styles.profileName}>{otherProfile?.member.name}{otherProfile?.nick ? ` (${otherProfile.nick})` : ""}</Text><Text style={styles.muted}>{otherProfile?.permission === "ADMIN" ? "관리자" : otherProfile?.permission === "MIDDLE_ADMIN" ? "중간관리자" : otherProfile?.permission === "TEACHER" ? "선생님" : "학생"}</Text></View><TouchableOpacity onPress={() => setOtherProfile(undefined)}><Text style={styles.link}>닫기</Text></TouchableOpacity></View>{[["상태 메시지", otherProfile?.status], ["학년·반·번호", [otherProfile?.grade, otherProfile?.class, otherProfile?.number].filter(Boolean).join(" · ")], ["직위", otherProfile?.spot], ["소속", otherProfile?.belong], ["휴대전화", otherProfile?.phone], ["유선전화", otherProfile?.wire], ["근무 위치", otherProfile?.location]].filter((row) => row[1]).map(([label, value]) => <View key={String(label)} style={styles.profileField}><Text style={styles.muted}>{label}</Text><Text style={styles.rowTitle}>{value}</Text></View>)}<Button label={openingOtherChat ? "여는 중…" : "개인 채팅 시작"} kind="secondary" onPress={() => void startChatWithOtherProfile()} disabled={openingOtherChat} /></View></View></Modal>
     <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={() => setSelectedMessage(undefined)}><View style={styles.contextBackdrop}><TouchableOpacity style={styles.contextDismiss} activeOpacity={1} onPress={() => setSelectedMessage(undefined)} /><View style={styles.contextDialog}><TouchableOpacity accessibilityRole="button" disabled={!selectedMessage || !visibleMessage(selectedMessage)} onPress={() => { if (!selectedMessage) return; void Clipboard.setStringAsync(visibleMessage(selectedMessage)).then(() => setSelectedMessage(undefined)).catch((error) => Alert.alert("메시지를 복사하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); }}><Text style={!selectedMessage || !visibleMessage(selectedMessage) ? styles.disabledAction : styles.copyAction}>메세지 복사하기</Text></TouchableOpacity><View style={styles.contextEmojis}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" onPress={() => { if (!selectedMessage) return; void react(selectedMessage, emoji).finally(() => setSelectedMessage(undefined)); }}><Text style={styles.contextEmoji}>{emoji}</Text></TouchableOpacity>)}</View></View></View></Modal>
