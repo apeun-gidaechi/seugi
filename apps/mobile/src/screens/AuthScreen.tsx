@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, BackHandler, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, BackHandler, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button } from "../components/ui";
 import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { GOOGLE_WEB_CLIENT_ID } from "../config";
+import { SeugiCodeTextField, SeugiPasswordTextField, SeugiTextField } from "../design-system/TextField";
 
 type AuthScreenProps = {
   hydrated: boolean;
@@ -50,24 +51,24 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
     </> : null}
     {screen === "login" ? <>
       <Text style={styles.subtitle}>이메일로 로그인</Text>
-      <TextInput placeholder="이메일" autoCapitalize="none" keyboardType="email-address" style={styles.input} value={email} onChangeText={onEmailChange} />
-      <TextInput placeholder="비밀번호" secureTextEntry style={styles.input} value={password} onChangeText={onPasswordChange} />
+      <SeugiTextField placeholder="이메일" autoCapitalize="none" keyboardType="email-address" containerStyle={styles.inputSpacing} value={email} onChangeText={onEmailChange} />
+      <SeugiPasswordTextField placeholder="비밀번호" containerStyle={styles.inputSpacing} value={password} onChangeText={onPasswordChange} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={loading ? "로그인 중…" : "로그인"} onPress={onLogin} disabled={loading || !email || !password} />
       <TouchableOpacity onPress={() => setScreen("signup")}><Text style={styles.link}>계정이 없으신가요? 회원가입</Text></TouchableOpacity>
     </> : null}
     {screen === "signup" ? <>
       <Text style={styles.subtitle}>이메일 회원가입</Text>
-      <TextInput placeholder="이름" style={styles.input} value={name} onChangeText={onNameChange} />
-      <TextInput placeholder="이메일" autoCapitalize="none" keyboardType="email-address" style={styles.input} value={email} onChangeText={onEmailChange} />
-      <TextInput placeholder="비밀번호 (8자 이상)" secureTextEntry style={styles.input} value={password} onChangeText={onPasswordChange} />
+      <SeugiTextField placeholder="이름" containerStyle={styles.inputSpacing} value={name} onChangeText={onNameChange} />
+      <SeugiTextField placeholder="이메일" autoCapitalize="none" keyboardType="email-address" containerStyle={styles.inputSpacing} value={email} onChangeText={onEmailChange} />
+      <SeugiPasswordTextField placeholder="비밀번호 (8자 이상)" containerStyle={styles.inputSpacing} value={password} onChangeText={onPasswordChange} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={loading ? "발송 중…" : "인증 코드 보내기"} kind="secondary" onPress={async () => { if (await onSendVerification()) setScreen("verification"); }} disabled={!email || !name || !password || loading} />
     </> : null}
     {screen === "verification" ? <>
       <Text style={styles.subtitle}>이메일 인증</Text>
       <Text style={styles.hint}>{email}로 전송한 인증 코드를 입력해 주세요.</Text>
-      <TextInput placeholder="인증 코드" keyboardType="number-pad" style={styles.input} value={code} onChangeText={onCodeChange} />
+      <SeugiCodeTextField value={code} limit={6} onChangeText={(value) => onCodeChange(value.replace(/\D/g, ""))} error={!!error} containerStyle={styles.inputSpacing} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={loading ? "가입 중…" : "인증하고 가입"} onPress={onRegister} disabled={loading || !code || !password || !name} />
       <TouchableOpacity onPress={async () => { if (await onSendVerification()) onError("인증 코드를 다시 발송했습니다."); }}><Text style={styles.link}>인증 코드 다시 받기</Text></TouchableOpacity>
@@ -75,4 +76,4 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({ auth: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: SeugiColor.Primary050 }, logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" }, subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 }, input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 }, error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" }, back: { alignSelf: "flex-start", color: SeugiColor.Gray700, fontSize: 16, paddingVertical: 8 }, link: { textAlign: "center", color: SeugiColor.Primary500, marginTop: 18 }, hint: { textAlign: "center", color: SeugiColor.Gray600, marginBottom: 16 }, actions: { gap: 10, marginTop: 12 } });
+const styles = StyleSheet.create({ auth: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: SeugiColor.Primary050 }, logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" }, subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 }, inputSpacing: { marginBottom: 10 }, error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" }, back: { alignSelf: "flex-start", color: SeugiColor.Gray700, fontSize: 16, paddingVertical: 8 }, link: { textAlign: "center", color: SeugiColor.Primary500, marginTop: 18 }, hint: { textAlign: "center", color: SeugiColor.Gray600, marginBottom: 16 }, actions: { gap: 10, marginTop: 12 } });

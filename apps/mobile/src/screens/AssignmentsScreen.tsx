@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { ClassroomTask, Task, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
+import { SeugiTextField } from "../design-system/TextField";
 
 export function AssignmentsScreen({ workspace, onCreateTask }: { workspace: Workspace; onCreateTask: () => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -48,7 +49,7 @@ function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated:
   const leadingDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
   const monthDays = [...Array<string | undefined>(leadingDays).fill(undefined), ...Array.from({ length: daysInMonth }, (_, index) => localDateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), index + 1)))];
   const shiftMonth = (amount: number) => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + amount, 1));
-  return <Card title="일반 과제 만들기"><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" maxLength={120} /><TextInput value={content} onChangeText={setContent} style={[styles.input, styles.descriptionInput]} placeholder="내용" multiline textAlignVertical="top" /><TouchableOpacity accessibilityRole="button" onPress={() => { setCalendarSelection(dueDate); setCalendarOpen(true); }} style={styles.dateButton}><Text style={styles.dateText}>{Number(dueDate.slice(5, 7))}월 {Number(dueDate.slice(8, 10))}일까지</Text><Text style={styles.calendarIcon}>▦</Text></TouchableOpacity><Button label={busy ? "만드는 중…" : "만들기"} onPress={create} disabled={busy || !title.trim()} />{notice ? <Text style={notice.includes("만들었") ? styles.answer : styles.error}>{notice}</Text> : null}
+  return <Card title="일반 과제 만들기"><SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목" maxLength={120} /><SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} style={styles.descriptionInput} placeholder="내용" multiline textAlignVertical="top" /><TouchableOpacity accessibilityRole="button" onPress={() => { setCalendarSelection(dueDate); setCalendarOpen(true); }} style={styles.dateButton}><Text style={styles.dateText}>{Number(dueDate.slice(5, 7))}월 {Number(dueDate.slice(8, 10))}일까지</Text><Text style={styles.calendarIcon}>▦</Text></TouchableOpacity><Button label={busy ? "만드는 중…" : "만들기"} onPress={create} disabled={busy || !title.trim()} />{notice ? <Text style={notice.includes("만들었") ? styles.answer : styles.error}>{notice}</Text> : null}
     <Modal visible={calendarOpen} transparent animationType="fade" onRequestClose={() => setCalendarOpen(false)}><View style={styles.dateModalBackdrop}><View style={styles.dateDialog}><Text style={styles.dateDialogTitle}>마감일 선택</Text><View style={styles.monthHeader}><TouchableOpacity onPress={() => shiftMonth(-1)}><Text style={styles.link}>‹ 이전</Text></TouchableOpacity><Text style={styles.rowTitle}>{calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월</Text><TouchableOpacity onPress={() => shiftMonth(1)}><Text style={styles.link}>다음 ›</Text></TouchableOpacity></View><View style={styles.calendarGrid}>{["일", "월", "화", "수", "목", "금", "토"].map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}{monthDays.map((date, index) => date ? <TouchableOpacity key={date} accessibilityRole="button" accessibilityState={{ selected: calendarSelection === date }} onPress={() => setCalendarSelection(date)} style={[styles.calendarDay, calendarSelection === date && styles.calendarDaySelected]}><Text style={calendarSelection === date ? styles.calendarDayTextSelected : styles.calendarDayText}>{Number(date.slice(-2))}</Text></TouchableOpacity> : <View key={`blank-${index}`} style={styles.calendarDay} />)}</View><TouchableOpacity style={styles.todayButton} onPress={() => { const today = new Date(); setCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setCalendarSelection(localDateKey(today)); }}><Text style={styles.link}>오늘</Text></TouchableOpacity><View style={styles.dateDialogActions}><TouchableOpacity onPress={() => setCalendarOpen(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => { setDueDate(calendarSelection); setCalendarOpen(false); }}><Text style={styles.link}>완료</Text></TouchableOpacity></View></View></View></Modal>
   </Card>;
 }
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
-  input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
+  editorField: { marginBottom: 10 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
   link: { color: SeugiColor.Primary500 },
   rowTitle: { fontWeight: "600" },
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   taskDescription: { color: SeugiColor.Gray600, fontSize: 14 },
   taskName: { flex: 1 },
   taskDue: { color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, overflow: "hidden", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12, fontWeight: "600" },
-  descriptionInput: { minHeight: 265 },
+  descriptionInput: { minHeight: 265, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
   dateButton: { minHeight: 52, borderWidth: 1.5, borderColor: SeugiColor.Gray400, backgroundColor: SeugiColor.White, borderRadius: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", marginBottom: 12 },
   dateText: { color: SeugiColor.Gray800, fontWeight: "600" },
   calendarIcon: { color: SeugiColor.Gray500, marginLeft: "auto", fontSize: 20 },

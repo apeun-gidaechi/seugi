@@ -4,6 +4,7 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Notification, Workspace } from "@seugi/contracts";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
+import { SeugiTextField } from "../design-system/TextField";
 
 export function NoticesScreen({ workspace, onCreate, onEdit }: { workspace: Workspace; onCreate: () => void; onEdit: (notice: Notification) => void }) {
   const [items, setItems] = useState<Notification[]>([]);
@@ -117,7 +118,7 @@ export function NoticeEditorScreen({ workspace, initial, onSaved, onCancel }: { 
     } catch (e) { setNotice(e instanceof Error ? e.message : initial ? "공지를 수정하지 못했습니다" : "공지를 등록하지 못했습니다"); }
     finally { setBusy(false); }
   };
-  return <View style={styles.content}><Card title={initial ? "공지 수정" : "공지 작성"}><TextInput value={title} onChangeText={setTitle} style={styles.input} placeholder="제목" /><TextInput value={content} onChangeText={setContent} style={styles.input} placeholder="공지 내용" multiline />
+  return <View style={styles.content}><Card title={initial ? "공지 수정" : "공지 작성"}><SeugiTextField value={title} onChangeText={setTitle} containerStyle={styles.editorField} placeholder="제목" /><SeugiTextField value={content} onChangeText={setContent} containerStyle={styles.editorField} style={styles.noticeBodyInput} placeholder="공지 내용" multiline />
     <Button label={busy ? "저장 중…" : initial ? "수정 저장" : "공지 등록"} onPress={submit} disabled={busy || !title.trim() || !content.trim()} /><Button label="취소" kind="secondary" onPress={onCancel} disabled={busy} />{notice ? <Text style={styles.error}>{notice}</Text> : null}</Card></View>;
 }
 
@@ -127,6 +128,8 @@ const styles = StyleSheet.create({
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
+  editorField: { marginBottom: 10 },
+  noticeBodyInput: { minHeight: 120, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top" },
   link: { color: SeugiColor.Primary500 },
   memberActions: { flexDirection: "row", gap: 14 },
   reactions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingTop: 6 },

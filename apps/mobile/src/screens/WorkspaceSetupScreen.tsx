@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { BackHandler, Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { BackHandler, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace, WorkspaceSearchSummary } from "@seugi/contracts";
 import { Button, Card, WorkspaceRolePicker, type WorkspaceJoinRole } from "../components/ui";
 import { api } from "../services/api";
+import { SeugiTextField } from "../design-system/TextField";
 
 export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
   const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting">("start");
@@ -48,7 +49,7 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
     {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
     {screen === "role" ? <><Text style={styles.subtitle}>가입할 유형을 선택해 주세요.</Text>{([ ["STUDENT", "학생"], ["TEACHER", "선생님"] ] as const).map(([value, label]) => <TouchableOpacity key={value} onPress={() => setRole(value)} style={[styles.roleCard, role === value && styles.roleCardSelected]}><Text style={role === value ? styles.selectedRole : styles.roleText}>{label}{role === value ? "  ✓" : ""}</Text></TouchableOpacity>)}<Button label="계속하기" onPress={() => setScreen("code")} /></> : null}
-    {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><TextInput value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} style={styles.input} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
+    {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toUpperCase())} autoCapitalize="characters" maxLength={6} containerStyle={styles.fieldSpacing} placeholder="학교 코드 6자리" />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
     {screen === "confirm" && workspace ? <><Text style={styles.subtitle}>가입할 학교를 확인해 주세요.</Text><View style={styles.schoolCard}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text><Text style={styles.muted}>가입 유형: {role === "STUDENT" ? "학생" : "선생님"}</Text></View>{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /></> : null}
     {screen === "waiting" ? <><Text style={styles.subtitle}>가입 승인 대기</Text><Text style={styles.muted}>관리자가 가입 신청을 승인하면 학교 화면으로 이동합니다.</Text><ScrollView style={styles.flow}><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView><Button label="새로고침" kind="secondary" onPress={onCreated} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
   </SafeAreaView>;
@@ -67,7 +68,7 @@ export function CreateWorkspaceCard({ onCreated }: { onCreated: () => Promise<vo
     } catch (error) { setNotice(error instanceof Error ? error.message : "워크스페이스 생성에 실패했습니다"); }
     finally { setBusy(false); }
   };
-  return <Card title="새 학교 등록"><TouchableOpacity onPress={() => void pickImage()} disabled={busy} style={{ alignItems: "center", paddingVertical: 8 }}>{image ? <Image source={{ uri: image.uri }} style={{ width: 72, height: 72, borderRadius: 36 }} /> : <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" }}><Text style={styles.link}>＋</Text></View>}<Text style={styles.link}>{image ? "이미지 변경" : "학교 이미지 추가 (선택)"}</Text></TouchableOpacity><TextInput value={name} onChangeText={setName} style={styles.input} placeholder="학교 이름을 입력해 주세요" maxLength={80} /><Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || !name.trim()} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
+  return <Card title="새 학교 등록"><TouchableOpacity onPress={() => void pickImage()} disabled={busy} style={{ alignItems: "center", paddingVertical: 8 }}>{image ? <Image source={{ uri: image.uri }} style={{ width: 72, height: 72, borderRadius: 36 }} /> : <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" }}><Text style={styles.link}>＋</Text></View>}<Text style={styles.link}>{image ? "이미지 변경" : "학교 이미지 추가 (선택)"}</Text></TouchableOpacity><SeugiTextField value={name} onChangeText={setName} containerStyle={styles.fieldSpacing} placeholder="학교 이름을 입력해 주세요" maxLength={80} /><Button label={busy ? "등록 중…" : "등록하기"} onPress={() => void create()} disabled={busy || !name.trim()} />{notice ? <Text style={notice.includes("만들었습니다") ? styles.answer : styles.error}>{notice}</Text> : null}</Card>;
 }
 
 export function PendingWorkspaceRequests({ onChanged }: { onChanged?: () => Promise<void> }) {
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
   auth: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: SeugiColor.Primary050 },
   logo: { color: SeugiColor.Primary500, fontWeight: "800", fontSize: 36, textAlign: "center" },
   subtitle: { textAlign: "center", color: SeugiColor.Gray600, marginVertical: 24 },
-  input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
+  fieldSpacing: { marginBottom: 10 },
   answer: { backgroundColor: SeugiColor.Primary100, padding: 10, borderRadius: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   link: { color: SeugiColor.Primary500 },
