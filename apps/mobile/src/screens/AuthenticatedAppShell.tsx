@@ -131,7 +131,8 @@ export function AuthenticatedAppShell({
   return (
     <SafeAreaView style={styles.page}>
       {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createTask" ? <SeugiTopBar
-        backgroundColor={SeugiColor.Primary050}
+        backgroundColor={tab === "chat" || tab === "group" ? SeugiColor.White : SeugiColor.Primary050}
+        shadow={tab === "chat" || tab === "group"}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
           <TouchableOpacity
             accessibilityRole="button"
@@ -155,8 +156,8 @@ export function AuthenticatedAppShell({
           </TouchableOpacity>
         ) : !detail && !roomSearchActive && (tab === "chat" || tab === "group") ? (
           <View style={styles.headerActions}>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => { setRoomSearch(""); setRoomSearchActive(true); }}><Text style={styles.headerActionIcon}>⌕</Text></TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}><Text style={styles.headerActionIcon}>＋</Text></TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => { setRoomSearch(""); setRoomSearchActive(true); }}><Text style={styles.headerActionIcon}>⌕</Text></TouchableOpacity>
           </View>
         ) : null}
       /> : null}
