@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { FlatList, Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { ClassroomTask, Task, Workspace } from "@seugi/contracts";
-import { GOOGLE_WEB_CLIENT_ID } from "../config";
-import { GoogleAuthButton } from "../components/GoogleAuthButton";
 import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
@@ -11,12 +9,15 @@ import { localDateKey } from "../utils/date";
 export function AssignmentsScreen({ workspace, onCreateTask }: { workspace: Workspace; onCreateTask: () => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState("");
+  const canCreate = useCanCreateTask(workspace);
   const refresh = useCallback(async () => { const result = await api.tasks(workspace.id); setTasks((result.data ?? []).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))); }, [workspace.id]);
   useEffect(() => { refresh().catch((e) => setError(e instanceof Error ? e.message : "과제를 불러오지 못했습니다")); }, [refresh]);
-  return <FlatList style={styles.content} data={tasks} keyExtractor={(item) => item.id}
-    ListHeaderComponent={<><TaskCreationLink workspace={workspace} onPress={onCreateTask} /><ClassroomTasks /><Text style={styles.sectionTitle}>일반 과제</Text>{error ? <Text style={styles.error}>{error}</Text> : null}</>}
+  return <View style={styles.screen}><FlatList style={styles.content} data={tasks} keyExtractor={(item) => item.id}
+    ListHeaderComponent={<><ClassroomTasks /><Text style={styles.sectionTitle}>일반 과제</Text>{error ? <Text style={styles.error}>{error}</Text> : null}</>}
     ListEmptyComponent={!error ? <Text style={styles.empty}>등록된 일반 과제가 없습니다.</Text> : null}
-    renderItem={({ item }) => <View style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View><Text>{item.content || "내용 없음"}</Text>{item.dueDate ? <Text style={styles.muted}>마감 {new Date(item.dueDate).toLocaleDateString()}</Text> : null}</View>} />;
+    renderItem={({ item }) => <View style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.content ? <Text style={styles.taskDescription}>{item.content}</Text> : null}</View>} />
+    {Platform.OS === "android" && canCreate ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="과제 만들기" onPress={onCreateTask} style={styles.fab}><Text style={styles.fabText}>＋</Text></TouchableOpacity> : null}
+  </View>;
 }
 
 export function TaskCreateScreen({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
@@ -27,11 +28,6 @@ function useCanCreateTask(workspace: Workspace) {
   const [canCreate, setCanCreate] = useState(false);
   useEffect(() => { let active = true; Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => active && setCanCreate(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"))).catch(() => undefined); return () => { active = false; }; }, [workspace.id, workspace.ownerId]);
   return canCreate;
-}
-
-function TaskCreationLink({ workspace, onPress }: { workspace: Workspace; onPress: () => void }) {
-  const canCreate = useCanCreateTask(workspace);
-  return canCreate ? <Card title="과제 관리"><Button label="과제 만들기" onPress={onPress} /></Card> : null;
 }
 
 function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated: () => Promise<void> }) {
@@ -58,13 +54,13 @@ function CreateTask({ workspace, onCreated }: { workspace: Workspace; onCreated:
 }
 
 function ClassroomTasks() {
-  const [items, setItems] = useState<ClassroomTask[]>([]); const [notice, setNotice] = useState(""); const [connected, setConnected] = useState(false); const [busy, setBusy] = useState(false);
-  useEffect(() => { api.googleConnection().then((result) => setConnected(result.data ?? false)).catch(() => undefined); }, []);
-  const load = async () => { if (busy) return; setBusy(true); setNotice(""); try { const result = await api.classroomTasks(); setItems(result.data ?? []); if (!result.data?.length) setNotice("표시할 클래스룸 과제가 없습니다."); } catch (e) { setNotice(e instanceof Error && e.message.includes("GOOGLE_CONNECTION_NOT_FOUND") ? "Google Classroom을 연결한 뒤 과제를 불러올 수 있습니다." : e instanceof Error ? e.message : "클래스룸 과제를 불러오지 못했습니다"); } finally { setBusy(false); } };
-  useEffect(() => { if (connected) void load(); }, [connected]);
-  const connect = async (code: string) => { await api.connectGoogle({ code, platform: Platform.OS === "ios" ? "IOS" : "ANDROID" }); setConnected(true); setNotice("Google Classroom을 연결했습니다."); };
-  const disconnect = async () => { try { await api.removeGoogleConnection(); setConnected(false); setItems([]); setNotice("Google 연결을 해제했습니다."); } catch (e) { setNotice(e instanceof Error ? e.message : "Google 연결을 해제하지 못했습니다"); } };
-  return <Card title="Google Classroom"><Text style={styles.muted}>{connected ? "Google 계정이 연결되어 있습니다." : "Google 계정을 연결하면 클래스룸 과제를 볼 수 있습니다."}</Text>{Platform.OS !== "web" && GOOGLE_WEB_CLIENT_ID ? connected ? <Button label="Google 연결 해제" kind="secondary" onPress={disconnect} /> : <GoogleAuthButton label="Google Classroom 연결" onCode={connect} onError={setNotice} /> : null}{connected ? <Button label={busy ? "불러오는 중…" : "새로고침"} kind="secondary" onPress={load} disabled={busy} /> : null}{busy ? <Text style={styles.muted}>클래스룸 과제를 불러오는 중…</Text> : null}{notice ? <Text style={styles.muted}>{notice}</Text> : null}{items.map((item) => <View key={item.id} style={styles.classroomTask}><View style={styles.taskHeader}><Text style={styles.rowTitle}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.description ? <Text>{item.description}</Text> : null}{item.dueDate ? <Text style={styles.muted}>마감 {new Date(item.dueDate).toLocaleDateString()}</Text> : null}{item.link ? <TouchableOpacity onPress={() => Linking.openURL(item.link!).catch(() => setNotice("과제 링크를 열지 못했습니다"))}><Text style={styles.link}>과제 열기 ↗</Text></TouchableOpacity> : null}</View>)}</Card>;
+  const [items, setItems] = useState<ClassroomTask[]>([]); const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    api.classroomTasks().then((result) => { if (active) setItems(result.data ?? []); }).catch(() => { if (active) setItems([]); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  return <><Text style={styles.sectionTitle}>구글 클래스룸 과제</Text>{loading ? <Text style={styles.empty}>불러오는 중…</Text> : items.length === 0 ? <Text style={styles.empty}>과제가 없어요</Text> : items.map((item) => <TouchableOpacity key={item.id} activeOpacity={1} disabled={Platform.OS !== "android" || !item.link} onPress={() => { if (item.link) void Linking.openURL(item.link).catch(() => undefined); }} style={styles.taskCard}><View style={styles.taskHeader}><Text style={[styles.rowTitle, styles.taskName]}>{item.title}</Text><Text style={styles.taskDue}>{getDDayLabel(item.dueDate)}</Text></View>{item.description ? <Text style={styles.taskDescription}>{item.description}</Text> : null}</TouchableOpacity>)}</>;
 }
 
 function getDDayLabel(dueDate?: string | null) {
@@ -78,7 +74,10 @@ function getDDayLabel(dueDate?: string | null) {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { flex: 1, padding: 16 },
+  fab: { position: "absolute", right: 24, bottom: 24, width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Primary500, elevation: 6 },
+  fabText: { color: SeugiColor.White, fontSize: 34, lineHeight: 38, fontWeight: "400" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
@@ -89,9 +88,9 @@ const styles = StyleSheet.create({
   sectionTitle: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600", marginHorizontal: 4, marginTop: 4, marginBottom: 8 },
   taskHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 },
   taskCard: { backgroundColor: SeugiColor.White, borderRadius: 12, padding: 12, marginBottom: 8 },
+  taskDescription: { color: SeugiColor.Gray600, fontSize: 14 },
   taskName: { flex: 1 },
   taskDue: { color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, overflow: "hidden", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, fontSize: 12, fontWeight: "600" },
-  classroomTask: { borderTopWidth: 1, borderColor: SeugiColor.Gray100, paddingTop: 12, marginTop: 8, gap: 6 },
   descriptionInput: { minHeight: 265 },
   dateButton: { minHeight: 52, borderWidth: 1.5, borderColor: SeugiColor.Gray400, backgroundColor: SeugiColor.White, borderRadius: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", marginBottom: 12 },
   dateText: { color: SeugiColor.Gray800, fontWeight: "600" },
