@@ -51,7 +51,7 @@ export class Store {
   id() { return randomUUID(); }
   pushTokensForWorkspace(workspaceId: string, memberIds: string[], excludedMemberId?: string) { return memberIds.filter((id) => id !== excludedMemberId && this.workspacePushPreferences.get(`${workspaceId}:${id}`) !== false).flatMap((id) => this.deviceTokens.get(id) ?? []); }
   requireMember(id: string) { const value = this.members.get(id); if (!value) throw new Error("MEMBER_NOT_FOUND"); return value; }
-  requireWorkspace(id: string) { const value = this.workspaces.get(id); if (!value) throw new Error("WORKSPACE_NOT_FOUND"); return value; }
+  requireWorkspace(id: string) { const value = this.workspaces.get(id); if (!value || value.status === "DELETE") throw new Error("WORKSPACE_NOT_FOUND"); return value; }
   canAccess(workspaceId: string, memberId: string) { return this.requireWorkspace(workspaceId).members.includes(memberId); }
   onMessageDeleted(listener: (event: MessageDeletedEvent) => void) { this.messageDeletedListeners.add(listener); return () => this.messageDeletedListeners.delete(listener); }
   onMessageEmoji(listener: (event: MessageEmojiEvent) => void) { this.messageEmojiListeners.add(listener); return () => this.messageEmojiListeners.delete(listener); }

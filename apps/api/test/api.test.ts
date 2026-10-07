@@ -52,6 +52,24 @@ test("member can register, create a workspace, and retrieve it", async () => {
   await app.close();
 });
 
+test("deleting a workspace preserves its data but hides it from active endpoints", async () => {
+  const store = new Store(); store.emailCodes.set("workspace-delete@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "workspace-delete@example.com", password: "password123", code: "123456" } });
+  const headers = { authorization: `Bearer ${registration.json().data.accessToken}` };
+  const created = await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "보존 학교" } });
+  const workspaceId = created.json().data as string;
+  const workspace = store.workspaces.get(workspaceId); assert.ok(workspace);
+  store.tasks.set("historical-task", { id: "historical-task", workspaceId, title: "보존 과제", createdAt: "2026-10-07T00:00:00.000Z" });
+  assert.equal((await app.inject({ method: "DELETE", url: `/workspace/${workspaceId}`, headers })).statusCode, 200);
+  assert.equal(store.workspaces.get(workspaceId)?.status, "DELETE");
+  assert.equal(store.tasks.get("historical-task")?.workspaceId, workspaceId);
+  assert.deepEqual((await app.inject({ url: "/workspace", headers })).json().data, []);
+  assert.equal((await app.inject({ url: `/workspace/${workspaceId}`, headers })).statusCode, 404);
+  assert.equal((await app.inject({ url: `/workspace/search/${workspace?.code}`, headers })).statusCode, 404);
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers, payload: { code: workspace?.code } })).statusCode, 404);
+  await app.close();
+});
+
 test("workspace endpoints accept and return the original desktop and Android field names", async () => {
   const store = new Store(); store.emailCodes.set("legacy-workspace@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const app = await buildApp(store);
   const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "legacy-workspace@example.com", password: "password123", code: "123456" } });
