@@ -30,7 +30,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |
 | Create assignment | `TaskCreateScreen` | device QA pending |
-| Email/social onboarding | `AuthScreen` states and provider actions | device QA pending |
+| Email/social onboarding | `AuthScreen` states and provider actions | Google is currently hidden without client-ID configuration; device QA pending |
 
 ## iOS-only navigation differences
 
@@ -44,4 +44,5 @@ The native projects have separate route destinations, while the TypeScript mobil
 
 - The current mobile app has 11 screen source files, but those files contain the route destinations and sub-steps above. File count alone understates the number of UI states.
 - Route presence is source-level evidence only. It does not prove matching layout, text, state transitions, permissions, system back behavior, or parity on real devices.
+- The iOS simulator launch verified the login and email-sign-up path. Google sign-in was absent because `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is not configured in the local app environment; provider sign-in still needs credential-backed runtime verification.
 - The next parity pass should capture each source and TypeScript screen on Android and iOS, compare the interaction path, and update these statuses only after runtime verification.
