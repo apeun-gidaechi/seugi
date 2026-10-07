@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, BackHandler, FlatList, Image, Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { SeugiColor } from "@seugi/design-tokens";
@@ -25,6 +26,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
   const [otherProfile, setOtherProfile] = useState<LegacyProfile>();
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage>();
   const [failedOutgoing, setFailedOutgoing] = useState<Array<{ id: string; message: string; files: string[]; type: "MESSAGE" | "IMG" | "FILE" }>>([]);
   useEffect(() => {
     if (!searchMode) return;
@@ -128,7 +130,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
           const imageUrl = item.type === "IMG" ? parts[0] : undefined;
           const fileUrl = item.type === "FILE" ? parts[0] : undefined;
           const fileName = item.type === "FILE" ? parts[1] : undefined;
-          return <View style={styles.message}>
+          return <TouchableOpacity activeOpacity={1} onLongPress={() => item.messageStatus !== "DELETE" && setSelectedMessage(item)} style={styles.message}>
             {item.messageStatus === "DELETE" ? <Text style={styles.muted}>메시지가 삭제되었습니다.</Text> : <>
               {imageUrl ? <TouchableOpacity onPress={() => setPreviewImage({ url: imageUrl, name: parts[1] || "채팅 이미지" })}><Image source={{ uri: absoluteApiUrl(imageUrl) }} resizeMode="cover" style={styles.imageMessage} /></TouchableOpacity> : null}
               {fileUrl ? <TouchableOpacity onPress={() => openFile(fileUrl, fileName)} style={styles.fileMessage}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={1} style={styles.rowTitle}>{fileName || "첨부 파일"}</Text><Text style={styles.link}>파일 저장/공유 ↗</Text></View></TouchableOpacity> : null}
@@ -137,7 +139,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
             </>}
             <View style={styles.row}><Text style={styles.muted}>{new Date(item.createdAt).toLocaleTimeString()}</Text>{item.senderId === memberId && item.messageStatus !== "DELETE" ? <TouchableOpacity onPress={() => removeMessage(item)}><Text style={styles.error}>삭제</Text></TouchableOpacity> : null}</View>
             {item.messageStatus !== "DELETE" ? <View style={styles.reactions}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {(item.emojis[emoji] ?? []).length}</Text></TouchableOpacity>)}</View> : null}
-          </View>;
+          </TouchableOpacity>;
         }}
       />
       <SeugiChatTextField value={draft} onChangeText={setDraft} placeholder="메시지 입력" onAddClick={() => setShowAttachmentOptions(true)} onSendClick={() => void send()} sendEnabled={!sending && !!draft.trim()} editable={!sending} />
@@ -147,6 +149,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
     <Modal visible={!!fileDraft} transparent animationType="fade" onRequestClose={() => setFileDraft(undefined)}><View style={styles.sheetBackdrop}><TouchableOpacity style={styles.sheetDismiss} activeOpacity={1} onPress={() => setFileDraft(undefined)} /><View style={styles.filePreviewSheet}><Text style={styles.sheetTitle}>파일 전송</Text><View style={styles.filePreviewRow}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.rowTitle}>{fileDraft?.name}</Text><Text style={styles.muted}>{fileDraft?.size ? formatFileSize(fileDraft.size) : "크기 확인 불가"}</Text></View></View><View style={styles.filePreviewActions}><Button label="취소" kind="secondary" onPress={() => setFileDraft(undefined)} disabled={uploading || sending} /><Button label={uploading ? "전송 중…" : "전송"} onPress={() => void sendFile()} disabled={uploading || sending} /></View></View></View></Modal>
     <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(undefined)}><View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.94)", padding: 16 }}><View style={styles.imagePreviewHeader}><TouchableOpacity accessibilityRole="button" onPress={() => setPreviewImage(undefined)}><Text style={styles.imagePreviewCloseText}>닫기 ✕</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" onPress={() => { if (previewImage) openFile(previewImage.url, previewImage.name); }}><Text style={styles.imagePreviewCloseText}>저장/공유 ↓</Text></TouchableOpacity></View>{previewImage ? <ZoomableImage uri={absoluteApiUrl(previewImage.url)} accessibilityLabel="채팅 이미지 미리보기" /> : null}</View></Modal>
     <Modal visible={!!otherProfile} transparent animationType="slide" onRequestClose={() => setOtherProfile(undefined)}><View style={styles.profileBackdrop}><TouchableOpacity style={styles.profileDismiss} activeOpacity={1} onPress={() => setOtherProfile(undefined)} /><View style={styles.profileSheet}><View style={styles.profileHeader}>{otherProfile?.member.picture ? <Image source={{ uri: absoluteApiUrl(otherProfile.member.picture) }} style={styles.profileAvatar} /> : <View style={styles.profileAvatarPlaceholder}><Text style={styles.link}>{otherProfile?.member.name.slice(0, 1) ?? "?"}</Text></View>}<View style={{ flex: 1 }}><Text style={styles.profileName}>{otherProfile?.member.name}{otherProfile?.nick ? ` (${otherProfile.nick})` : ""}</Text><Text style={styles.muted}>{otherProfile?.permission === "ADMIN" ? "관리자" : otherProfile?.permission === "MIDDLE_ADMIN" ? "중간관리자" : otherProfile?.permission === "TEACHER" ? "선생님" : "학생"}</Text></View><TouchableOpacity onPress={() => setOtherProfile(undefined)}><Text style={styles.link}>닫기</Text></TouchableOpacity></View>{[["상태 메시지", otherProfile?.status], ["학년·반·번호", [otherProfile?.grade, otherProfile?.class, otherProfile?.number].filter(Boolean).join(" · ")], ["직위", otherProfile?.spot], ["소속", otherProfile?.belong], ["휴대전화", otherProfile?.phone], ["유선전화", otherProfile?.wire], ["근무 위치", otherProfile?.location]].filter((row) => row[1]).map(([label, value]) => <View key={String(label)} style={styles.profileField}><Text style={styles.muted}>{label}</Text><Text style={styles.rowTitle}>{value}</Text></View>)}</View></View></Modal>
+    <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={() => setSelectedMessage(undefined)}><View style={styles.contextBackdrop}><TouchableOpacity style={styles.contextDismiss} activeOpacity={1} onPress={() => setSelectedMessage(undefined)} /><View style={styles.contextDialog}><TouchableOpacity accessibilityRole="button" disabled={!selectedMessage || !visibleMessage(selectedMessage)} onPress={() => { if (!selectedMessage) return; void Clipboard.setStringAsync(visibleMessage(selectedMessage)).then(() => setSelectedMessage(undefined)).catch((error) => Alert.alert("메시지를 복사하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); }}><Text style={!selectedMessage || !visibleMessage(selectedMessage) ? styles.disabledAction : styles.copyAction}>메세지 복사하기</Text></TouchableOpacity><View style={styles.contextEmojis}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" onPress={() => { if (!selectedMessage) return; void react(selectedMessage, emoji).finally(() => setSelectedMessage(undefined)); }}><Text style={styles.contextEmoji}>{emoji}</Text></TouchableOpacity>)}</View></View></View></Modal>
   </View>;
 }
 
@@ -199,4 +202,11 @@ const styles = StyleSheet.create({
   profileAvatarPlaceholder: { width: 54, height: 54, borderRadius: 27, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   profileName: { color: SeugiColor.Gray800, fontWeight: "700", fontSize: 18 },
   profileField: { borderTopWidth: 1, borderColor: SeugiColor.Gray100, paddingTop: 10, gap: 4 },
+  contextBackdrop: { flex: 1, justifyContent: "center", padding: 28, backgroundColor: "rgba(0,0,0,0.32)" },
+  contextDismiss: { ...StyleSheet.absoluteFillObject },
+  contextDialog: { backgroundColor: SeugiColor.White, borderRadius: 16, padding: 16, gap: 8 },
+  copyAction: { paddingVertical: 8, color: SeugiColor.Gray800, fontWeight: "600" },
+  disabledAction: { paddingVertical: 8, color: SeugiColor.Gray400, fontWeight: "600" },
+  contextEmojis: { flexDirection: "row", justifyContent: "space-between" },
+  contextEmoji: { height: 32, textAlignVertical: "center", fontSize: 19 },
 });
