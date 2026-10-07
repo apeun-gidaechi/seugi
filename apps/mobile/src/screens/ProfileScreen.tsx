@@ -175,19 +175,6 @@ function WorkspaceNavigationRow({ title, onPress }: { title: string; onPress: ()
   </TouchableOpacity>;
 }
 
-export function WorkspaceGeneralScreen() {
-  const leaveWorkspace = () => {
-    if (Platform.OS === "ios") {
-      Alert.alert("정말 학교를 나가시겠습니까?", "나간 후에는\n다시 정보를 되돌릴 수 없습니다", [
-        { text: "나가기", style: "destructive", onPress: () => undefined },
-        { text: "취소", style: "cancel" },
-      ]);
-      return;
-    }
-    Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
-  };
-  return <ScrollView style={styles.content}><TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}><Text style={styles.leaveWorkspace}>학교 나가기</Text><Text style={styles.muted}>›</Text></TouchableOpacity></ScrollView>;
-}
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: import("@seugi/contracts").Room) => void }) { return <WorkspaceMembersDestination workspace={workspace} onOpenRoom={onOpenRoom} />; }
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <View style={styles.notificationScreen}><WorkspaceNotificationSettings workspace={workspace} /></View>; }
@@ -424,8 +411,6 @@ const styles = StyleSheet.create({
   requestCheckbox: { width: 24, height: 24, borderWidth: 1, borderColor: SeugiColor.Gray400, borderRadius: 5, color: SeugiColor.White, fontSize: 16, lineHeight: 21, textAlign: "center" },
   requestCheckboxChecked: { backgroundColor: SeugiColor.Primary500, borderColor: SeugiColor.Primary500 },
   requestActions: { flexDirection: "row", gap: 8, paddingTop: 12 },
-  generalAction: { minHeight: 56, paddingHorizontal: 4, borderBottomWidth: 1, borderColor: SeugiColor.Gray100, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  leaveWorkspace: { color: SeugiColor.Red500, fontSize: 15, fontWeight: "600" },
   memberActions: { flexDirection: "row", gap: 14 },
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   numberInput: { flex: 1, minWidth: 0 },

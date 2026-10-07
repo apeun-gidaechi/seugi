@@ -32,13 +32,13 @@ import {
   AccountSettingsScreen,
   WorkspaceCreateScreen,
   WorkspaceDetailScreen,
-  WorkspaceGeneralScreen,
   WorkspaceInviteScreen,
   WorkspaceJoinScreen,
   WorkspaceMembersScreen,
   WorkspaceNotificationsScreen,
   type WorkspaceSection,
 } from "./ProfileScreen";
+import { WorkspaceGeneralScreen } from "./WorkspaceGeneralScreen";
 
 const tabTitles: Record<SeugiTab, string> = {
   home: "홈",
