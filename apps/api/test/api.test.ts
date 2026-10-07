@@ -63,6 +63,22 @@ test("email login accepts the original client token field", async () => {
   await app.close();
 });
 
+test("workspace retains requested roles and permits a teacher announcement", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  for (const email of ["role-owner@example.com", "teacher@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  const owner = await app.inject({ method: "POST", url: "/member/register", payload: { email: "role-owner@example.com", password: "password123", code: "123456" } });
+  const teacher = await app.inject({ method: "POST", url: "/member/register", payload: { email: "teacher@example.com", password: "password123", code: "123456" } });
+  const ownerHeaders = { authorization: `Bearer ${owner.json().data.accessToken}` }; const teacherHeaders = { authorization: `Bearer ${teacher.json().data.accessToken}` };
+  const created = await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "역할 학교" } }); const workspaceId = created.json().data as string;
+  const code = (await app.inject({ method: "GET", url: `/workspace/code/${workspaceId}`, headers: ownerHeaders })).json().data as string;
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: teacherHeaders, payload: { workspaceId, workspaceCode: code, role: "TEACHER" } })).statusCode, 200);
+  const teacherId = app.jwt.decode<{ sub: string }>(teacher.json().data.accessToken)?.sub; assert.ok(teacherId);
+  assert.equal((await app.inject({ method: "PATCH", url: "/workspace/add", headers: ownerHeaders, payload: { workspaceId, userSet: [teacherId], role: "TEACHER" } })).statusCode, 200);
+  assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "TEACHER");
+  assert.equal((await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } })).statusCode, 200);
+  await app.close();
+});
+
 test("workspace data rejects unauthenticated and non-member access with HTTP semantics", async () => {
   const store = new Store(); const app = await buildApp(store);
   for (const email of ["owner@example.com", "other@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
