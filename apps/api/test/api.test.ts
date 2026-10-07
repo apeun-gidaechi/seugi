@@ -287,10 +287,13 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.nick, "별명");
   const notification = await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } });
   assert.equal(notification.statusCode, 200);
+  assert.equal(notification.json().data.userName, "teacher"); assert.deepEqual(notification.json().data.emoji, []); assert.equal(notification.json().data.createdDate, notification.json().data.lastModifiedDate);
   const notificationId = notification.json().data.id as string;
   assert.equal((await app.inject({ method: "PATCH", url: "/notification", headers: teacherHeaders, payload: { id: notificationId, workspaceId: "00000000-0000-4000-8000-000000000099", title: "시험 일정", content: "다음 주 시험입니다" } })).statusCode, 200);
   assert.equal(store.notifications.get(notificationId)?.title, "시험 일정");
   assert.equal(store.notifications.get(notificationId)?.workspaceId, workspaceId);
+  const refreshedNotices = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: teacherHeaders });
+  assert.equal(refreshedNotices.json().data[0].lastModifiedDate, store.notifications.get(notificationId)?.updatedAt);
   assert.equal((await app.inject({ method: "DELETE", url: `/notification/${workspaceId}/${notificationId}`, headers: teacherHeaders })).statusCode, 200);
   assert.equal(store.notifications.has(notificationId), false);
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "교사 방", memberIds: [teacherId] } })).json().data as string;
@@ -332,12 +335,13 @@ test("announcements are returned newest first, matching the original descending 
   store.members.set(memberId, { id: memberId, email: "notice-order@example.com", name: "공지 사용자" });
   store.workspaces.set(workspaceId, { id: workspaceId, code: "NOTICE", name: "공지 학교", members: [memberId], waitlist: [], ownerId: memberId });
   for (const [id, title, createdAt] of [["00000000-0000-4000-8000-000000000033", "오래된 공지", "2025-01-01T00:00:00.000Z"], ["00000000-0000-4000-8000-000000000034", "새 공지", "2025-02-01T00:00:00.000Z"]]) {
-    store.notifications.set(id, { id, workspaceId, title, content: title, authorId: memberId, createdAt, emojis: {} });
+    store.notifications.set(id, { id, workspaceId, title, content: title, authorId: memberId, createdAt, emojis: title === "새 공지" ? { "👍": [memberId] } : {} });
   }
   const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`;
   try {
-    const response = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: { authorization } });
+  const response = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: { authorization } });
     assert.deepEqual(response.json().data.map((item: { title: string }) => item.title), ["새 공지", "오래된 공지"]);
+    assert.equal(response.json().data[0].userName, "공지 사용자"); assert.equal(response.json().data[0].userId, memberId); assert.deepEqual(response.json().data[0].emoji, [{ emoji: "👍", userList: [memberId] }]); assert.equal(response.json().data[0].createdDate, response.json().data[0].lastModifiedDate);
   } finally { await app.close(); }
 });
 
