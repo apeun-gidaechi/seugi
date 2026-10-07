@@ -7,11 +7,6 @@ import { createPersonalChatRoom, searchChatRooms } from "@/Api/chat";
 type ApiRoom = { id: string; workspaceId: string; type: string; name: string; adminId: string; image?: string; memberIds: string[] };
 const toChatRoom = (room: ApiRoom): ChatRoom => ({ id: room.id, workspaceId: room.workspaceId, type: room.type, roomAdmin: Number(room.adminId), chatName: room.name, chatRoomImg: room.image ?? "", createdAt: "", chatStatusEnum: "ALIVE", joinUserInfo: [], lastMessage: "", lastMessageTimestamp: "", notReadCnt: 0 });
 
-// Axios 인스턴스 생성
-// export const SeugiCustomAxios: AxiosInstance = axios.create({
-//   baseURL: SERVER_URL,
-// });
-
 // useChatSidebar 훅 정의
 const useChat = () => {  
   const location = useLocation();
