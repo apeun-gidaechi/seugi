@@ -92,6 +92,7 @@ export function SeugiPasswordTextField(props: Omit<SeugiTextFieldProps, "secureT
 
 /** Six-cell code input matching the native Seugi verification control. */
 export function SeugiCodeTextField({
+  label,
   value,
   onChangeText,
   limit = 6,
@@ -102,12 +103,14 @@ export function SeugiCodeTextField({
   value: string;
   onChangeText: (value: string) => void;
   limit?: number;
+  label?: string;
   error?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.codeRoot, containerStyle]}>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <View pointerEvents="none" style={styles.codeCells}>
         {Array.from({ length: limit }, (_, index) => (
           <View key={index} style={[styles.codeCell, focused && (value.length === index || (index === limit - 1 && value.length === limit)) && styles.focused, error && styles.invalid]}>

@@ -283,7 +283,6 @@ export default function App() {
           setError("");
           try {
             await api.sendVerification(email);
-            setError("인증 코드를 발송했습니다.");
             return true;
           } catch (e) {
             setError(e instanceof Error ? e.message : "인증 코드를 발송하지 못했습니다");

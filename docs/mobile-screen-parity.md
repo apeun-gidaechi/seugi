@@ -30,7 +30,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |
 | Create assignment | `TaskCreateScreen` | device QA pending |
-| Email/social onboarding | `AuthScreen` states and provider actions | Google is currently hidden without client-ID configuration; device QA pending |
+| Email/social onboarding | `AuthScreen` states and provider actions | iPad simulator verified email signup fields and transition to code entry against the iOS source flow; sending/submitting a real code and Apple/Google remain unverified |
 
 ## iOS-only navigation differences
 
@@ -48,6 +48,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 - Route presence is source-level evidence only. It does not prove matching layout, text, state transitions, permissions, system back behavior, or parity on real devices.
 - Group-room member invitations are available to every current room member in the Android source. The TypeScript UI and API now match that behavior while keeping member invitations limited to authenticated room members and workspace members; kick and leadership-transfer actions remain room-admin-only.
 - An iOS simulator smoke pass signed in with a disposable local account and opened home, notice list/editor, personal/group chat lists, profile/account settings, workspace detail/members/invites/notifications, assignments, timetable/editor, and meal calendar. This verified screen reachability with an empty local workspace, not source-vs-target visual or interaction parity. The test account was signed out and its temporary API data removed afterward.
+- A current iPad A16 simulator pass compared the email-registration layout and state transition to the native SwiftUI source. The form has labeled name/email/password/confirmation fields and a fixed continue action; continuing opens the code screen without sending mail, matching the native route sequence. Only dummy `.invalid` input was used and no email was sent. Code delivery and registration submission remain unverified.
 - Google sign-in was absent because `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is not configured; Apple, Google, realtime chat, and populated-school data still need credential-backed runtime checks. Push-token registration also remains unavailable without `EXPO_PUBLIC_EAS_PROJECT_ID`; the missing optional push configuration is logged without showing a global app error.
 - The meal calendar route opened, but the local API returned `NEIS_API_KEY is not configured`; real meal/timetable-backed content could not be verified.
 - Android device QA and source-vs-target capture/comparison remain outstanding. Update individual `device QA pending` rows only after those comparisons.
