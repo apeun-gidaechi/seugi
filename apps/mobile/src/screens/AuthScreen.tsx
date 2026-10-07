@@ -32,26 +32,31 @@ type AuthScreenProps = {
   onRegister: () => void;
 };
 
+type AuthRoute = "start" | "login" | "signup" | "verification";
+
 export function AuthScreen({ hydrated, appleAvailable, loading, error, email, password, confirmPassword, name, code, onEmailChange, onPasswordChange, onConfirmPasswordChange, onNameChange, onCodeChange, onGoogleCode, onAppleSignIn, onError, onSendVerification, onLogin, onRegister }: AuthScreenProps) {
-  const [screen, setScreen] = useState<"start" | "login" | "signup" | "verification">("start");
+  const [routeStack, setRouteStack] = useState<AuthRoute[]>(["start"]);
+  const screen = routeStack[routeStack.length - 1];
+  const navigate = (route: AuthRoute) => setRouteStack((current) => [...current, route]);
+  const goBack = useCallback(() => setRouteStack((current) => current.length > 1 ? current.slice(0, -1) : current), []);
   const [showSignInOptions, setShowSignInOptions] = useState(false);
   const [verificationWaiting, setVerificationWaiting] = useState(false);
   const [verificationSeconds, setVerificationSeconds] = useState(300);
   const leaveVerification = useCallback(() => {
     onCodeChange("");
     onError("");
-    setScreen("signup");
-  }, [onCodeChange, onError]);
+    goBack();
+  }, [goBack, onCodeChange, onError]);
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (showSignInOptions) { setShowSignInOptions(false); return true; }
       if (screen === "start") return false;
       if (screen === "verification") leaveVerification();
-      else setScreen("start");
+      else goBack();
       return true;
     });
     return () => subscription.remove();
-  }, [screen, showSignInOptions, leaveVerification]);
+  }, [screen, showSignInOptions, leaveVerification, goBack]);
   useEffect(() => {
     if (!verificationWaiting) return;
     const timer = setInterval(() => setVerificationSeconds((remaining) => {
@@ -62,7 +67,7 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
   }, [verificationWaiting]);
   if (!hydrated) return <SafeAreaView style={styles.auth}><ActivityIndicator size="large" color={SeugiColor.Primary500} /><Text style={styles.subtitle}>로그인 정보를 확인하는 중…</Text></SafeAreaView>;
   if (screen === "signup") return <SafeAreaView style={[styles.auth, styles.formScreen]}>
-    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" onPress={() => setScreen("start")} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>회원가입</Text><View style={styles.formBack} /></View>
+    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" onPress={goBack} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>회원가입</Text><View style={styles.formBack} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
       <SeugiTextField label="이름" placeholder="이름을 입력해 주세요" containerStyle={styles.signupField} value={name} onChangeText={onNameChange} />
       <SeugiTextField label="이메일" placeholder="이메일 입력해 주세요" autoCapitalize="none" keyboardType="email-address" returnKeyType="next" containerStyle={styles.signupField} value={email} onChangeText={onEmailChange} />
@@ -72,8 +77,8 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </ScrollView>
     <View style={styles.formFooter}>
-      <TouchableOpacity accessibilityRole="button" onPress={() => setScreen("login")} style={styles.existingAccount}><Text style={styles.link}>이미 계정이 있으신가요?</Text></TouchableOpacity>
-      <Button label="계속하기" onPress={() => { onError(""); setScreen("verification"); }} disabled={!email || !name || password.length < 8 || !confirmPassword || password !== confirmPassword || loading} />
+      <TouchableOpacity accessibilityRole="button" onPress={() => navigate("login")} style={styles.existingAccount}><Text style={styles.link}>이미 계정이 있으신가요?</Text></TouchableOpacity>
+      <Button label="계속하기" onPress={() => { onError(""); navigate("verification"); }} disabled={!email || !name || password.length < 8 || !confirmPassword || password !== confirmPassword || loading} />
     </View>
   </SafeAreaView>;
   if (screen === "verification") return <SafeAreaView style={[styles.auth, styles.formScreen]}>
@@ -109,21 +114,21 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
     {error ? <Text style={styles.startError}>{error}</Text> : null}
     <Modal visible={showSignInOptions} transparent animationType="slide" onRequestClose={() => setShowSignInOptions(false)}>
       <View style={styles.sheetBackdrop}><TouchableOpacity accessibilityRole="button" accessibilityLabel="닫기" style={styles.sheetDismiss} onPress={() => setShowSignInOptions(false)} /><View style={styles.signInSheet}>
-        <SeugiButton label="이메일로 계속하기" variant="black" size="large" fullWidth onPress={() => { setShowSignInOptions(false); setScreen("login"); }} />
+        <SeugiButton label="이메일로 계속하기" variant="black" size="large" fullWidth onPress={() => { setShowSignInOptions(false); navigate("login"); }} />
         {appleAvailable ? <AppleAuthentication.AppleAuthenticationButton buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN} buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK} cornerRadius={10} style={styles.oauthButton} onPress={() => { setShowSignInOptions(false); void onAppleSignIn(); }} /> : null}
         {Platform.OS !== "web" && GOOGLE_WEB_CLIENT_ID ? <GoogleAuthButton label="Google로 계속하기" onCode={onGoogleCode} onError={onError} disabled={loading} /> : null}
       </View></View>
     </Modal>
   </SafeAreaView>;
   if (screen === "login") return <SafeAreaView style={[styles.auth, styles.formScreen]}>
-    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={() => setScreen("start")} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>로그인</Text><View style={styles.formBack} /></View>
+    <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={goBack} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>로그인</Text><View style={styles.formBack} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
       <SeugiTextField label="이메일" placeholder="이메일을 입력해 주세요" autoCapitalize="none" keyboardType="email-address" returnKeyType="next" containerStyle={styles.signupField} value={email} onChangeText={onEmailChange} />
       <SeugiPasswordTextField label="비밀번호" placeholder="비밀번호를 입력해 주세요" containerStyle={styles.signupField} value={password} onChangeText={onPasswordChange} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </ScrollView>
     <View style={styles.formFooter}>
-      <TouchableOpacity accessibilityRole="button" onPress={() => setScreen("signup")} style={styles.existingAccount}><Text style={styles.loginSignupPrompt}>계정이 없으시다면? <Text style={styles.link}>가입하기</Text></Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" onPress={() => navigate("signup")} style={styles.existingAccount}><Text style={styles.loginSignupPrompt}>계정이 없으시다면? <Text style={styles.link}>가입하기</Text></Text></TouchableOpacity>
       <Button label={loading ? "로그인 중…" : "로그인"} onPress={onLogin} disabled={loading || !email || !password} />
     </View>
   </SafeAreaView>;
