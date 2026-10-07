@@ -6,7 +6,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 
 | Original destination | TypeScript mobile target | Status |
 | --- | --- | --- |
-| Home | `HomeScreen` in `HomeScreen.tsx` | Pull-to-refresh reloads the home data set; schedule query is current-month with Android's three-item cap and iOS's future-only rule; platform-specific schedule empty/error states; populated meal/timetable/task and device capture parity pending |
+| Home | `HomeScreen` in `HomeScreen.tsx` | Pull-to-refresh reloads the home data set; meal query is date-scoped; schedule query is current-month with Android's three-item cap and iOS's future-only rule; platform-specific schedule/meal failure states; populated meal/timetable/task and device capture parity pending |
 | Chat | `ChatScreen` (`roomType="personal"`) | last-message ordering, avatars, timestamps, unread badges, and pull-to-refresh aligned to Android; device QA pending |
 | Group rooms | `ChatScreen` (`roomType="group"`) | member counts plus shared chat-row parity aligned to Android; device QA pending |
 | Chat detail | `ChatConversationScreen` | Own messages align right; incoming sender avatars/names, local-date dividers, Korean local timestamps, used-reaction-only display, and live unread counts are implemented; device QA pending |

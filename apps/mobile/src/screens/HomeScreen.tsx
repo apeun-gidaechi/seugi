@@ -52,6 +52,7 @@ export function HomeScreen({
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [meals, setMeals] = useState<Meal[]>();
+  const [mealError, setMealError] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [scheduleError, setScheduleError] = useState(false);
@@ -70,13 +71,14 @@ export function HomeScreen({
       api.tasks(workspace.id),
       api.classroomTasks(),
       api.weeklyTimetable(workspace.id),
-      api.meals(workspace.id),
+      api.mealForDate(workspace.id, localDateKey(new Date())),
       api.schedulesForMonth(workspace.id, new Date().getMonth() + 1),
     ]);
     if (results[0].status === "fulfilled") setTasks(results[0].value.data ?? []);
     if (results[1].status === "fulfilled") setClassroomTasks(results[1].value.data ?? []);
     if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
     if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
+    setMealError(results[3].status === "rejected");
     if (results[4].status === "fulfilled") setSchedules(results[4].value.data ?? []);
     setScheduleError(results[4].status === "rejected");
     setScheduleLoading(false);
@@ -159,7 +161,7 @@ export function HomeScreen({
         )}
       </HomeCard>
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
-        {meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
+        {meals === undefined && Platform.OS === "ios" && mealError ? <Text style={styles.muted}>학교를 등록하고 급식을 확인하세요</Text> : meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
           {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
             {mealPages.map(({ type, meal }, index) => <View key={`${today}-${type}`} style={[styles.mealPage, { width: mealPageWidth }]}>
               {meal ? <>
