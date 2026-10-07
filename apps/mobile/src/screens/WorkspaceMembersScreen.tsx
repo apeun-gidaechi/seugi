@@ -5,6 +5,7 @@ import type { LegacyProfile, Member, Role, Room, Workspace } from "@seugi/contra
 import { Button } from "../components/ui";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { StudentInfoScreen } from "./StudentInfoScreen";
 
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: Room) => void }) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -15,11 +16,14 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
   const [busyId, setBusyId] = useState("");
   const [selected, setSelected] = useState<LegacyProfile>();
   const [openingChat, setOpeningChat] = useState(false);
+  const [canManageMembers, setCanManageMembers] = useState(false);
+  const [editingStudentInfo, setEditingStudentInfo] = useState(false);
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [info, result] = await Promise.all([api.memberInfo(), api.workspaceMembers(workspace.id)]);
+      const [info, result, profile] = await Promise.all([api.memberInfo(), api.workspaceMembers(workspace.id), api.myProfile(workspace.id)]);
       setIsOwner(info.data?.id === workspace.ownerId);
+      setCanManageMembers(info.data?.id === workspace.ownerId || profile.data?.role === "ADMIN" || profile.data?.role === "MIDDLE_ADMIN");
       setMembers((result.data ?? []).map((member) => ({ ...member, role: member.id === workspace.ownerId ? "ADMIN" : member.role ?? "STUDENT" })));
     } finally {
       setLoading(false);
@@ -81,17 +85,22 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
       </View>) : null}
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
     </ScrollView>
-    <Modal visible={!!selected} transparent animationType="slide" onRequestClose={() => setSelected(undefined)}>
+    <Modal visible={!!selected && !editingStudentInfo} transparent animationType="slide" onRequestClose={() => setSelected(undefined)}>
       <View style={styles.backdrop}><TouchableOpacity style={styles.dismiss} activeOpacity={1} onPress={() => setSelected(undefined)} /><View style={styles.sheet}>
         <View style={styles.profileHeader}>
           {selected?.member.picture ? <Image source={{ uri: absoluteApiUrl(selected.member.picture) }} style={styles.profileAvatar} /> : <View style={styles.profileAvatarFallback}><Text style={styles.avatarInitial}>{selected?.member.name.slice(0, 1) ?? "?"}</Text></View>}
           <View style={styles.identityText}><Text style={styles.profileName}>{selected?.member.name}</Text><Text style={styles.role}>{selected ? roleLabel(selected.permission) : ""}</Text></View>
           <TouchableOpacity onPress={() => setSelected(undefined)}><Text style={styles.action}>닫기</Text></TouchableOpacity>
         </View>
-        {[["상태 메시지", selected?.status], ["직위", selected?.spot], ["소속", selected?.belong], ["휴대전화", selected?.phone], ["유선전화", selected?.wire], ["근무 위치", selected?.location]].filter((row) => row[1]).map(([label, value]) => <View key={String(label)} style={styles.profileField}><Text style={styles.role}>{label}</Text><Text style={styles.profileValue}>{value}</Text></View>)}
+        {[["상태 메시지", selected?.status], ["학년·반·번호", selected ? [selected.schGrade ?? selected.grade, selected.schClass ?? selected.class, selected.schNumber ?? selected.number].filter(Boolean).join(" · ") : ""], ["직위", selected?.spot], ["소속", selected?.belong], ["휴대전화", selected?.phone], ["유선전화", selected?.wire], ["근무 위치", selected?.location]].filter((row) => row[1]).map(([label, value]) => <View key={String(label)} style={styles.profileField}><Text style={styles.role}>{label}</Text><Text style={styles.profileValue}>{value}</Text></View>)}
+        {canManageMembers && selected?.permission === "STUDENT" ? <Button label="학생 정보 수정" kind="secondary" onPress={() => setEditingStudentInfo(true)} /> : null}
         <Button label={openingChat ? "채팅방 여는 중…" : "개인 채팅"} onPress={() => void startPersonalChat()} disabled={openingChat} />
       </View></View>
     </Modal>
+    {selected ? <StudentInfoScreen visible={editingStudentInfo} workspace={workspace} profile={selected} onClose={(saved) => {
+      setEditingStudentInfo(false);
+      if (saved) void api.profileOfOther(workspace.id, selected.member.id).then((result) => setSelected(result.data)).catch((error) => setNotice(error instanceof Error ? error.message : "수정된 학생 정보를 불러오지 못했습니다"));
+    }} /> : null}
   </View>;
 }
 
