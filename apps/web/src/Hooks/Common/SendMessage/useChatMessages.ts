@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import {socketService} from './socketService';
 import {ChatRoom} from "@/Components/common/ChatRoom";
-import {SeugiCustomAxios} from "@/axios/SeugiCutomAxios";
+import { getChatMessages } from "@/Api/chat";
 
 // TODO: Move to file
 
@@ -41,7 +41,6 @@ const adaptMessage = (message: ApiMessage): Message => ({ id: message.id, uuid: 
 
 const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
   const [receivedMessages, setReceivedMessages] = useState<Message[]>([]);
-  const [lastTimestamps, setLastTimestamps] = useState<{ [roomId: string]: number }>({});
 
   useEffect(() => {
     console.log('useChatMessages.useEffect called');
@@ -80,17 +79,11 @@ const useChatMessages = (selectedRoom: ChatRoom, currentUser: string) => {
       return;
     }
     // 해당 roomId의 마지막 메시지 timestamp 가져오기
-    const lastTimestamp = lastTimestamps[roomId];
     console.log("dd:", roomId);
 
-    // 메시지 가져오기 API 호출
-    const url = lastTimestamp
-      ? `message/search/${roomId}?timestamp=${lastTimestamp}`
-      : `message/search/${roomId}`;
-
     try {
-      const response = await SeugiCustomAxios.get(url);
-      const messages = (response.data.data.messages as ApiMessage[]).map(adaptMessage);
+      const response = await getChatMessages(roomId);
+      const messages = response.messages.map(adaptMessage);
       messages
         .sort((a, b) => new Date(a.timestamp ?? '').getTime() - new Date(b.timestamp ?? '').getTime())
 

@@ -1,10 +1,9 @@
 import {useEffect, useState} from "react";
 import Cookies from "js-cookie";
-import {SeugiCustomAxios} from "@/axios/SeugiCutomAxios";
 import {useLocation} from "react-router-dom";
-import ChatRoom from "@/Components/common/ChatRoom";
+import type { ChatRoom } from "@/Components/common/ChatRoom";
+import { createPersonalChatRoom, searchChatRooms } from "@/Api/chat";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 type ApiRoom = { id: string; workspaceId: string; type: string; name: string; adminId: string; image?: string; memberIds: string[] };
 const toChatRoom = (room: ApiRoom): ChatRoom => ({ id: room.id, workspaceId: room.workspaceId, type: room.type, roomAdmin: Number(room.adminId), chatName: room.name, chatRoomImg: room.image ?? "", createdAt: "", chatStatusEnum: "ALIVE", joinUserInfo: [], lastMessage: "", lastMessageTimestamp: "", notReadCnt: 0 });
 
@@ -37,14 +36,14 @@ const useChat = () => {
 
       // 경로에 따라 개인 또는 그룹 채팅방 검색
       if (pathname === "/chat") {
-        const response = await SeugiCustomAxios.get(`/chat/personal/search?workspace=${storedWorkspaceId}`);
-
-        const personalRooms = (response.data.data as ApiRoom[]).map(toChatRoom);
+        if (!storedWorkspaceId) return;
+        const rooms = await searchChatRooms(storedWorkspaceId, "", "personal");
+        const personalRooms = (rooms as ApiRoom[]).map(toChatRoom);
         updatePersonalChatRooms(personalRooms);
       } else if (pathname === "/groupchat") {
-        const response = await SeugiCustomAxios.get(`/chat/group/search?workspace=${storedWorkspaceId}`);
-
-        const groupRooms = (response.data.data as ApiRoom[]).map(toChatRoom);
+        if (!storedWorkspaceId) return;
+        const rooms = await searchChatRooms(storedWorkspaceId, "", "group");
+        const groupRooms = (rooms as ApiRoom[]).map(toChatRoom);
         updateGroupChatRooms(groupRooms);
       }
     } catch (error) {
@@ -53,18 +52,10 @@ const useChat = () => {
   };
 
   const createRoom = async (roomName: string) => {
-    const requestData = {
-      workspaceId: Cookies.get("workspaceId"),
-      name: roomName,
-      memberIds: [],
-    };
+    const workspaceId = Cookies.get("workspaceId");
+    if (!workspaceId) return;
     try {
-      const response = await SeugiCustomAxios.post('/chat/personal/create', requestData);
-
-      if (response.status !== 200) {
-        console.error(`Error creating room: ${response.data}`);
-        return;
-      }
+      await createPersonalChatRoom(workspaceId, roomName);
 
       // const newRoomList = [...personalChatRooms, roomName]; // 새로운 방 추가
       // updatePersonalChatRooms(newRoomList); // 업데이트된 상태 저장
