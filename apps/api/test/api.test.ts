@@ -142,13 +142,23 @@ test("message deletion preserves a room-scoped tombstone and publishes a deletio
 
 test("meal API can serve the cached requested month and validates month ranges", async () => {
   const store = new Store(); const app = await buildApp(store);
+  const memberId = "2ca59215-e627-43f4-a5c1-4c1feb56cf21"; const outsiderId = "2ca59215-e627-43f4-a5c1-4c1feb56cf23";
   const workspaceId = "2ca59215-e627-43f4-a5c1-4c1feb56cf22";
+  store.members.set(memberId, { id: memberId, email: "meal-member@example.com", name: "급식 구성원" }); store.members.set(outsiderId, { id: outsiderId, email: "meal-outsider@example.com", name: "외부 사용자" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "MEALTEST", name: "급식 학교", ownerId: memberId, members: [memberId], waitlist: [] });
+  const memberHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: memberId })}` }; const outsiderHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: outsiderId })}` };
   const now = new Date(); const year = now.getFullYear(); const month = now.getMonth() + 1;
   const cached = [{ date: `${year}-${String(month).padStart(2, "0")}-01`, type: "중식", menu: ["테스트 메뉴"], calorie: "500 Kcal" }];
   store.meals.set(workspaceId, cached);
-  const meals = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}&month=${month}` });
+  assert.equal((await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}` })).statusCode, 401);
+  assert.equal((await app.inject({ method: "POST", url: `/meal/reset/${workspaceId}` })).statusCode, 401);
+  assert.equal((await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}`, headers: outsiderHeaders })).statusCode, 403);
+  assert.equal((await app.inject({ method: "POST", url: `/meal/reset/${workspaceId}`, headers: outsiderHeaders })).statusCode, 403);
+  const meals = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}&month=${month}`, headers: memberHeaders });
   assert.equal(meals.statusCode, 200); assert.deepEqual(meals.json().data, cached);
-  const invalidRange = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}` });
+  const dailyMeals = await app.inject({ method: "GET", url: `/meal?workspaceId=${workspaceId}&date=${cached[0].date}`, headers: memberHeaders });
+  assert.deepEqual(dailyMeals.json().data, cached);
+  const invalidRange = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}`, headers: memberHeaders });
   assert.equal(invalidRange.statusCode, 400);
   await app.close();
 });
