@@ -4,7 +4,7 @@ The web app keeps screen composition in `Pages/` and feature behavior in the exi
 
 ## Foundations
 
-`tokens.ts` is the shared source for the refreshed web palette, spacing, radii, shadows, typography, and the mobile breakpoint. Prefer these tokens in new styled components rather than adding one-off hex values or spacing scales. `SeugiColor` and `SeugiFont` remain available to legacy screens during incremental migration.
+`tokens.ts` provides semantic aliases and shared spacing/radius/shadow values grounded in the existing `SeugiColor` and `SeugiFont` definitions. It is not a replacement palette: existing screens remain the visual source of truth. Prefer these aliases in new styled components and preserve computed styles when extracting existing ones.
 
 ## Components
 
