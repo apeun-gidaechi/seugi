@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { CHAT_EMOJIS } from "@seugi/contracts";
+import type { ClientToServerEvents, ServerToClientEvents } from "@seugi/contracts";
 import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
 import type { MessageEmojiEvent, Store } from "./store.js";
@@ -9,7 +10,7 @@ import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
 
 export function attachRealtime(app: FastifyInstance, store: Store) {
-  const io = new Server(app.server, { cors: { origin: true } });
+  const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, { userId: string }>(app.server, { cors: { origin: true } });
   const stomp = attachStompCompatibility(app, store, io, (message) => replyToMention(message));
   const push = new PushNotifications();
   const replyToMention = (message: ChatMessage) => {
@@ -33,7 +34,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         .then((allowed) => { if (allowed) socket.join(roomId); })
         .catch((error) => app.log.error(error, "realtime room authorization failed"));
     });
-    socket.on("chat:message", (rawInput: unknown, done?: (result: unknown) => void) => {
+    socket.on("chat:message", (rawInput, done) => {
       const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), files: z.array(z.string().min(1).max(2048)).max(10).optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);
       if (!parsed.success) return done?.({ message: "MESSAGE_INVALID" });
       void store.withMutation(() => {
@@ -48,7 +49,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         const tokens = store.pushTokensForWorkspace(room.workspaceId, room.memberIds, socket.data.userId);
         return { room, message, senderName: sender.name, senderPicture: sender.picture, tokens };
       }).then((result) => {
-        if ("error" in result) return done?.({ message: result.error });
+        if ("error" in result) return done?.({ message: result.error ?? "ROOM_NOT_FOUND" });
         io.to(result.room.id).emit("chat:message", result.message);
         stomp.publishMessage(result.message);
         replyToMention(result.message);
