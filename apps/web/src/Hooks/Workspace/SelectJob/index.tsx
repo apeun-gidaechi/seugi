@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SeugiCustomAxios } from '@/axios/SeugiCutomAxios';
 import { paths } from '@/Constants/paths';
 import Cookies from 'js-cookie';
+import { joinWorkspace } from '@/Api/workspace';
 
 type Role = 'NONE' | 'STUDENT' | 'TEACHER';
 
@@ -43,17 +43,12 @@ const index = () => {
         }
 
         try {
-            const res = await SeugiCustomAxios.post(`/workspace/join`, {
+            await joinWorkspace({
                 workspaceId: workspaceId,
                 workspaceCode: verificationCode,
                 role: selectedRole,
             });
-
-            if (res.status === 200) {
-                navigate(paths.waitingjoin, { state: { token } });
-            } else {
-                console.error("워크스페이스 가입 실패:", res.data);
-            }
+            navigate(paths.waitingjoin, { state: { token } });
         } catch (error) {
             console.error("error", error);
         }
