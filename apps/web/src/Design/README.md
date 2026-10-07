@@ -1,6 +1,6 @@
 # Web design system
 
-The web app keeps screen composition in `Pages/` and feature behavior in the existing hooks and `Api/` adapters. Reusable visual primitives live in `Components/ui`; they should not fetch data or own route state.
+Screen composition and route-level coordination stay in `Pages/`. Reusable feature UI stays in `Components/`, behavior in `Hooks/`, and transport in `Api/`. Cross-feature visual primitives live in `Components/ui`; they should not fetch data or own route state.
 
 ## Foundations
 
@@ -8,11 +8,9 @@ The web app keeps screen composition in `Pages/` and feature behavior in the exi
 
 ## Components
 
-- `Button`: primary, secondary, and quiet actions; supports full-width layouts and native button attributes.
-- `Button`'s `seugi` variant backs the legacy button wrapper with the original Seugi dimensions and typography.
-- `TextField`: labeled, controlled input with helper/error text and an optional trailing control.
-- `TextControl`: input primitive used by the composed, labeled field.
-- `SeugiTextControl`: compatibility primitive for existing forms; preserves the original Seugi input dimensions and typography.
-- `Surface` and `Eyebrow`: shared building blocks for cards and section labels.
+- `Button`'s `seugi` variant backs the legacy button wrapper with the original Seugi dimensions, typography, and full-width behavior. The wrapper forwards native button props.
+- `SeugiTextControl` backs the legacy text-field wrapper with its original dimensions and typography. The wrapper forwards native input props.
+- `Avatar` centralizes the existing 60/36/32px circular profile image presentation. The legacy avatar wrapper retains its profile-loading behavior.
+- `Button`'s `primary`, `secondary`, and `quiet` variants, the labeled `TextField`, `Surface`, and `Eyebrow` are available for new compositions, not substituted into existing screens by default.
 
-These foundations are intentionally not wired into existing screen compositions yet. Current screens retain their original Seugi structure, styles, and visual behavior; adopt shared primitives only when they can reproduce that presentation without visible changes.
+Existing screen structure, styles, and visual behavior are the source of truth. When extracting or migrating a screen, preserve its rendered CSS and composition; adopt shared primitives only after confirming they reproduce the original presentation without visible changes.
