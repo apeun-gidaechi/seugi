@@ -26,7 +26,7 @@ export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Pro
 
 export type WorkspaceSection = "workspaceGeneral" | "workspaceMembers" | "workspaceInvite" | "workspaceNotifications" | "workspaceCreate" | "workspaceJoin";
 
-export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void }) {
+export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavigate, onReload }: { workspaces: Workspace[]; workspace: Workspace; onSelect: (value: Workspace) => void; onNavigate: (section: WorkspaceSection) => void; onReload: () => Promise<void> }) {
   const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [role, setRole] = useState<Role>("STUDENT");
   useEffect(() => {
@@ -69,6 +69,7 @@ export function WorkspaceDetailScreen({ workspaces, workspace, onSelect, onNavig
               <Text style={item.id === workspace.id ? styles.activeTab : styles.rowTitle}>{item.name}{item.id === workspace.id ? " · 선택됨" : ""}</Text>
               <Text style={styles.muted}>›</Text>
             </TouchableOpacity>)}
+            {Platform.OS === "android" ? <PendingWorkspaceRequests onChanged={onReload} /> : null}
           </ScrollView>
           <View style={styles.workspacePickerActions}>
             <Button label="새 학교 만들기" kind="secondary" onPress={() => { setWorkspacePickerOpen(false); onNavigate("workspaceCreate"); }} />

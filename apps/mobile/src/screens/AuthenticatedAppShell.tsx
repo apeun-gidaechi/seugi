@@ -154,7 +154,7 @@ export function AuthenticatedAppShell({
         />
       ) : null}
       {detail === "catSeugi" ? <CatSeugiScreen workspace={workspace} /> : null}
-      {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={switchWorkspace} onNavigate={pushDetail} /> : null}
+      {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={switchWorkspace} onNavigate={pushDetail} onReload={onReload} /> : null}
       {detail === "workspaceGeneral" ? <WorkspaceGeneralScreen /> : null}
       {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
