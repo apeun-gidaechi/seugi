@@ -33,6 +33,18 @@ export const joinWorkspaceSchema = z.object({
   role: z.enum(["STUDENT", "TEACHER", "MIDDLE_ADMIN"]).default("STUDENT"),
 }).refine((input) => input.workspaceId || input.code || input.workspaceCode, "워크스페이스 정보가 필요합니다");
 
+export const workspaceNotificationsSchema = z.object({ receivePush: z.boolean() });
+export const workspaceMemberSchema = z.object({ workspaceId: z.string().uuid(), memberId: z.string().uuid() });
+export const workspaceWaitlistActionSchema = z.object({ workspaceId: z.string().uuid(), memberId: z.string().uuid().optional(), memberIds: z.array(z.string().uuid()).default([]), userSet: z.array(z.string().uuid()).default([]), role: z.enum(["STUDENT", "TEACHER", "MIDDLE_ADMIN"]).default("STUDENT") });
+export const workspaceWaitlistQuerySchema = z.object({ workspaceId: z.string().uuid(), role: z.enum(["STUDENT", "TEACHER", "MIDDLE_ADMIN"]).default("STUDENT") });
+export const workspaceRoleSchema = z.enum(["STUDENT", "TEACHER", "MIDDLE_ADMIN", "MIDDLEADMIN", "ADMIN"]);
+export const updateWorkspaceMemberRoleSchema = workspaceMemberSchema.extend({ role: workspaceRoleSchema.optional(), workspaceRole: workspaceRoleSchema.optional() }).refine((value) => !!(value.role ?? value.workspaceRole));
+export const kickWorkspaceMembersSchema = z.object({ workspaceId: z.string().uuid(), memberId: z.string().uuid().optional(), memberList: z.array(z.string().uuid()).optional() }).refine((value) => !!value.memberId || !!value.memberList?.length);
+export const workspaceCodeParamSchema = z.object({ code: z.string() });
+
 export type CreateWorkspaceInput = z.input<typeof createWorkspaceSchema>;
 export type UpdateWorkspaceInput = z.input<typeof updateWorkspaceSchema>;
 export type JoinWorkspaceInput = z.input<typeof joinWorkspaceSchema>;
+export type WorkspaceWaitlistActionInput = z.input<typeof workspaceWaitlistActionSchema>;
+export type UpdateWorkspaceMemberRoleInput = z.input<typeof updateWorkspaceMemberRoleSchema>;
+export type KickWorkspaceMembersInput = z.input<typeof kickWorkspaceMembersSchema>;

@@ -1,5 +1,5 @@
 import { createTaskSchema } from "./task.js";
-import { createWorkspaceSchema, joinWorkspaceSchema, updateWorkspaceSchema } from "./workspace.js";
+import { createWorkspaceSchema, joinWorkspaceSchema, kickWorkspaceMembersSchema, updateWorkspaceMemberRoleSchema, updateWorkspaceSchema, workspaceMemberSchema, workspaceNotificationsSchema, workspaceWaitlistActionSchema, workspaceWaitlistQuerySchema } from "./workspace.js";
 import { editMemberSchema, loginMemberSchema, logoutMemberSchema, memberDeviceTokenSchema, registerMemberSchema } from "./member.js";
 import { editProfileSchema, editStudentNumberSchema } from "./profile.js";
 import { chatMemberEventSchema, chatRoomSearchSchema, createChatRoomSchema, deleteMessageSchema, chatEmojiSchema, messageHistoryQuerySchema } from "./chat.js";
@@ -7,6 +7,7 @@ import { createNotificationSchema, notificationEmojiSchema, updateNotificationSc
 import { createTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, updateTimetableSchema } from "./school.js";
 import { aiPromptSchema, authenticateOAuthSchema, connectGoogleSchema, oauthProviderSchema, sendVerificationQuerySchema, uploadTypeSchema } from "./integrations.js";
 import { emailVerificationSchema } from "./member.js";
+import { otherProfileQuerySchema, profileWorkspaceQuerySchema } from "./profile.js";
 
 /** Shared transport specification consumed by both the API server and SDK. */
 export const API_SPEC = {
@@ -73,6 +74,17 @@ export const API_SPEC = {
   updateWorkspace: { method: "PATCH", path: "/workspace", body: updateWorkspaceSchema },
   listWorkspaces: { method: "GET", path: "/workspace" },
   joinWorkspace: { method: "POST", path: "/workspace/join", body: joinWorkspaceSchema },
-  workspaceMembers: { method: "GET", path: "/workspace/members" },
-  workspaceMemberChart: { method: "GET", path: "/workspace/members/chart" },
+  workspaceMembers: { method: "GET", path: "/workspace/members", query: profileWorkspaceQuerySchema },
+  workspaceMemberChart: { method: "GET", path: "/workspace/members/chart", query: profileWorkspaceQuerySchema },
+  workspaceNotificationPreference: { method: "GET", path: "/workspace/:workspaceId/notifications", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}/notifications` },
+  setWorkspaceNotificationPreference: { method: "PATCH", path: "/workspace/:workspaceId/notifications", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}/notifications`, body: workspaceNotificationsSchema },
+  workspaceCode: { method: "GET", path: "/workspace/code/:workspaceId", pathFor: (workspaceId: string) => `/workspace/code/${encodeURIComponent(workspaceId)}` },
+  searchWorkspace: { method: "GET", path: "/workspace/search/:code" },
+  approveWorkspaceMembers: { method: "PATCH", path: "/workspace/add", body: workspaceWaitlistActionSchema },
+  rejectWorkspaceMembers: { method: "DELETE", path: "/workspace/cancel", body: workspaceWaitlistActionSchema },
+  workspaceWaitlist: { method: "GET", path: "/workspace/wait-list", query: workspaceWaitlistQuerySchema },
+  updateWorkspaceMemberRole: { method: "PATCH", path: "/workspace/permission", body: updateWorkspaceMemberRoleSchema },
+  kickWorkspaceMembers: { method: "PATCH", path: "/workspace/kick", body: kickWorkspaceMembersSchema },
+  workspaceMember: { method: "GET", path: "/profile/others", query: otherProfileQuerySchema },
+  myWaitingWorkspaces: { method: "GET", path: "/workspace/my/wait-list" },
 } as const;

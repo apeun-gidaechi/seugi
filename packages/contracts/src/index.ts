@@ -1,6 +1,6 @@
 export { API_SPEC } from "./api-spec.js";
 export { createTaskSchema, type CreateTaskInput } from "./task.js";
-export { createWorkspaceSchema, updateWorkspaceSchema, joinWorkspaceSchema, workspaceFieldsSchema, type CreateWorkspaceInput, type UpdateWorkspaceInput, type JoinWorkspaceInput } from "./workspace.js";
+export { createWorkspaceSchema, updateWorkspaceSchema, joinWorkspaceSchema, workspaceFieldsSchema, workspaceNotificationsSchema, workspaceMemberSchema, workspaceWaitlistActionSchema, workspaceWaitlistQuerySchema, workspaceRoleSchema, updateWorkspaceMemberRoleSchema, kickWorkspaceMembersSchema, workspaceCodeParamSchema, type CreateWorkspaceInput, type UpdateWorkspaceInput, type JoinWorkspaceInput, type WorkspaceWaitlistActionInput, type UpdateWorkspaceMemberRoleInput, type KickWorkspaceMembersInput } from "./workspace.js";
 export { registerMemberSchema, loginMemberSchema, editMemberSchema, memberDeviceTokenSchema, logoutMemberSchema, emailVerificationSchema, type RegisterMemberInput, type LoginMemberInput, type EditMemberInput } from "./member.js";
 export { editProfileSchema, editStudentNumberSchema, profileWorkspaceQuerySchema, otherProfileQuerySchema, type EditProfileInput, type EditStudentNumberInput } from "./profile.js";
 export { createChatRoomSchema, chatMemberEventSchema, chatRoomSearchSchema, messageHistoryQuerySchema, chatEmojiSchema, deleteMessageSchema, type CreateChatRoomInput, type ChatMemberEventInput } from "./chat.js";
