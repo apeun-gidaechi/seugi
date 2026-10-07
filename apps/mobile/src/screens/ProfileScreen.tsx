@@ -34,6 +34,7 @@ export function AccountSettingsScreen({ workspace, onLogout }: { workspace: Work
 
 function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
   const [name, setName] = useState("");
+  const [nick, setNick] = useState("");
   const [picture, setPicture] = useState("");
   const [draft, setDraft] = useState("");
   const [editingName, setEditingName] = useState(false);
@@ -41,10 +42,11 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
   const [message, setMessage] = useState("");
   useEffect(() => {
     let active = true;
-    api.memberInfo().then(({ data }) => {
+    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([{ data }, profile]) => {
       if (!active) return;
       setName(data?.name ?? "");
       setPicture(data?.picture ?? "");
+      setNick(profile.data?.nick ?? "");
     }).catch(() => undefined);
     return () => { active = false; };
   }, [workspace.id]);
@@ -87,7 +89,7 @@ function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
             {!picture ? <Svg style={styles.settingsAvatarAdd} width={24} height={25} viewBox="0 0 24 25"><Path d="M5.636 18.728C9.151 22.243 14.849 22.243 18.364 18.728C21.879 15.213 21.879 9.515 18.364 6C14.849 2.485 9.151 2.485 5.636 6C2.121 9.515 2.121 15.213 5.636 18.728ZM7.05 11.364C6.498 11.364 6.05 11.812 6.05 12.364C6.05 12.916 6.498 13.364 7.05 13.364H11L11 17.314C11 17.866 11.448 18.314 12 18.314C12.552 18.314 13 17.866 13 17.314V13.364H16.95C17.502 13.364 17.95 12.916 17.95 12.364C17.95 11.812 17.502 11.364 16.95 11.364H13L13 7.414C13 6.862 12.552 6.414 12 6.414C11.448 6.414 11 6.862 11 7.414L11 11.364H7.05Z" fill={SeugiColor.Gray600} fillRule="evenodd" /></Svg> : null}
           </View>
         </TouchableOpacity>
-        <View style={styles.settingsIdentityName}><Text style={styles.profileNameText}>{name || "이름"}</Text><TouchableOpacity accessibilityRole="button" onPress={() => { setDraft(name); setEditingName(true); }} disabled={busy}><Text style={styles.link}>이름 수정</Text></TouchableOpacity></View>
+        <View style={styles.settingsIdentityName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text><TouchableOpacity accessibilityRole="button" onPress={() => { setDraft(name); setEditingName(true); }} disabled={busy}><Text style={styles.link}>이름 수정</Text></TouchableOpacity></View>
       </View>
       {busy ? <Text style={styles.muted}>변경 사항을 저장하는 중…</Text> : null}
       {message ? <Text style={message.includes("변경") ? styles.answer : styles.error}>{message}</Text> : null}
