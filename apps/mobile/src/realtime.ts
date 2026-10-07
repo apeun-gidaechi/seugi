@@ -1,12 +1,11 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServerEvents, ServerToClientEvents } from "@seugi/contracts";
 import type { SeugiApi } from "@seugi/api-client";
-import { API_URL } from "./config";
 
 type SeugiSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-export function createAuthenticatedSocket(api: SeugiApi, onAuthenticationFailure: () => void = () => undefined): SeugiSocket {
-  const socket = io(API_URL, { auth: { token: api.accessToken() }, timeout: 15000 }) as SeugiSocket;
+export function createAuthenticatedSocket(api: SeugiApi, apiUrl: string, onAuthenticationFailure: () => void = () => undefined): SeugiSocket {
+  const socket = io(apiUrl, { auth: { token: api.accessToken() }, timeout: 15000 }) as SeugiSocket;
   let refreshAttempted = false;
 
   socket.on("connect", () => { refreshAttempted = false; });

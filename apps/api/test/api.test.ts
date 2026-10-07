@@ -8,6 +8,7 @@ import { io } from "socket.io-client";
 import WebSocket from "ws";
 import type { ChatMessage } from "@seugi/contracts";
 import { SeugiApi, SeugiApiError } from "../../../packages/api-client/src/index.js";
+import { createAuthenticatedSocket } from "../../mobile/src/realtime.js";
 import { buildApp } from "../src/app.js";
 import { attachRealtime } from "../src/realtime.js";
 import { Store } from "../src/store.js";
@@ -682,6 +683,34 @@ test("persistent store survives a new application instance", async () => {
     assert.equal(result.json().data[0].name, "영속 학교");
     await second.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("mobile realtime client refreshes an expired access token before connecting", async () => {
+  const store = new Store();
+  store.emailCodes.set("realtime-refresh@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  const app = await buildApp(store);
+  attachRealtime(app, store);
+  const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "realtime-refresh@example.com", password: "password123", code: "123456" } });
+  const tokens = registration.json().data as { accessToken: string; refreshToken: string };
+  const memberId = app.jwt.decode<{ sub: string }>(tokens.accessToken)!.sub;
+  const expiredAccessToken = app.jwt.sign({ sub: memberId, exp: Math.floor(Date.now() / 1000) - 1 });
+  const apiUrl = await app.listen({ port: 0, host: "127.0.0.1" });
+  const api = new SeugiApi(apiUrl, expiredAccessToken, tokens.refreshToken);
+  const socket = createAuthenticatedSocket(api, apiUrl);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Socket.IO reconnect timed out")), 3_000);
+      socket.once("connect", () => { clearTimeout(timeout); resolve(); });
+      socket.once("connect_error", (error) => {
+        if (error.message !== "UNAUTHORIZED") { clearTimeout(timeout); reject(error); }
+      });
+    });
+    assert.equal(socket.connected, true);
+    assert.notEqual(api.accessToken(), expiredAccessToken);
+  } finally {
+    socket.close();
+    await app.close();
+  }
 });
 
 test("authenticated room members receive Socket.IO messages", async () => {
