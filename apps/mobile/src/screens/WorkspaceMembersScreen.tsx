@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Member, Role, Room, Workspace } from "@seugi/contracts";
 import { Button } from "../components/ui";
@@ -8,6 +8,7 @@ import { absoluteApiUrl } from "../utils/url";
 
 export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: Room) => void }) {
   const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [tab, setTab] = useState<"TEACHER" | "STUDENT">("TEACHER");
   const [notice, setNotice] = useState("");
@@ -15,9 +16,14 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
   const [selected, setSelected] = useState<LegacyProfile>();
   const [openingChat, setOpeningChat] = useState(false);
   const refresh = useCallback(async () => {
-    const [info, result] = await Promise.all([api.memberInfo(), api.workspaceMembers(workspace.id)]);
-    setIsOwner(info.data?.id === workspace.ownerId);
-    setMembers((result.data ?? []).map((member) => ({ ...member, role: member.id === workspace.ownerId ? "ADMIN" : member.role ?? "STUDENT" })));
+    setLoading(true);
+    try {
+      const [info, result] = await Promise.all([api.memberInfo(), api.workspaceMembers(workspace.id)]);
+      setIsOwner(info.data?.id === workspace.ownerId);
+      setMembers((result.data ?? []).map((member) => ({ ...member, role: member.id === workspace.ownerId ? "ADMIN" : member.role ?? "STUDENT" })));
+    } finally {
+      setLoading(false);
+    }
   }, [workspace.id, workspace.ownerId]);
   useEffect(() => { refresh().catch((error) => setNotice(error instanceof Error ? error.message : "구성원 목록을 불러오지 못했습니다")); }, [refresh]);
 
@@ -60,7 +66,9 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
   return <View style={styles.screen}>
     <View style={styles.tabs}>{(["TEACHER", "STUDENT"] as const).map((value) => <TouchableOpacity key={value} accessibilityRole="tab" accessibilityState={{ selected: tab === value }} onPress={() => setTab(value)} style={[styles.tab, tab === value && styles.tabSelected]}><Text style={tab === value ? styles.tabLabelSelected : styles.tabLabel}>{value === "TEACHER" ? "선생님" : "학생"}</Text></TouchableOpacity>)}</View>
     <ScrollView contentContainerStyle={styles.list}>
-      {visibleMembers.map((member) => <View key={member.id} style={styles.member}>
+      {loading ? <ActivityIndicator color={SeugiColor.Primary500} style={styles.loading} /> : null}
+      {!loading && members.length === 0 ? <Text style={styles.empty}>멤버가 없어요</Text> : null}
+      {!loading ? visibleMembers.map((member) => <View key={member.id} style={styles.member}>
         <TouchableOpacity accessibilityRole="button" onPress={() => void openProfile(member)} style={styles.identity}>
           {member.picture ? <Image source={{ uri: absoluteApiUrl(member.picture) }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Text style={styles.avatarInitial}>{member.name.slice(0, 1)}</Text></View>}
           <View style={styles.identityText}><Text style={styles.name}>{member.name}</Text><Text style={styles.role}>{roleLabel(member.role)}</Text></View>
@@ -70,8 +78,7 @@ export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: W
           {(["STUDENT", "TEACHER", "MIDDLE_ADMIN"] as const).map((role) => <TouchableOpacity key={role} disabled={!!busyId} onPress={() => void updateRole(member, role)}><Text style={member.role === role ? styles.selectedRole : styles.action}>{role === "STUDENT" ? "학생" : role === "TEACHER" ? "교사" : "관리자"}</Text></TouchableOpacity>)}
           <TouchableOpacity disabled={!!busyId} onPress={() => removeMember(member)}><Text style={styles.remove}>내보내기</Text></TouchableOpacity>
         </View> : null}
-      </View>)}
-      {!visibleMembers.length ? <Text style={styles.empty}>표시할 구성원이 없습니다.</Text> : null}
+      </View>) : null}
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
     </ScrollView>
     <Modal visible={!!selected} transparent animationType="slide" onRequestClose={() => setSelected(undefined)}>
@@ -96,6 +103,7 @@ const styles = StyleSheet.create({
   tabLabel: { color: SeugiColor.Gray500, fontSize: 14 },
   tabLabelSelected: { color: SeugiColor.Primary500, fontSize: 14, fontWeight: "700" },
   list: { paddingHorizontal: 4, paddingTop: 12, paddingBottom: 24 },
+  loading: { padding: 24 },
   member: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
   identity: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12 },
   identityText: { flex: 1, gap: 4 },
