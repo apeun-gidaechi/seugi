@@ -4,13 +4,11 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Room, Workspace } from "@seugi/contracts";
-import { Button, Card } from "../components/ui";
 import { api } from "../services/api";
 
 type RoomMessagesProps = { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void };
@@ -19,31 +17,35 @@ export function ChatScreen({
   workspace,
   roomType,
   RoomMessagesComponent,
-  onCreateRoom,
   initialRoom,
   onConversationChange,
+  roomSearch,
+  roomSearchActive,
 }: {
   workspace: Workspace;
   roomType: "group" | "personal";
   RoomMessagesComponent: React.ComponentType<RoomMessagesProps>;
-  onCreateRoom: () => void;
   initialRoom?: Room;
   onConversationChange: (room?: Room) => void;
+  roomSearch: string;
+  roomSearchActive: boolean;
 }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selected, setSelected] = useState<Room | undefined>(initialRoom);
-  const [roomSearch, setRoomSearch] = useState("");
-  const [roomSearchActive, setRoomSearchActive] = useState(false);
   const [message, setMessage] = useState("");
   const searchRequest = useRef(0);
   const refresh = useCallback(async () => {
     const x = await api.rooms(workspace.id, roomType);
     setRooms(x.data ?? []);
   }, [workspace.id, roomType]);
-  useEffect(() => {
-    refresh().catch(() => undefined);
-  }, [refresh]);
   useEffect(() => { if (initialRoom) onConversationChange(initialRoom); }, [initialRoom?.id]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (roomSearchActive || !roomSearch) void search(roomSearch);
+      else void refresh().catch(() => undefined);
+    }, roomSearchActive && roomSearch ? 180 : 0);
+    return () => clearTimeout(timer);
+  }, [refresh, roomSearch, roomSearchActive]);
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (!selected) return false;
@@ -80,23 +82,7 @@ export function ChatScreen({
       style={styles.content}
       data={rooms}
       keyExtractor={(item) => item.id}
-      ListHeaderComponent={
-        <Card title={roomType === "group" ? "단체 채팅" : "채팅"}>
-          {!roomSearchActive ? <Button label={roomType === "group" ? "단체 채팅방 만들기" : "새 채팅 시작"} onPress={onCreateRoom} /> : null}
-          {!roomSearchActive ? <TouchableOpacity accessibilityRole="button" style={styles.searchToggle} onPress={() => setRoomSearchActive(true)}><Text style={styles.link}>⌕ 채팅방 검색</Text></TouchableOpacity> : <View style={styles.row}>
-            <TextInput
-              value={roomSearch}
-              onChangeText={(value) => { setRoomSearch(value); void search(value); }}
-              onSubmitEditing={() => void search()}
-              returnKeyType="search"
-              style={[styles.input, { flex: 1 }]}
-              placeholder="채팅방 검색"
-            />
-            <TouchableOpacity accessibilityRole="button" onPress={() => { setRoomSearch(""); setRoomSearchActive(false); void search(""); }}><Text style={styles.link}>취소</Text></TouchableOpacity>
-          </View>}
-          {message ? <Text style={styles.error}>{message}</Text> : null}
-        </Card>
-      }
+      ListHeaderComponent={message ? <Text style={styles.error}>{message}</Text> : null}
       ListEmptyComponent={
         <Text style={styles.empty}>
           {roomSearch.trim()
@@ -136,18 +122,8 @@ const styles = StyleSheet.create({
   },
   activeTab: { color: SeugiColor.Primary500, fontWeight: "700" },
   inactiveTab: { color: SeugiColor.Gray500 },
-  input: {
-    backgroundColor: SeugiColor.White,
-    borderWidth: 1,
-    borderColor: SeugiColor.Gray300,
-    borderRadius: 10,
-    padding: 13,
-    marginBottom: 10,
-  },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
   rowTitle: { fontWeight: "600" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
-  searchToggle: { paddingVertical: 8, alignItems: "flex-end" },
-  link: { color: SeugiColor.Primary500 },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
 });

@@ -5,6 +5,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -97,12 +98,15 @@ export function AuthenticatedAppShell({
   const detail = detailStack[detailStack.length - 1];
   const [createdRoom, setCreatedRoom] = useState<Room>();
   const [activeConversation, setActiveConversation] = useState<Room>();
+  const [roomSearchActive, setRoomSearchActive] = useState(false);
+  const [roomSearch, setRoomSearch] = useState("");
   const [editingNotice, setEditingNotice] = useState<import("@seugi/contracts").Notification>();
   const [canCreateNotice, setCanCreateNotice] = useState(false);
   const pushDetail = (next: AppDetail) => setDetailStack((current) => [...current, next]);
   const goBack = () => setDetailStack((current) => current.slice(0, -1));
-  const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); onTabChange(next); };
-  const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); onSelectWorkspace(selected); onTabChange("home"); };
+  const closeRoomSearch = () => { setRoomSearchActive(false); setRoomSearch(""); };
+  const changeTab = (next: Tab) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onTabChange(next); };
+  const switchWorkspace = (selected: Workspace) => { setDetailStack([]); setActiveConversation(undefined); closeRoomSearch(); onSelectWorkspace(selected); onTabChange("home"); };
   const title = detail ? detailTitles[detail] : activeConversation?.name ?? tabTitles[tab];
 
   useEffect(() => {
@@ -116,6 +120,10 @@ export function AuthenticatedAppShell({
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (roomSearchActive) {
+        closeRoomSearch();
+        return true;
+      }
       if (detailStack.length > 0) {
         setDetailStack((current) => current.slice(0, -1));
         return true;
@@ -123,22 +131,23 @@ export function AuthenticatedAppShell({
       return false;
     });
     return () => subscription.remove();
-  }, [activeConversation, detailStack.length]);
+  }, [activeConversation, detailStack.length, roomSearchActive]);
 
   return (
     <SafeAreaView style={styles.page}>
       {!activeConversation ? <View style={styles.header}>
-        {detail ? (
+        {detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={goBack}
+            accessibilityLabel={detail ? "뒤로" : "검색 닫기"}
+            onPress={detail ? goBack : closeRoomSearch}
           >
             <Text style={styles.back}>‹</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backPlaceholder} />
         )}
-        <Text style={styles.title}>{title}</Text>
+        {!detail && roomSearchActive && (tab === "chat" || tab === "group") ? <TextInput autoFocus value={roomSearch} onChangeText={setRoomSearch} onSubmitEditing={() => undefined} returnKeyType="search" placeholder="채팅방 검색" style={styles.headerSearch} /> : <Text style={styles.title}>{title}</Text>}
         {!detail && tab === "home" ? (
           <TouchableOpacity
             accessibilityRole="button"
@@ -150,6 +159,11 @@ export function AuthenticatedAppShell({
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="공지 작성" onPress={() => { setEditingNotice(undefined); pushDetail("createNotice"); }}>
             <Text style={styles.writeIcon}>✎</Text>
           </TouchableOpacity>
+        ) : !detail && !roomSearchActive && (tab === "chat" || tab === "group") ? (
+          <View style={styles.headerActions}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => { setRoomSearch(""); setRoomSearchActive(true); }}><Text style={styles.headerActionIcon}>⌕</Text></TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}><Text style={styles.headerActionIcon}>＋</Text></TouchableOpacity>
+          </View>
         ) : (
           <View style={styles.actionPlaceholder} />
         )}
@@ -200,8 +214,9 @@ export function AuthenticatedAppShell({
           workspace={workspace}
           roomType={tab === "group" ? "group" : "personal"}
           RoomMessagesComponent={RoomMessages}
-          onCreateRoom={() => { setCreatedRoom(undefined); pushDetail("createRoom"); }}
           initialRoom={createdRoom}
+          roomSearch={roomSearch}
+          roomSearchActive={roomSearchActive}
           onConversationChange={(room) => { setActiveConversation(room); if (room) setCreatedRoom(undefined); }}
         />
       ) : null}
@@ -277,6 +292,9 @@ const styles = StyleSheet.create({
   backPlaceholder: { width: 36 },
   actionPlaceholder: { width: 64 },
   title: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "700" },
+  headerSearch: { flex: 1, minWidth: 0, height: 42, fontSize: 16, paddingHorizontal: 12, backgroundColor: SeugiColor.White, borderRadius: 10 },
+  headerActions: { width: 64, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 12 },
+  headerActionIcon: { color: SeugiColor.Gray800, fontSize: 28, lineHeight: 32 },
   link: { color: SeugiColor.Primary500 },
   writeIcon: { color: SeugiColor.Gray800, fontSize: 25, paddingHorizontal: 4 },
   tabbar: {
