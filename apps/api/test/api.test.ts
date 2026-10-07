@@ -299,6 +299,20 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   await app.close();
 });
 
+test("announcements are returned newest first, matching the original descending notice feed", async () => {
+  const store = new Store(); const memberId = "00000000-0000-4000-8000-000000000031"; const workspaceId = "00000000-0000-4000-8000-000000000032";
+  store.members.set(memberId, { id: memberId, email: "notice-order@example.com", name: "공지 사용자" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "NOTICE", name: "공지 학교", members: [memberId], waitlist: [], ownerId: memberId });
+  for (const [id, title, createdAt] of [["00000000-0000-4000-8000-000000000033", "오래된 공지", "2025-01-01T00:00:00.000Z"], ["00000000-0000-4000-8000-000000000034", "새 공지", "2025-02-01T00:00:00.000Z"]]) {
+    store.notifications.set(id, { id, workspaceId, title, content: title, authorId: memberId, createdAt, emojis: {} });
+  }
+  const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`;
+  try {
+    const response = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: { authorization } });
+    assert.deepEqual(response.json().data.map((item: { title: string }) => item.title), ["새 공지", "오래된 공지"]);
+  } finally { await app.close(); }
+});
+
 test("legacy desktop workspace administration response and request fields remain supported", async () => {
   const store = new Store(); const app = await buildApp(store);
   for (const email of ["legacy-admin@example.com", "legacy-student@example.com"]) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
