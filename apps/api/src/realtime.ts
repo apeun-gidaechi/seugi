@@ -14,7 +14,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
   const unsubscribeMessageDeleted = store.onMessageDeleted((event) => io.to(event.roomId).emit("chat:message-deleted", event));
   const unsubscribeMessageEmoji = store.onMessageEmoji((event) => { io.to(event.roomId).emit("chat:message-emoji", event); stomp.publishEmoji(event); });
   app.addHook("onClose", async () => { unsubscribeMessageDeleted(); unsubscribeMessageEmoji(); });
-  io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; next(); } catch { next(new Error("UNAUTHORIZED")); } });
+  io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; store.requireMember(socket.data.userId); next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
     socket.on("room:join", (roomId: string) => {
       void store.withMutation(() => { const room = store.rooms.get(roomId); return !!room?.memberIds.includes(socket.data.userId); })
@@ -80,7 +80,7 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
         const body = raw.slice(separator + 2);
         if (command === "CONNECT" || command === "STOMP") {
           const match = /^Bearer\s+(.+)$/i.exec(headers.Authorization ?? headers.authorization ?? "");
-          try { if (!match) throw new Error(); state.userId = app.jwt.verify<{ sub: string }>(match[1]).sub; write(socket, "CONNECTED", { version: "1.2", "heart-beat": "0,0" }); }
+          try { if (!match) throw new Error(); state.userId = app.jwt.verify<{ sub: string }>(match[1]).sub; store.requireMember(state.userId); write(socket, "CONNECTED", { version: "1.2", "heart-beat": "0,0" }); }
           catch { write(socket, "ERROR", { message: "UNAUTHORIZED" }, "인증에 실패했습니다."); socket.close(1008, "UNAUTHORIZED"); }
         } else if (command === "SUBSCRIBE" && state.userId) {
           const roomId = /\/room\.([0-9a-f-]{36})$/i.exec(headers.destination ?? "")?.[1];

@@ -498,6 +498,24 @@ test("authenticated room members receive Socket.IO messages", async () => {
   } finally { socket.close(); await app.close(); }
 });
 
+test("withdrawn members cannot reconnect to Socket.IO or legacy STOMP with an old token", async () => {
+  const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
+  const memberId = store.id(); store.members.set(memberId, { id: memberId, email: "deleted-realtime@example.com", name: "탈퇴 회원", deleted: true });
+  const token = app.jwt.sign({ sub: memberId });
+  await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  const realtimeClient = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"], reconnection: false });
+  try {
+    await new Promise<void>((resolve, reject) => { realtimeClient.once("connect", () => reject(new Error("withdrawn member unexpectedly connected to Socket.IO"))); realtimeClient.once("connect_error", () => resolve()); });
+    const stompClient = new WebSocket(`ws://127.0.0.1:${address.port}/stomp/chat`);
+    try {
+      const frames: string[] = []; stompClient.on("message", (data) => frames.push(data.toString()));
+      await new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("STOMP websocket open timed out")), 2_000); stompClient.once("open", () => { clearTimeout(timer); resolve(); }); stompClient.once("error", (error) => { clearTimeout(timer); reject(error); }); });
+      const rejected = new Promise<void>((resolve, reject) => { const timer = setTimeout(() => reject(new Error(`STOMP should reject withdrawn member: ${frames.join(" | ")}`)), 2_000); const interval = setInterval(() => { if (frames.some((frame) => frame.startsWith("ERROR\n") && frame.includes("UNAUTHORIZED"))) { clearInterval(interval); clearTimeout(timer); resolve(); } }, 5); });
+      stompClient.send(`CONNECT\naccept-version:1.2\nAuthorization: Bearer ${token}\n\n\0`); await rejected;
+    } finally { stompClient.close(); }
+  } finally { realtimeClient.close(); await app.close(); }
+});
+
 test("chat room API accepts original Android/iOS request names and exposes legacy response fields", async () => {
   const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000011"; const peerId = "00000000-0000-4000-8000-000000000012"; const workspaceId = "00000000-0000-4000-8000-000000000013";
   store.members.set(ownerId, { id: ownerId, email: "owner@rooms.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@rooms.test", name: "친구" });
