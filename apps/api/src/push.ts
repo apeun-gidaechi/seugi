@@ -6,7 +6,7 @@ export type PushPayload = { title: string; body: string; imageUrl?: string };
 /** Firebase Cloud Messaging adapter. It is deliberately inert until credentials are configured. */
 export class PushNotifications {
   private enabled = false;
-  constructor() {
+  constructor(private readonly fetcher: typeof fetch = fetch) {
     const rawCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     if (!rawCredentials) return;
     const credentials = JSON.parse(rawCredentials) as Record<string, string>;
@@ -18,7 +18,7 @@ export class PushNotifications {
     const expo = target.filter((token) => /^Expo(nent)?PushToken\[/.test(token));
     const fcm = target.filter((token) => !/^Expo(nent)?PushToken\[/.test(token));
     if (expo.length) await Promise.all(this.chunks(expo, 100).map(async (chunk) => {
-      const response = await fetch("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(chunk.map((to) => ({ to, title: payload.title, body: payload.body, sound: "default", ...(payload.imageUrl ? { data: { imageUrl: payload.imageUrl } } : {}) }))) });
+      const response = await this.fetcher("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(chunk.map((to) => ({ to, title: payload.title, body: payload.body, sound: "default", ...(payload.imageUrl ? { data: { imageUrl: payload.imageUrl } } : {}) }))) });
       if (!response.ok) throw new Error("EXPO_PUSH_REQUEST_FAILED");
     }));
     if (this.enabled && fcm.length) await Promise.all(this.chunks(fcm, 500).map((chunk) => getMessaging().sendEachForMulticast({ tokens: chunk, notification: { title: payload.title, body: payload.body, imageUrl: payload.imageUrl } })));
