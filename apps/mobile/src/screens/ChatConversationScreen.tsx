@@ -12,6 +12,7 @@ import { api } from "../services/api";
 import { API_URL } from "../config";
 import { createAuthenticatedSocket } from "../realtime";
 import { absoluteApiUrl } from "../utils/url";
+import { SeugiChatTextField } from "../design-system/TextField";
 
 export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]); const [memberId, setMemberId] = useState(""); const [currentRoom, setCurrentRoom] = useState(room); const [manageMembers, setManageMembers] = useState(false); const [draft, setDraft] = useState(""); const [sending, setSending] = useState(false); const [uploading, setUploading] = useState(false);
@@ -138,7 +139,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom }: { room: Roo
           </View>;
         }}
       />
-      <View style={styles.composer}><TouchableOpacity onPress={() => setShowAttachmentOptions(true)} disabled={uploading || sending}><Text style={styles.link}>{uploading ? "업로드 중…" : "＋ 첨부"}</Text></TouchableOpacity><TextInput value={draft} onChangeText={setDraft} placeholder="메시지 입력" style={[styles.input, styles.composerInput]} onSubmitEditing={send} /><Button label={sending ? "…" : "전송"} onPress={send} disabled={sending || !draft.trim()} /></View>
+      <SeugiChatTextField value={draft} onChangeText={setDraft} placeholder="메시지 입력" onAddClick={() => setShowAttachmentOptions(true)} onSendClick={() => void send()} sendEnabled={!sending && !!draft.trim()} editable={!sending} />
     </>}
     <Modal visible={showAttachmentOptions} transparent animationType="slide" onRequestClose={() => setShowAttachmentOptions(false)}><View style={styles.sheetBackdrop}><TouchableOpacity style={styles.sheetDismiss} activeOpacity={1} onPress={() => setShowAttachmentOptions(false)} /><View style={styles.attachmentSheet}><Text style={styles.sheetTitle}>첨부하기</Text><TouchableOpacity style={styles.attachmentOption} onPress={() => void selectImage()}><Text style={styles.attachmentIcon}>▧</Text><Text style={styles.rowTitle}>사진 또는 이미지</Text></TouchableOpacity><TouchableOpacity style={styles.attachmentOption} onPress={() => void attachFile()}><Text style={styles.attachmentIcon}>↧</Text><Text style={styles.rowTitle}>파일</Text></TouchableOpacity></View></View></Modal>
     <Modal visible={!!imageDraft} transparent animationType="fade" onRequestClose={() => setImageDraft(undefined)}><View style={styles.imagePreviewBackdrop}><View style={styles.imagePreviewHeader}><TouchableOpacity onPress={() => setImageDraft(undefined)}><Text style={styles.previewButton}>취소</Text></TouchableOpacity><Text style={styles.previewTitle}>사진 미리보기</Text><TouchableOpacity onPress={() => void sendImage()} disabled={uploading || sending}><Text style={[styles.previewButton, (uploading || sending) && styles.disabledText]}>{uploading ? "전송 중…" : "전송"}</Text></TouchableOpacity></View>{imageDraft ? <ZoomableImage uri={imageDraft.uri} accessibilityLabel="전송할 사진 미리보기" /> : null}</View></Modal>
@@ -167,9 +168,6 @@ const styles = StyleSheet.create({
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   reactions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingTop: 6 },
-  composer: { flexDirection: "row", padding: 10, gap: 8, backgroundColor: SeugiColor.White, alignItems: "center" },
-  input: { backgroundColor: SeugiColor.White, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 10, padding: 13, marginBottom: 10 },
-  composerInput: { flex: 1, marginBottom: 0 },
   imageMessage: { width: 220, height: 220, maxWidth: "100%", borderRadius: 10, backgroundColor: SeugiColor.Gray100 },
   fileMessage: { minWidth: 210, maxWidth: 270, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: SeugiColor.Gray100, borderRadius: 10, padding: 12 },
   fileIcon: { fontSize: 24, color: SeugiColor.Primary500 },

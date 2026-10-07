@@ -5,14 +5,13 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace } from "@seugi/contracts";
-import { Button } from "../components/ui";
 import { api } from "../services/api";
+import { SeugiChatTextField } from "../design-system/TextField";
 
 type ChatMessage = { id: string; role: "assistant" | "user"; content: string };
 
@@ -117,22 +116,7 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
           ))}
         </View>
       ) : null}
-      <View style={styles.composer}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          onSubmitEditing={() => void send()}
-          returnKeyType="send"
-          placeholder="메세지 보내기"
-          style={styles.input}
-          editable={!busy}
-        />
-        <Button
-          label={busy ? "…" : "전송"}
-          onPress={() => void send()}
-          disabled={busy || !draft.trim()}
-        />
-      </View>
+      <SeugiChatTextField value={draft} onChangeText={setDraft} onSendClick={() => void send()} placeholder="메세지 보내기" editable={!busy} sendEnabled={!busy && !!draft.trim()} />
     </KeyboardAvoidingView>
   );
 }
@@ -176,21 +160,5 @@ const styles = StyleSheet.create({
     color: SeugiColor.Gray700,
     fontSize: 12,
     textAlign: "center",
-  },
-  composer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 10,
-    backgroundColor: SeugiColor.White,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: SeugiColor.Gray300,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: SeugiColor.White,
   },
 });
