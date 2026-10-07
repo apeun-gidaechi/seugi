@@ -533,6 +533,27 @@ test("chat room API accepts original Android/iOS request names and exposes legac
   } finally { await app.close(); }
 });
 
+test("chat room lists return the latest preview and unread count until a member subscribes", async () => {
+  const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000021"; const peerId = "00000000-0000-4000-8000-000000000022"; const workspaceId = "00000000-0000-4000-8000-000000000023"; const roomId = "00000000-0000-4000-8000-000000000024";
+  store.members.set(ownerId, { id: ownerId, email: "owner@preview.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@preview.test", name: "친구" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "PREVIEW", name: "미리보기 학교", members: [ownerId, peerId], waitlist: [], ownerId });
+  const createdAt = new Date(Date.now() - 30_000).toISOString(); const readAt = new Date(Date.now() - 20_000).toISOString(); const latestAt = new Date(Date.now() - 5_000).toISOString();
+  store.rooms.set(roomId, { id: roomId, workspaceId, type: "GROUP", name: "최근 대화", memberIds: [ownerId, peerId], adminId: ownerId, createdAt, memberReadAt: { [ownerId]: readAt, [peerId]: readAt } });
+  store.messages.set(store.id(), { id: store.id(), roomId, senderId: peerId, message: "사진 메시지", type: "IMG", createdAt: new Date(Date.now() - 10_000).toISOString(), emojis: {} });
+  store.messages.set(store.id(), { id: store.id(), roomId, senderId: peerId, message: "마지막 메시지", type: "MESSAGE", createdAt: latestAt, emojis: {} });
+  const app = await buildApp(store); const token = app.jwt.sign({ sub: ownerId }); const headers = { authorization: `Bearer ${token}` }; attachRealtime(app, store);
+  await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
+  const socket = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
+  try {
+    await new Promise<void>((resolve, reject) => { socket.once("connect", resolve); socket.once("connect_error", reject); });
+    const list = await app.inject({ method: "GET", url: `/chat/group/search/${workspaceId}`, headers }); const room = list.json().data[0];
+    assert.equal(room.lastMessage, "마지막 메시지"); assert.equal(room.lastMessageTimestamp, latestAt); assert.equal(room.notReadCnt, 2);
+    socket.emit("room:join", roomId);
+    await new Promise<void>((resolve, reject) => { const timeout = setTimeout(() => reject(new Error("room join did not advance member read timestamp")), 2_000); const interval = setInterval(() => { if ((store.rooms.get(roomId)?.memberReadAt?.[ownerId] ?? "") > latestAt) { clearInterval(interval); clearTimeout(timeout); resolve(); } }, 5); });
+    const readList = await app.inject({ method: "GET", url: `/chat/group/search/${workspaceId}`, headers }); assert.equal(readList.json().data[0].notReadCnt, 0);
+  } finally { socket.close(); await app.close(); }
+});
+
 test("original mobile clients can authenticate, subscribe, and send over STOMP", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
   store.emailCodes.set("stomp@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });

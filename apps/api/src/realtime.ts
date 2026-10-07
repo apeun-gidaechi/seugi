@@ -17,7 +17,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
   io.use((socket, next) => { try { socket.data.userId = app.jwt.verify<{ sub: string }>(socket.handshake.auth.token).sub; store.requireMember(socket.data.userId); next(); } catch { next(new Error("UNAUTHORIZED")); } });
   io.on("connection", (socket) => {
     socket.on("room:join", (roomId: string) => {
-      void store.withMutation(() => { const room = store.rooms.get(roomId); return !!room?.memberIds.includes(socket.data.userId); })
+      void store.withMutation(() => { const room = store.rooms.get(roomId); if (!room?.memberIds.includes(socket.data.userId)) return false; room.memberReadAt ??= {}; room.memberReadAt[socket.data.userId] = new Date().toISOString(); return true; })
         .then((allowed) => { if (allowed) socket.join(roomId); })
         .catch((error) => app.log.error(error, "realtime room authorization failed"));
     });
@@ -84,7 +84,7 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
           catch { write(socket, "ERROR", { message: "UNAUTHORIZED" }, "인증에 실패했습니다."); socket.close(1008, "UNAUTHORIZED"); }
         } else if (command === "SUBSCRIBE" && state.userId) {
           const roomId = /\/room\.([0-9a-f-]{36})$/i.exec(headers.destination ?? "")?.[1];
-          void store.withMutation(() => { const room = roomId ? store.rooms.get(roomId) : undefined; return !!room?.memberIds.includes(state.userId!); }).then((allowed) => {
+          void store.withMutation(() => { const room = roomId ? store.rooms.get(roomId) : undefined; if (!room?.memberIds.includes(state.userId!)) return false; room.memberReadAt ??= {}; room.memberReadAt[state.userId!] = new Date().toISOString(); return true; }).then((allowed) => {
             if (allowed && roomId) state.rooms.add(roomId); else write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }, "채팅방을 찾을 수 없습니다.");
           }).catch((error) => app.log.error(error, "STOMP room authorization failed"));
         } else if (command === "SEND" && state.userId) {
