@@ -40,6 +40,7 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
   const navigate = (route: AuthRoute) => setRouteStack((current) => [...current, route]);
   const goBack = useCallback(() => setRouteStack((current) => current.length > 1 ? current.slice(0, -1) : current), []);
   const [showSignInOptions, setShowSignInOptions] = useState(false);
+  const [signupError, setSignupError] = useState<"blank_name" | "blank_email" | "invalid_email" | "blank_password" | "different_password">();
   const [verificationWaiting, setVerificationWaiting] = useState(false);
   const [verificationSeconds, setVerificationSeconds] = useState(300);
   const leaveVerification = useCallback(() => {
@@ -70,15 +71,32 @@ export function AuthScreen({ hydrated, appleAvailable, loading, error, email, pa
     <View style={styles.formTopBar}><TouchableOpacity accessibilityRole="button" onPress={goBack} style={styles.formBack}><Text style={styles.back}>‹</Text></TouchableOpacity><Text style={styles.formTitle}>회원가입</Text><View style={styles.formBack} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formContent}>
       <SeugiTextField label="이름" placeholder="이름을 입력해 주세요" containerStyle={styles.signupField} value={name} onChangeText={onNameChange} />
+      {signupError === "blank_name" ? <Text style={styles.error}>이름을 입력해 주세요</Text> : null}
       <SeugiTextField label="이메일" placeholder="이메일 입력해 주세요" autoCapitalize="none" keyboardType="email-address" returnKeyType="next" containerStyle={styles.signupField} value={email} onChangeText={onEmailChange} />
+      {signupError === "blank_email" ? <Text style={styles.error}>이메일을 입력해주세요</Text> : null}
+      {signupError === "invalid_email" ? <Text style={styles.error}>이메일 형식을 맞춰주세요</Text> : null}
       <SeugiPasswordTextField label="비밀번호" placeholder="비밀번호 입력해 주세요" containerStyle={styles.signupField} value={password} onChangeText={onPasswordChange} />
+      {signupError === "blank_password" ? <Text style={styles.error}>비밀번호를 입력해 주세요</Text> : null}
       <SeugiPasswordTextField label="비밀번호 확인" placeholder="비밀번호를 다시 입력해 주세요" containerStyle={styles.signupField} value={confirmPassword} onChangeText={onConfirmPasswordChange} />
-      {confirmPassword && password !== confirmPassword ? <Text style={styles.error}>비밀번호가 다릅니다</Text> : null}
+      {signupError === "different_password" || (confirmPassword && password !== confirmPassword) ? <Text style={styles.error}>비밀번호가 다릅니다</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </ScrollView>
     <View style={styles.formFooter}>
       <TouchableOpacity accessibilityRole="button" onPress={() => navigate("login")} style={styles.existingAccount}><Text style={styles.link}>이미 계정이 있으신가요?</Text></TouchableOpacity>
-      <Button label="계속하기" onPress={() => { onError(""); navigate("verification"); }} disabled={!email || !name || !password || !confirmPassword || password !== confirmPassword || loading} />
+      <Button label="계속하기" onPress={() => {
+        if (Platform.OS === "android") {
+          const validation = name === "" ? "blank_name"
+            : email === "" ? "blank_email"
+              : !email.includes("@") || email.split("@").length !== 2 || email.split("@")[1] === "" ? "invalid_email"
+                : password === "" ? "blank_password"
+                  : password !== confirmPassword ? "different_password"
+                    : undefined;
+          setSignupError(validation);
+          if (validation) return;
+        }
+        onError("");
+        navigate("verification");
+      }} disabled={loading || (Platform.OS === "ios" && (!email || !name || !password || !confirmPassword || password !== confirmPassword))} />
     </View>
   </SafeAreaView>;
   if (screen === "verification") return <SafeAreaView style={[styles.auth, styles.formScreen]}>
