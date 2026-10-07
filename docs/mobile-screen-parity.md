@@ -24,7 +24,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Workspace notification settings | `WorkspaceNotificationsScreen` | device QA pending |
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
 | Create workspace | `WorkspaceCreateScreen` | device QA pending |
-| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; role step uses shared illustrated `WorkspaceRoleSelection` | implementation aligned to Android student/teacher cards; device QA pending |
+| Join workspace / role / code / confirmation | `WorkspaceJoinScreen` steps; shared illustrated `WorkspaceRoleSelection` and dedicated `WorkspaceJoinConfirmation` | role and confirmation layouts aligned to Android source structure; device QA pending |
 | Waiting for workspace approval | Dedicated `WorkspaceApprovalScreen` shared by `WorkspaceJoinScreen` / `WorkspaceSetupScreen` | device QA pending |
 | Meal calendar | `MealCalendar` in `HomeScreen.tsx` | device QA pending |
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |

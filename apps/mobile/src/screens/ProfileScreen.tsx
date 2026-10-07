@@ -7,6 +7,7 @@ import { Button, Card, type WorkspaceJoinRole } from "../components/ui";
 import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
 import { CreateWorkspaceCard, PendingWorkspaceRequests, WorkspaceApprovalScreen } from "./WorkspaceSetupScreen";
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
+import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
@@ -174,9 +175,9 @@ export function WorkspaceJoinScreen({ onReload, onDone }: { onReload: () => Prom
   const search = async () => { if (inviteCode.trim().length !== 6 || busy) return; setBusy(true); setMessage(""); try { const result = await api.searchWorkspace(inviteCode.trim().toUpperCase()); setWorkspace(result.data); setStep("confirm"); } catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); } finally { setBusy(false); } };
   const join = async () => { if (!workspace || busy) return; setBusy(true); setMessage(""); try { await api.joinWorkspace({ code: inviteCode.trim().toUpperCase(), role: joinRole }); await onReload(); setStep("waiting"); } catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); } finally { setBusy(false); } };
   if (step === "role") return <WorkspaceRoleSelection value={joinRole} onChange={setJoinRole} onContinue={() => setStep("code")} />;
+  if (step === "confirm" && workspace) return <WorkspaceJoinConfirmation workspace={workspace} busy={busy} error={message} onContinue={() => void join()} />;
   return <ScrollView style={styles.content}>
     {step === "code" ? <Card title="초대 코드 입력"><SeugiCodeTextField value={inviteCode} onChangeText={(value) => setInviteCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.inputSpacing} /><Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || inviteCode.length !== 6} /></Card> : null}
-    {step === "confirm" && workspace ? <Card title="학교 확인"><View style={styles.schoolSummary}>{workspace.workspaceImageUrl ? <Image source={{ uri: workspace.workspaceImageUrl }} style={styles.schoolImage} /> : null}<Text style={styles.schoolName}>{workspace.workspaceName}</Text><Text style={styles.muted}>학생 {workspace.studentCount}명 · 교사 {workspace.teacherCount}명</Text></View><Button label={busy ? "신청 중…" : "가입 신청"} onPress={() => void join()} disabled={busy} /><Button label="다시 입력" kind="secondary" onPress={() => setStep("code")} disabled={busy} /></Card> : null}
     {step === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={onDone} /> : null}
     {message ? <Text style={styles.error}>{message}</Text> : null}
   </ScrollView>;
@@ -257,9 +258,6 @@ const styles = StyleSheet.create({
   memberActions: { flexDirection: "row", gap: 14 },
   row: { backgroundColor: SeugiColor.White, padding: 16, marginBottom: 8, borderRadius: 12, flexDirection: "row", justifyContent: "space-between" },
   numberInput: { flex: 1, minWidth: 0 },
-  schoolSummary: { alignItems: "center", gap: 8, paddingVertical: 12 },
-  schoolImage: { width: 76, height: 76, borderRadius: 38 },
-  schoolName: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700" },
   workspaceHero: { minHeight: 84, paddingHorizontal: 4, paddingBottom: 18, flexDirection: "row", alignItems: "center", gap: 14 },
   workspaceHeroText: { flex: 1, gap: 8 },
   workspaceAvatar: { width: 48, height: 48, borderRadius: 24 },
