@@ -18,9 +18,9 @@ export function SeugiTopBar({
 }) {
   return (
     <View style={[styles.bar, { backgroundColor }, shadow && styles.shadow]}>
-      <View style={styles.leading}>{leading}</View>
+      <View style={[styles.leading, !leading && styles.emptySlot]}>{leading}</View>
       <View style={styles.title}>{title}</View>
-      <View style={styles.trailing}>{trailing}</View>
+      <View style={[styles.trailing, !trailing && styles.emptySlot]}>{trailing}</View>
     </View>
   );
 }
@@ -28,6 +28,7 @@ export function SeugiTopBar({
 const styles = StyleSheet.create({
   bar: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" },
   leading: { width: 36, justifyContent: "center", alignItems: "flex-start" },
+  emptySlot: { width: 0 },
   title: { flex: 1, minWidth: 0, justifyContent: "center" },
   trailing: { width: 64, justifyContent: "center", alignItems: "flex-end" },
   shadow: { zIndex: 1, shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
