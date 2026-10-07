@@ -10,6 +10,7 @@ import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { WorkspaceMembersScreen as WorkspaceMembersDestination } from "./WorkspaceMembersScreen";
 
 export function ProfileScreen({ workspace, onOpenSettings }: { workspace: Workspace; onOpenSettings: () => void }) {
   return <ScrollView style={styles.content}><ProfileEditor workspace={workspace} onOpenSettings={onOpenSettings} /></ScrollView>;
@@ -156,7 +157,7 @@ export function WorkspaceGeneralScreen() {
   const leaveWorkspace = () => Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
   return <ScrollView style={styles.content}><TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}><Text style={styles.leaveWorkspace}>학교 나가기</Text><Text style={styles.muted}>›</Text></TouchableOpacity></ScrollView>;
 }
-export function WorkspaceMembersScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceMembers workspace={workspace} /></ScrollView>; }
+export function WorkspaceMembersScreen({ workspace, onOpenRoom }: { workspace: Workspace; onOpenRoom: (room: import("@seugi/contracts").Room) => void }) { return <WorkspaceMembersDestination workspace={workspace} onOpenRoom={onOpenRoom} />; }
 export function WorkspaceInviteScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceInviteCode workspace={workspace} /><JoinRequests workspace={workspace} /></ScrollView>; }
 export function WorkspaceNotificationsScreen({ workspace }: { workspace: Workspace }) { return <ScrollView style={styles.content}><WorkspaceNotificationSettings workspace={workspace} /></ScrollView>; }
 export function WorkspaceCreateScreen({ onReload }: { onReload: () => Promise<void> }) { return <CreateWorkspaceCard onCreated={onReload} presentation="screen" />; }

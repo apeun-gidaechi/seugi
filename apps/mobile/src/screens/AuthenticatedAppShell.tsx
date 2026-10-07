@@ -178,7 +178,7 @@ export function AuthenticatedAppShell({
       {detail === "catSeugi" ? <CatSeugiScreen workspace={workspace} /> : null}
       {detail === "workspace" ? <WorkspaceDetailScreen workspaces={workspaces} workspace={workspace} onSelect={switchWorkspace} onNavigate={pushDetail} onReload={onReload} /> : null}
       {detail === "workspaceGeneral" ? <WorkspaceGeneralScreen /> : null}
-      {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} /> : null}
+      {detail === "workspaceMembers" ? <WorkspaceMembersScreen workspace={workspace} onOpenRoom={(room) => { setCreatedRoom(room); setDetailStack([]); setActiveConversation(undefined); onTabChange("chat"); }} /> : null}
       {detail === "workspaceInvite" ? <WorkspaceInviteScreen workspace={workspace} /> : null}
       {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}

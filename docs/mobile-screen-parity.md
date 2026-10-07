@@ -19,7 +19,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Edit notice | `NoticeEditorScreen` with initial notice | device QA pending |
 | CatSeugi | `CatSeugiScreen` | device QA pending |
 | Workspace detail | `WorkspaceDetailScreen` | device QA pending |
-| Workspace members | `WorkspaceMembersScreen` | device QA pending |
+| Workspace members | `WorkspaceMembersScreen` | Teacher/student segmented list, member avatars/admin marks, profile sheet, and start-personal-chat action now match native interaction structure; device QA pending |
 | Workspace invitation | `WorkspaceInviteScreen` | device QA pending |
 | Workspace notification settings | `WorkspaceNotificationsScreen` | device QA pending |
 | Workspace general settings | `WorkspaceGeneralScreen` | device QA pending |
