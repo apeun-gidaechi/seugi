@@ -9,8 +9,13 @@ import { SeugiCodeTextField, SeugiTextField } from "../design-system/TextField";
 import { WorkspaceRoleSelection } from "../components/WorkspaceRoleSelection";
 import { WorkspaceJoinConfirmation } from "../components/WorkspaceJoinConfirmation";
 
+type WorkspaceSetupRoute = "start" | "create" | "role" | "code" | "confirm" | "waiting" | "requests";
+
 export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated: () => Promise<void>; onLogout: () => Promise<void>; error?: string }) {
-  const [screen, setScreen] = useState<"start" | "create" | "role" | "code" | "confirm" | "waiting" | "requests">("start");
+  const [routeStack, setRouteStack] = useState<WorkspaceSetupRoute[]>(["start"]);
+  const screen = routeStack[routeStack.length - 1];
+  const navigate = (route: WorkspaceSetupRoute) => setRouteStack((current) => [...current, route]);
+  const returnToStart = () => setRouteStack(["start"]);
   const [role, setRole] = useState<WorkspaceJoinRole>("STUDENT");
   const [code, setCode] = useState("");
   const [workspace, setWorkspace] = useState<WorkspaceSearchSummary>();
@@ -21,7 +26,7 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     const timer = setInterval(() => { void onCreated().catch(() => undefined); }, 10_000);
     return () => clearInterval(timer);
   }, [screen, onCreated]);
-  const back = () => setScreen((current) => current === "waiting" ? "confirm" : current === "confirm" ? "code" : current === "code" ? "role" : current === "role" || current === "create" ? "start" : "start");
+  const back = () => setRouteStack((current) => current.length > 1 ? current.slice(0, -1) : current);
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (screen === "start") return false;
@@ -33,14 +38,14 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
   const search = async () => {
     if (code.trim().length !== 6 || busy) return;
     setBusy(true); setMessage("");
-    try { const result = await api.searchWorkspace(code.trim().toUpperCase()); setWorkspace(result.data); setScreen("confirm"); }
+    try { const result = await api.searchWorkspace(code.trim().toUpperCase()); setWorkspace(result.data); navigate("confirm"); }
     catch (error) { setMessage(error instanceof Error ? error.message : "학교를 찾지 못했습니다"); }
     finally { setBusy(false); }
   };
   const join = async () => {
     if (!workspace || busy) return;
     setBusy(true); setMessage("");
-    try { await api.joinWorkspace({ code: code.trim().toUpperCase(), role }); await onCreated(); setScreen("waiting"); }
+    try { await api.joinWorkspace({ code: code.trim().toUpperCase(), role }); await onCreated(); navigate("waiting"); }
     catch (error) { setMessage(error instanceof Error ? error.message : "가입 신청에 실패했습니다"); }
     finally { setBusy(false); }
   };
@@ -56,12 +61,12 @@ export function WorkspaceSetupScreen({ onCreated, onLogout, error }: { onCreated
     {screen === "start" ? <Text style={styles.logo}>스기</Text> : null}
     {!joinFlow && screen !== "start" ? <TouchableOpacity onPress={back}><Text style={styles.link}>‹ 뒤로</Text></TouchableOpacity> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
-    {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => setScreen("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => setScreen("role")} /><Button label="가입 신청 내역" kind="secondary" onPress={() => setScreen("requests")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
-    {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={onCreated} /></ScrollView> : null}
+    {screen === "start" ? <><Text style={styles.subtitle}>학교 워크스페이스를 만들어 시작하거나, 초대 코드로 가입하세요.</Text><Button label="새 학교 만들기" onPress={() => navigate("create")} /><Button label="초대 코드로 가입" kind="secondary" onPress={() => navigate("role")} /><Button label="가입 신청 내역" kind="secondary" onPress={() => navigate("requests")} /><Button label="로그아웃" kind="secondary" onPress={onLogout} /></> : null}
+    {screen === "create" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>새 학교 만들기</Text><CreateWorkspaceCard onCreated={async () => { await onCreated(); returnToStart(); }} /></ScrollView> : null}
     {screen === "requests" ? <ScrollView style={styles.flow}><Text style={styles.subtitle}>가입 신청 내역</Text><PendingWorkspaceRequests onChanged={onCreated} /></ScrollView> : null}
-    {screen === "role" ? <WorkspaceRoleSelection value={role} onChange={setRole} onContinue={() => setScreen("code")} /> : null}
+    {screen === "role" ? <WorkspaceRoleSelection value={role} onChange={setRole} onContinue={() => navigate("code")} /> : null}
     {screen === "code" ? <><Text style={styles.subtitle}>학교 초대 코드를 입력해 주세요.</Text><SeugiCodeTextField value={code} onChangeText={(value) => setCode(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())} keyboardType="default" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="학교 코드" label="학교 코드" containerStyle={styles.codeSpacing} />{message ? <Text style={styles.error}>{message}</Text> : null}<Button label={busy ? "학교 확인 중…" : "계속하기"} onPress={() => void search()} disabled={busy || code.length !== 6} /></> : null}
-    {screen === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={() => setScreen("start")} /> : null}
+    {screen === "waiting" && workspace ? <WorkspaceApprovalScreen workspace={workspace} onDone={returnToStart} /> : null}
   </SafeAreaView>;
 }
 
