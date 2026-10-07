@@ -1,11 +1,12 @@
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import type { Member } from "@seugi/contracts";
+import type { WorkspaceMemberView } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { absoluteApiUrl } from "../utils/url";
 import { SeugiAvatar } from "../design-system/Avatar";
+import { workspaceMemberDisplayName } from "../utils/member";
 
 type ChatInviteScreenProps = {
-  members: Member[];
+  members: WorkspaceMemberView[];
   selectedIds: string[];
   busy: boolean;
   notice: string;
@@ -36,8 +37,8 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
         <Text style={styles.hint}>선택한 멤버 {selectedIds.length}</Text>
         <ScrollView horizontal contentContainerStyle={styles.selectedList} showsHorizontalScrollIndicator={false}>
           {selectedMembers.map((member) => (
-            <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${member.name} 선택 해제`} style={styles.selectedChip} onPress={() => onToggle(member.id)} disabled={busy}>
-              <Text style={styles.selectedText}>{member.name} ×</Text>
+            <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${workspaceMemberDisplayName(member)} 선택 해제`} style={styles.selectedChip} onPress={() => onToggle(member.id)} disabled={busy}>
+              <Text style={styles.selectedText}>{workspaceMemberDisplayName(member)} ×</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -53,7 +54,7 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
             <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked }} style={styles.memberRow} onPress={() => onToggle(item.id)} disabled={busy}>
               <Text style={checked ? styles.checked : styles.unchecked}>{checked ? "☑" : "□"}</Text>
               <SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.avatar} fallbackStyle={styles.avatar} labelStyle={styles.avatarText} />
-              <Text style={styles.memberName}>{item.name}</Text>
+              <Text style={styles.memberName}>{workspaceMemberDisplayName(item)}</Text>
             </TouchableOpacity>
           );
         }}

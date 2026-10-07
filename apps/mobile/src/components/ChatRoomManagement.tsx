@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, BackHandler, FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
-import type { LegacyProfile, Member, Room } from "@seugi/contracts";
+import type { LegacyProfile, Room, WorkspaceMemberView } from "@seugi/contracts";
 import { Button, Card } from "./ui";
 import { ChatInviteScreen } from "../screens/ChatInviteScreen";
 import { SeugiAvatar } from "../design-system/Avatar";
@@ -10,7 +10,7 @@ import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 
 export function ChatRoomManagement({ room, memberId, notificationEnabled, onNotificationToggle, showNotificationToggle, onRoomChange, onLeave, onOpenPersonalChat }: { room: Room; memberId: string; notificationEnabled: boolean; onNotificationToggle: () => void; showNotificationToggle: boolean; onRoomChange: (room: Room) => void; onLeave: () => void; onOpenPersonalChat: (room: Room) => void }) {
-  const [workspaceMembers, setWorkspaceMembers] = useState<Member[]>([]); const [selectedIds, setSelectedIds] = useState<string[]>([]); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [inviting, setInviting] = useState(false); const isAdmin = room.adminId === memberId;
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberView[]>([]); const [selectedIds, setSelectedIds] = useState<string[]>([]); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [inviting, setInviting] = useState(false); const isAdmin = room.adminId === memberId;
   const [profile, setProfile] = useState<LegacyProfile>();
   useEffect(() => {
     if (!inviting) return;

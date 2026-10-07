@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import type { Member, Room, Workspace } from "@seugi/contracts";
+import type { Room, Workspace, WorkspaceMemberView } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { SeugiTextField } from "../design-system/TextField";
 import { SeugiTopBar } from "../design-system/TopBar";
 import { SeugiAvatar } from "../design-system/Avatar";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { workspaceMemberDisplayName } from "../utils/member";
 
 export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreated }: {
   workspace: Workspace;
@@ -15,7 +16,7 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
   onBack: () => void;
   onCreated: (room: Room) => void;
 }) {
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberView[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [roomName, setRoomName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,14 +51,14 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
   const next = () => {
     if (!selectedIds.length || busy) return;
     if (selectedMembers.length === 1) {
-      void create(selectedMembers[0]?.name ?? "채팅");
+      void create(selectedMembers[0] ? workspaceMemberDisplayName(selectedMembers[0]) : "채팅");
       return;
     }
     onNavigate("createGroupRoomName");
   };
   const complete = () => {
     if (step === "members") next();
-    else void create(roomName.trim() || `${selectedMembers[0]?.name ?? "멤버"} 외 ${selectedMembers.length - 1}명`);
+    else void create(roomName.trim() || `${selectedMembers[0] ? workspaceMemberDisplayName(selectedMembers[0]) : "멤버"} 외 ${selectedMembers.length - 1}명`);
   };
 
   const topBar = <SeugiTopBar
@@ -70,9 +71,9 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
   if (step === "name") return <>
     {topBar}
     <View style={styles.nameContent}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{selectedMembers[0]?.name.slice(0, 1) ?? "채"}</Text><Text style={styles.avatarAdd}>＋</Text></View>
+      <View style={styles.avatar}><Text style={styles.avatarText}>{selectedMembers[0] ? workspaceMemberDisplayName(selectedMembers[0]).slice(0, 1) : "채"}</Text><Text style={styles.avatarAdd}>＋</Text></View>
       <Text style={styles.nameLabel}>채팅방 이름</Text>
-      <SeugiTextField value={roomName} onChangeText={setRoomName} containerStyle={styles.inputSpacing} placeholder={selectedMembers[0] ? `${selectedMembers[0].name}${selectedMembers.length > 1 ? ` 외 ${selectedMembers.length - 1}명` : ""}` : "채팅방 이름"} maxLength={60} autoFocus />
+      <SeugiTextField value={roomName} onChangeText={setRoomName} containerStyle={styles.inputSpacing} placeholder={selectedMembers[0] ? `${workspaceMemberDisplayName(selectedMembers[0])}${selectedMembers.length > 1 ? ` 외 ${selectedMembers.length - 1}명` : ""}` : "채팅방 이름"} maxLength={60} autoFocus />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   </>;
@@ -80,9 +81,9 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
   return <>
     {topBar}
     <FlatList style={styles.content} data={members} keyExtractor={(member) => member.id}
-    ListHeaderComponent={<View style={styles.memberSelection}><ScrollView style={styles.selected} contentContainerStyle={styles.selectedContent} nestedScrollEnabled><View style={styles.selectedMembers}>{selectedMembers.length ? selectedMembers.map((member) => <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${member.name} 선택 해제`} onPress={() => setSelectedIds((current) => current.filter((id) => id !== member.id))} style={styles.selectedMember}><Text style={styles.selectedName}>{member.name}</Text><Text style={styles.removeSelected}>×</Text></TouchableOpacity>) : <Text style={styles.muted}>멤버를 선택해 주세요</Text>}</View></ScrollView>{error ? <Text style={styles.error}>{error}</Text> : null}</View>}
+    ListHeaderComponent={<View style={styles.memberSelection}><ScrollView style={styles.selected} contentContainerStyle={styles.selectedContent} nestedScrollEnabled><View style={styles.selectedMembers}>{selectedMembers.length ? selectedMembers.map((member) => <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${workspaceMemberDisplayName(member)} 선택 해제`} onPress={() => setSelectedIds((current) => current.filter((id) => id !== member.id))} style={styles.selectedMember}><Text style={styles.selectedName}>{workspaceMemberDisplayName(member)}</Text><Text style={styles.removeSelected}>×</Text></TouchableOpacity>) : <Text style={styles.muted}>멤버를 선택해 주세요</Text>}</View></ScrollView>{error ? <Text style={styles.error}>{error}</Text> : null}</View>}
     ListEmptyComponent={<Text style={styles.empty}>초대할 구성원이 없습니다.</Text>}
-    renderItem={({ item }) => <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: selectedIds.includes(item.id) }} style={styles.member} onPress={() => setSelectedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])}><View style={styles.memberAvatar}><SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.memberAvatarImage} fallbackStyle={styles.memberAvatar} labelStyle={styles.memberInitial} /></View><Text style={styles.memberName}>{item.name}</Text><Text style={styles.check}>{selectedIds.includes(item.id) ? "☑" : "□"}</Text></TouchableOpacity>} />
+    renderItem={({ item }) => <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: selectedIds.includes(item.id) }} style={styles.member} onPress={() => setSelectedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])}><View style={styles.memberAvatar}><SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.memberAvatarImage} fallbackStyle={styles.memberAvatar} labelStyle={styles.memberInitial} /></View><Text style={styles.memberName}>{workspaceMemberDisplayName(item)}</Text><Text style={styles.check}>{selectedIds.includes(item.id) ? "☑" : "□"}</Text></TouchableOpacity>} />
   </>;
 }
 
