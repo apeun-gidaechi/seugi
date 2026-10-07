@@ -23,7 +23,17 @@ export function ProfileScreen({ workspace, onOpenSettings }: { workspace: Worksp
 export function AccountSettingsScreen({ workspace, onLogout }: { workspace: Workspace; onLogout: () => void | Promise<void> }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const signOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
+  const performSignOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
+  const signOut = () => {
+    if (Platform.OS === "ios") {
+      Alert.alert("로그아웃 하시겠습니까?", undefined, [
+        { text: "아니요", style: "cancel" },
+        { text: "로그아웃", onPress: () => { void performSignOut(); } },
+      ]);
+      return;
+    }
+    void performSignOut();
+  };
   const openPolicy = (url: string) => { void Linking.openURL(url).catch(() => setMessage("정책 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.")); };
   const withdraw = () => Alert.alert("회원 탈퇴", "계정과 연결된 데이터에 접근할 수 없게 됩니다. 탈퇴를 진행할까요?", [
     { text: "취소", style: "cancel" },
