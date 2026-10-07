@@ -12,7 +12,7 @@ export function ProfileScreen({ workspace, onOpenSettings }: { workspace: Worksp
   return <ScrollView style={styles.content}><ProfileEditor workspace={workspace} onOpenSettings={onOpenSettings} /></ScrollView>;
 }
 
-export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Promise<void> }) {
+export function AccountSettingsScreen({ workspace, onLogout }: { workspace: Workspace; onLogout: () => void | Promise<void> }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const signOut = async () => { await api.logout().catch(() => undefined); await onLogout(); };
@@ -21,7 +21,68 @@ export function AccountSettingsScreen({ onLogout }: { onLogout: () => void | Pro
     { text: "취소", style: "cancel" },
     { text: "탈퇴", style: "destructive", onPress: () => { void (async () => { setBusy(true); setMessage(""); try { await api.removeMember(); await onLogout(); } catch (e) { setMessage(e instanceof Error ? e.message : "회원 탈퇴에 실패했습니다"); } finally { setBusy(false); } })(); } },
   ]);
-  return <ScrollView style={styles.content}><Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card><Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} /><Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView>;
+  return <ScrollView style={styles.content}><ProfileIdentitySettings workspace={workspace} /><Card title="안내"><Button label="개인정보 처리 방침" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/58f95c1209fb48b4b74434701290f838")} /><Button label="서비스 운영 정책" kind="secondary" onPress={() => openPolicy("https://byungjjun.notion.site/5ba79e224f53439bbfa3607e581fe6bf")} /></Card><Button label="로그아웃" kind="secondary" onPress={signOut} disabled={busy} /><Button label="회원 탈퇴" kind="secondary" onPress={withdraw} disabled={busy} />{message ? <Text style={styles.error}>{message}</Text> : null}</ScrollView>;
+}
+
+function ProfileIdentitySettings({ workspace }: { workspace: Workspace }) {
+  const [name, setName] = useState("");
+  const [picture, setPicture] = useState("");
+  const [draft, setDraft] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    api.memberInfo().then(({ data }) => {
+      if (!active) return;
+      setName(data?.name ?? "");
+      setPicture(data?.picture ?? "");
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [workspace.id]);
+  const changePhoto = async () => {
+    if (busy) return;
+    setBusy(true); setMessage("");
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const form = new FormData();
+      form.append("file", { uri: asset.uri, name: asset.name, type: asset.mimeType ?? "image/jpeg" } as unknown as Blob);
+      const uploaded = await api.uploadFile("PROFILE", form);
+      if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다");
+      await api.editMember({ picture: uploaded.data.url });
+      setPicture(uploaded.data.url);
+      setMessage("프로필 사진을 변경했습니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "프로필 사진을 변경하지 못했습니다");
+    } finally { setBusy(false); }
+  };
+  const saveName = async () => {
+    if (busy || !draft.trim()) return;
+    setBusy(true); setMessage("");
+    try {
+      await api.editMember({ name: draft.trim() });
+      setName(draft.trim());
+      setEditingName(false);
+      setMessage("이름을 변경했습니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "이름을 변경하지 못했습니다");
+    } finally { setBusy(false); }
+  };
+  return <>
+    <Card title="프로필 정보">
+      <View style={styles.settingsIdentity}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="프로필 사진 변경" onPress={() => void changePhoto()} disabled={busy}>
+          {picture ? <Image source={{ uri: absoluteApiUrl(picture) }} style={styles.settingsAvatar} /> : <View style={styles.settingsAvatarPlaceholder}><Text style={styles.link}>사진 추가</Text></View>}
+        </TouchableOpacity>
+        <View style={styles.settingsIdentityName}><Text style={styles.profileNameText}>{name || "이름"}</Text><TouchableOpacity accessibilityRole="button" onPress={() => { setDraft(name); setEditingName(true); }} disabled={busy}><Text style={styles.link}>이름 수정</Text></TouchableOpacity></View>
+      </View>
+      {busy ? <Text style={styles.muted}>변경 사항을 저장하는 중…</Text> : null}
+      {message ? <Text style={message.includes("변경") ? styles.answer : styles.error}>{message}</Text> : null}
+    </Card>
+    <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>이름 수정</Text><TextInput autoFocus value={draft} onChangeText={setDraft} style={styles.input} placeholder="이름을 입력해 주세요" maxLength={50} /><View style={styles.dialogActions}><TouchableOpacity onPress={() => setEditingName(false)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={() => void saveName()} disabled={busy || !draft.trim()}><Text style={styles.link}>{busy ? "저장 중…" : "저장"}</Text></TouchableOpacity></View></View></View></Modal>
+  </>;
 }
 
 export type WorkspaceSection = "workspaceGeneral" | "workspaceMembers" | "workspaceInvite" | "workspaceNotifications" | "workspaceCreate" | "workspaceJoin";
@@ -142,40 +203,25 @@ function WorkspaceMembers({ workspace }: { workspace: Workspace }) { const [memb
 
 function ProfileEditor({ workspace, onOpenSettings }: { workspace: Workspace; onOpenSettings: () => void }) {
   const [name, setName] = useState(""); const [grade, setGrade] = useState(""); const [classNumber, setClassNumber] = useState(""); const [number, setNumber] = useState("");
-  const [picture, setPicture] = useState(""); const [photoBusy, setPhotoBusy] = useState(false);
+  const [picture, setPicture] = useState("");
   const [status, setStatus] = useState(""); const [nick, setNick] = useState(""); const [spot, setSpot] = useState(""); const [belong, setBelong] = useState(""); const [phone, setPhone] = useState(""); const [wire, setWire] = useState(""); const [location, setLocation] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<"name" | "status" | "nick" | "studentNumber" | "spot" | "belong" | "phone" | "wire" | "location">();
+  const [editing, setEditing] = useState<"status" | "nick" | "studentNumber" | "spot" | "belong" | "phone" | "wire" | "location">();
   const [draft, setDraft] = useState("");
   useEffect(() => { let active = true; Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => { if (!active) return; setName(member.data?.name ?? ""); setPicture(member.data?.picture ?? ""); setGrade(profile.data?.grade ? String(profile.data.grade) : ""); setClassNumber(profile.data?.class ? String(profile.data.class) : ""); setNumber(profile.data?.number ? String(profile.data.number) : ""); setStatus(profile.data?.status ?? ""); setNick(profile.data?.nick ?? ""); setSpot(profile.data?.spot ?? ""); setBelong(profile.data?.belong ?? ""); setPhone(profile.data?.phone ?? ""); setWire(profile.data?.wire ?? ""); setLocation(profile.data?.location ?? ""); }).catch(() => undefined); return () => { active = false; }; }, [workspace.id]);
-  const pickPhoto = async () => {
-    if (photoBusy) return;
-    setPhotoBusy(true); setNotice("");
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: "image/*", copyToCacheDirectory: true, multiple: false });
-      if (result.canceled || !result.assets[0]) return;
-      const asset = result.assets[0]; const form = new FormData();
-      form.append("file", { uri: asset.uri, name: asset.name, type: asset.mimeType ?? "image/jpeg" } as unknown as Blob);
-      const uploaded = await api.uploadFile("PROFILE", form);
-      if (!uploaded.data?.url) throw new Error("이미지 업로드 응답이 올바르지 않습니다");
-      await api.editMember({ picture: uploaded.data.url }); setPicture(uploaded.data.url); setNotice("프로필 사진을 변경했습니다.");
-    } catch (e) { setNotice(e instanceof Error ? e.message : "프로필 사진을 변경하지 못했습니다"); }
-    finally { setPhotoBusy(false); }
-  };
-  const save = async () => { if (busy) return; setBusy(true); setNotice(""); try { if (!name.trim()) throw new Error("이름을 입력해 주세요"); const hasStudentNumber = !!(grade || classNumber || number); if (hasStudentNumber && [grade, classNumber, number].some((value) => !/^\d+$/.test(value) || Number(value) < 1)) throw new Error("학년·반·번호를 모두 올바르게 입력해 주세요"); await api.editMember({ name: name.trim() }); await api.editProfile(workspace.id, { status, nick, spot, belong, phone, wire, location, ...(hasStudentNumber ? { grade: Number(grade), class: Number(classNumber), number: Number(number) } : {}) }); setNotice("프로필을 저장했습니다."); } catch (e) { setNotice(e instanceof Error ? e.message : "프로필 저장에 실패했습니다"); } finally { setBusy(false); } };
+  const save = async () => { if (busy) return; setBusy(true); setNotice(""); try { const hasStudentNumber = !!(grade || classNumber || number); if (hasStudentNumber && [grade, classNumber, number].some((value) => !/^\d+$/.test(value) || Number(value) < 1)) throw new Error("학년·반·번호를 모두 올바르게 입력해 주세요"); await api.editProfile(workspace.id, { status, nick, spot, belong, phone, wire, location, ...(hasStudentNumber ? { grade: Number(grade), class: Number(classNumber), number: Number(number) } : {}) }); setNotice("프로필을 저장했습니다."); } catch (e) { setNotice(e instanceof Error ? e.message : "프로필 저장에 실패했습니다"); } finally { setBusy(false); } };
   const profileRows: Array<[typeof editing & string, string, string, (value: string) => void]> = [
     ["status", "상태메세지", status, setStatus], ["nick", "닉네임", nick, setNick],
     ["studentNumber", "학년 · 반 · 번호", [grade, classNumber, number].filter(Boolean).join(" · "), (value) => { const [nextGrade = "", nextClass = "", nextNumber = ""] = value.split(/[.,\s]+/); setGrade(nextGrade); setClassNumber(nextClass); setNumber(nextNumber); }],
     ["spot", "직위", spot, setSpot], ["belong", "소속", belong, setBelong], ["phone", "휴대전화번호", phone, setPhone], ["wire", "유선전화번호", wire, setWire], ["location", "근무 위치", location, setLocation],
   ];
   const openEditor = (key: typeof editing, value: string) => { setEditing(key); setDraft(value); };
-  const fieldTitle = editing === "name" ? "이름" : profileRows.find(([key]) => key === editing)?.[1] ?? "프로필";
+  const fieldTitle = profileRows.find(([key]) => key === editing)?.[1] ?? "프로필";
   const commitDraft = () => {
-    if (editing === "name") setName(draft);
-    else profileRows.find(([key]) => key === editing)?.[3](draft);
+    profileRows.find(([key]) => key === editing)?.[3](draft);
     setEditing(undefined);
   };
   return <Card title="내 프로필">
-    <View style={styles.profileHeader}><TouchableOpacity accessibilityRole="button" accessibilityLabel="프로필 사진 변경" onPress={pickPhoto} disabled={photoBusy}>{picture ? <Image source={{ uri: absoluteApiUrl(picture) }} style={styles.profilePicture} /> : <View style={styles.profilePictureEmpty}><Text style={styles.link}>사진 추가</Text></View>}</TouchableOpacity><View style={styles.profileName}><View style={styles.nameRow}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="이름 수정" onPress={() => openEditor("name", name)}><Text style={styles.profileEdit}>✎</Text></TouchableOpacity></View><Text style={styles.muted}>{photoBusy ? "사진 업로드 중…" : "사진을 눌러 변경"}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
+    <View style={styles.profileHeader}>{picture ? <Image source={{ uri: absoluteApiUrl(picture) }} style={styles.profilePicture} /> : <View style={styles.profilePictureEmpty}><Text style={styles.link}>프로필</Text></View>}<View style={styles.profileName}><Text style={styles.profileNameText}>{name || "이름"}{nick ? ` (${nick})` : ""}</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="설정" onPress={onOpenSettings} style={styles.settingsButton}><Text style={styles.settingsIcon}>⚙</Text></TouchableOpacity></View>
     {profileRows.map(([key, title, value]) => <TouchableOpacity key={key} accessibilityRole="button" style={styles.profileRow} onPress={() => openEditor(key as NonNullable<typeof editing>, value)}><View><Text style={styles.profileLabel}>{title}</Text><Text style={styles.profileValue}>{value || "미설정"}</Text></View><Text style={styles.profileEdit}>✎</Text></TouchableOpacity>)}
     <Button label={busy ? "저장 중…" : "변경 사항 저장"} onPress={save} disabled={busy} />{notice ? <Text style={notice.includes("저장") || notice.includes("변경") ? styles.answer : styles.error}>{notice}</Text> : null}
     <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(undefined)}><View style={styles.modalBackdrop}><View style={styles.editDialog}><Text style={styles.dialogTitle}>{fieldTitle} 수정</Text><TextInput autoFocus value={draft} onChangeText={setDraft} style={styles.input} placeholder={`${fieldTitle} 입력`} multiline={editing === "status"} keyboardType={editing === "phone" || editing === "wire" ? "phone-pad" : "default"} /><View style={styles.dialogActions}><TouchableOpacity onPress={() => setEditing(undefined)}><Text style={styles.muted}>취소</Text></TouchableOpacity><TouchableOpacity onPress={commitDraft}><Text style={styles.link}>확인</Text></TouchableOpacity></View></View></View></Modal>
@@ -225,6 +271,10 @@ const styles = StyleSheet.create({
   workspaceOptionAvatarPlaceholder: { width: 36, height: 36, borderRadius: 18, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   workspacePickerActions: { flexDirection: "row", gap: 8, paddingTop: 12 },
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, marginBottom: 8 },
+  settingsIdentity: { minHeight: 104, flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 8 },
+  settingsIdentityName: { flex: 1, gap: 8 },
+  settingsAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: SeugiColor.Gray300 },
+  settingsAvatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   profilePicture: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Gray300 },
   profilePictureEmpty: { width: 56, height: 56, borderRadius: 28, backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
   profileName: { flex: 1, gap: 4 },

@@ -161,7 +161,7 @@ export function AuthenticatedAppShell({
       {detail === "workspaceNotifications" ? <WorkspaceNotificationsScreen workspace={workspace} /> : null}
       {detail === "workspaceCreate" ? <WorkspaceCreateScreen onReload={onReload} /> : null}
       {detail === "workspaceJoin" ? <WorkspaceJoinScreen onReload={onReload} /> : null}
-      {detail === "accountSettings" ? <AccountSettingsScreen onLogout={onLogout} /> : null}
+      {detail === "accountSettings" ? <AccountSettingsScreen workspace={workspace} onLogout={onLogout} /> : null}
       {detail === "createRoom" && (tab === "chat" || tab === "group") ? (
         <CreateRoomScreen
           workspace={workspace}
