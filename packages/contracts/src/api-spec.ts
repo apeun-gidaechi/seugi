@@ -1,99 +1,20 @@
-import { createTaskSchema } from "./task.js";
-import { createWorkspaceSchema, joinWorkspaceSchema, kickWorkspaceMembersSchema, updateWorkspaceMemberRoleSchema, updateWorkspaceSchema, workspaceMemberSchema, workspaceNotificationsSchema, workspaceWaitlistActionSchema, workspaceWaitlistQuerySchema } from "./workspace.js";
-import { editMemberSchema, loginMemberSchema, logoutMemberSchema, memberDeviceTokenSchema, registerMemberSchema } from "./member.js";
-import { editProfileSchema, editStudentNumberSchema } from "./profile.js";
-import { chatMemberEventSchema, chatRoomSearchSchema, createChatRoomSchema, deleteMessageSchema, chatEmojiSchema, messageHistoryQuerySchema } from "./chat.js";
-import { createNotificationSchema, notificationEmojiSchema, updateNotificationSchema } from "./notification.js";
-import { createTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, updateTimetableSchema } from "./school.js";
-import { aiPromptSchema, authenticateOAuthSchema, connectGoogleSchema, oauthProviderSchema, sendVerificationQuerySchema, uploadTypeSchema } from "./integrations.js";
-import { emailVerificationSchema } from "./member.js";
-import { otherProfileQuerySchema, profileWorkspaceQuerySchema } from "./profile.js";
-import { tokenQuerySchema, uploadNameParamSchema } from "./common.js";
+/**
+ * Runtime-safe API route registry shared by servers and clients.
+ * Request/response validation schemas live in the domain modules so browser
+ * clients can consume routes without bundling server-side validators.
+ */
+const route = (method: string, path: string) => ({ method, path });
+const path = (method: string, value: string, pathFor: (...parts: any[]) => string) => ({ method, path: value, pathFor });
+const query = (method: string, value: string, pathFor: (...parts: any[]) => string) => ({ method, path: value, pathFor });
+const segment = (value: string) => encodeURIComponent(value);
 
-/** Shared transport specification consumed by both the API server and SDK. */
 export const API_SPEC = {
-  health: { method: "GET", path: "/health" },
-  uploadedFile: { method: "GET", path: "/uploads/:name", params: uploadNameParamSchema, pathFor: (name: string) => `/uploads/${encodeURIComponent(name)}` },
-  refreshMember: { method: "GET", path: "/member/refresh", query: tokenQuerySchema, pathFor: (token: string) => `/member/refresh?token=${encodeURIComponent(token)}` },
-  memberInfo: { method: "GET", path: "/member/myInfo" },
-  removeMember: { method: "DELETE", path: "/member/remove" },
-  workspaceDetails: { method: "GET", path: "/workspace/:workspaceId", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}` },
-  deleteWorkspace: { method: "DELETE", path: "/workspace/:workspaceId", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}` },
-  registerMember: { method: "POST", path: "/member/register", body: registerMemberSchema },
-  loginMember: { method: "POST", path: "/member/login", body: loginMemberSchema },
-  editMember: { method: "PATCH", path: "/member/edit", body: editMemberSchema },
-  addDeviceToken: { method: "POST", path: "/member/device-token", body: memberDeviceTokenSchema },
-  removeDeviceToken: { method: "DELETE", path: "/member/device-token", body: memberDeviceTokenSchema },
-  logoutMember: { method: "POST", path: "/member/logout", body: logoutMemberSchema },
-  editProfile: { method: "PATCH", path: "/profile/:workspaceId", pathFor: (workspaceId: string) => `/profile/${encodeURIComponent(workspaceId)}`, body: editProfileSchema },
-  editStudentNumber: { method: "PATCH", path: "/profile/schidnum/:workspaceId", pathFor: (workspaceId: string) => `/profile/schidnum/${encodeURIComponent(workspaceId)}`, body: editStudentNumberSchema },
-  myProfile: { method: "GET", path: "/profile/me", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/profile/me?workspaceId=${encodeURIComponent(workspaceId)}` },
-  createGroupRoom: { method: "POST", path: "/chat/group/create", body: createChatRoomSchema },
-  createPersonalRoom: { method: "POST", path: "/chat/personal/create", body: createChatRoomSchema },
-  groupRooms: { method: "GET", path: "/chat/group/search/:workspaceId", pathFor: (workspaceId: string) => `/chat/group/search/${encodeURIComponent(workspaceId)}` },
-  personalRooms: { method: "GET", path: "/chat/personal/search/:workspaceId", pathFor: (workspaceId: string) => `/chat/personal/search/${encodeURIComponent(workspaceId)}` },
-  searchGroupRooms: { method: "GET", path: "/chat/group/search", query: chatRoomSearchSchema, pathFor: (workspaceId: string, word = "") => `/chat/group/search?workspace=${encodeURIComponent(workspaceId)}&word=${encodeURIComponent(word)}` },
-  searchPersonalRooms: { method: "GET", path: "/chat/personal/search", query: chatRoomSearchSchema, pathFor: (workspaceId: string, word = "") => `/chat/personal/search?workspace=${encodeURIComponent(workspaceId)}&word=${encodeURIComponent(word)}` },
-  groupRoom: { method: "GET", path: "/chat/group/search/room/:roomId", pathFor: (roomId: string) => `/chat/group/search/room/${encodeURIComponent(roomId)}` },
-  personalRoom: { method: "GET", path: "/chat/personal/search/room/:roomId", pathFor: (roomId: string) => `/chat/personal/search/room/${encodeURIComponent(roomId)}` },
-  addGroupMembers: { method: "POST", path: "/chat/group/member/add", body: chatMemberEventSchema },
-  removeGroupMembers: { method: "PATCH", path: "/chat/group/member/kick", body: chatMemberEventSchema },
-  transferGroupAdmin: { method: "PATCH", path: "/chat/group/member/toss", body: chatMemberEventSchema },
-  leaveGroupRoom: { method: "PATCH", path: "/chat/group/left/:roomId", pathFor: (roomId: string) => `/chat/group/left/${encodeURIComponent(roomId)}` },
-  messages: { method: "GET", path: "/message/search/:roomId", pathFor: (roomId: string, timestamp?: string) => `/message/search/${encodeURIComponent(roomId)}${timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : ""}`, query: messageHistoryQuerySchema },
-  addMessageEmoji: { method: "PUT", path: "/message/emoji", body: chatEmojiSchema },
-  removeMessageEmoji: { method: "DELETE", path: "/message/emoji", body: chatEmojiSchema },
-  deleteMessage: { method: "DELETE", path: "/message/delete", body: deleteMessageSchema },
-  createNotification: { method: "POST", path: "/notification", body: createNotificationSchema },
-  listNotifications: { method: "GET", path: "/notification/:workspaceId", pathFor: (workspaceId: string) => `/notification/${encodeURIComponent(workspaceId)}` },
-  updateNotification: { method: "PATCH", path: "/notification", body: updateNotificationSchema },
-  deleteNotification: { method: "DELETE", path: "/notification/:workspaceId/:id", pathFor: (workspaceId: string, id: string) => `/notification/${encodeURIComponent(workspaceId)}/${encodeURIComponent(id)}` },
-  toggleNotificationEmoji: { method: "PATCH", path: "/notification/emoji", body: notificationEmojiSchema },
-  createTimetable: { method: "POST", path: "/timetable", body: createTimetableSchema },
-  updateTimetable: { method: "PATCH", path: "/timetable", body: updateTimetableSchema },
-  deleteTimetable: { method: "DELETE", path: "/timetable/:id", pathFor: (id: string) => `/timetable/${encodeURIComponent(id)}` },
-  resetTimetable: { method: "POST", path: "/timetable/reset", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/timetable/reset?workspaceId=${encodeURIComponent(workspaceId)}` },
-  dailyTimetable: { method: "GET", path: "/timetable/day", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/timetable/day?workspaceId=${encodeURIComponent(workspaceId)}` },
-  weeklyTimetable: { method: "GET", path: "/timetable/weekend", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/timetable/weekend?workspaceId=${encodeURIComponent(workspaceId)}` },
-  mealForDate: { method: "GET", path: "/meal", query: mealDateQuerySchema, pathFor: (workspaceId: string, date: string) => `/meal?workspaceId=${encodeURIComponent(workspaceId)}&date=${encodeURIComponent(date)}` },
-  meals: { method: "GET", path: "/meal/all", query: mealRangeQuerySchema, pathFor: (workspaceId: string, year?: number, month?: number) => `/meal/all?workspaceId=${encodeURIComponent(workspaceId)}${year !== undefined && month !== undefined ? `&year=${year}&month=${month}` : ""}` },
-  resetMeals: { method: "POST", path: "/meal/reset/:workspaceId", pathFor: (workspaceId: string) => `/meal/reset/${encodeURIComponent(workspaceId)}` },
-  schedules: { method: "GET", path: "/schedule/:workspaceId", pathFor: (workspaceId: string) => `/schedule/${encodeURIComponent(workspaceId)}` },
-  monthSchedules: { method: "GET", path: "/schedule/month", query: monthScheduleQuerySchema, pathFor: (workspaceId: string, month: number) => `/schedule/month?workspaceId=${encodeURIComponent(workspaceId)}&month=${month}` },
-  sendVerification: { method: "GET", path: "/email/send", query: sendVerificationQuerySchema, pathFor: (email: string) => `/email/send?email=${encodeURIComponent(email)}` },
-  confirmVerification: { method: "POST", path: "/email/confirm", body: emailVerificationSchema },
-  authenticateOAuth: { method: "POST", path: "/oauth/:provider/authenticate", pathFor: (provider: "google" | "apple") => `/oauth/${provider}/authenticate`, params: oauthProviderSchema, body: authenticateOAuthSchema },
-  connectGoogle: { method: "POST", path: "/oauth/google/connect", body: connectGoogleSchema },
-  removeGoogleConnection: { method: "DELETE", path: "/oauth/google/remove" },
-  googleConnection: { method: "GET", path: "/oauth/google/status" },
-  askCatseugi: { method: "POST", path: "/ai", body: aiPromptSchema },
-  uploadFile: { method: "POST", path: "/file/upload/:type", pathFor: (type: "IMAGE" | "FILE" | "PROFILE") => `/file/upload/${type}`, params: uploadTypeSchema },
-  createTask: {
-    method: "POST",
-    path: "/task",
-    body: createTaskSchema,
-  },
-  listTasks: {
-    method: "GET",
-    path: "/task/:workspaceId",
-    pathFor: (workspaceId: string) => `/task/${encodeURIComponent(workspaceId)}`,
-  },
-  createWorkspace: { method: "POST", path: "/workspace", body: createWorkspaceSchema },
-  updateWorkspace: { method: "PATCH", path: "/workspace", body: updateWorkspaceSchema },
-  listWorkspaces: { method: "GET", path: "/workspace" },
-  joinWorkspace: { method: "POST", path: "/workspace/join", body: joinWorkspaceSchema },
-  workspaceMembers: { method: "GET", path: "/workspace/members", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/workspace/members?workspaceId=${encodeURIComponent(workspaceId)}` },
-  workspaceMemberChart: { method: "GET", path: "/workspace/members/chart", query: profileWorkspaceQuerySchema, pathFor: (workspaceId: string) => `/workspace/members/chart?workspaceId=${encodeURIComponent(workspaceId)}` },
-  workspaceNotificationPreference: { method: "GET", path: "/workspace/:workspaceId/notifications", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}/notifications` },
-  setWorkspaceNotificationPreference: { method: "PATCH", path: "/workspace/:workspaceId/notifications", pathFor: (workspaceId: string) => `/workspace/${encodeURIComponent(workspaceId)}/notifications`, body: workspaceNotificationsSchema },
-  workspaceCode: { method: "GET", path: "/workspace/code/:workspaceId", pathFor: (workspaceId: string) => `/workspace/code/${encodeURIComponent(workspaceId)}` },
-  searchWorkspace: { method: "GET", path: "/workspace/search/:code", pathFor: (code: string) => `/workspace/search/${encodeURIComponent(code)}` },
-  approveWorkspaceMembers: { method: "PATCH", path: "/workspace/add", body: workspaceWaitlistActionSchema },
-  rejectWorkspaceMembers: { method: "DELETE", path: "/workspace/cancel", body: workspaceWaitlistActionSchema },
-  workspaceWaitlist: { method: "GET", path: "/workspace/wait-list", query: workspaceWaitlistQuerySchema, pathFor: (workspaceId: string, role: "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" = "STUDENT") => `/workspace/wait-list?workspaceId=${encodeURIComponent(workspaceId)}&role=${role}` },
-  updateWorkspaceMemberRole: { method: "PATCH", path: "/workspace/permission", body: updateWorkspaceMemberRoleSchema },
-  kickWorkspaceMembers: { method: "PATCH", path: "/workspace/kick", body: kickWorkspaceMembersSchema },
-  workspaceMember: { method: "GET", path: "/profile/others", query: otherProfileQuerySchema, pathFor: (workspaceId: string, memberId: string) => `/profile/others?workspaceId=${encodeURIComponent(workspaceId)}&memberId=${encodeURIComponent(memberId)}` },
-  myWaitingWorkspaces: { method: "GET", path: "/workspace/my/wait-list" },
-  classroomTasks: { method: "GET", path: "/task/classroom" },
+  health: route("GET", "/health"), uploadedFile: path("GET", "/uploads/:name", (name) => `/uploads/${segment(name)}`),
+  registerMember: route("POST", "/member/register"), loginMember: route("POST", "/member/login"), editMember: route("PATCH", "/member/edit"), addDeviceToken: route("POST", "/member/device-token"), removeDeviceToken: route("DELETE", "/member/device-token"), logoutMember: route("POST", "/member/logout"), refreshMember: query("GET", "/member/refresh", (token) => `/member/refresh?token=${segment(token)}`), memberInfo: route("GET", "/member/myInfo"), removeMember: route("DELETE", "/member/remove"),
+  editProfile: path("PATCH", "/profile/:workspaceId", (workspaceId) => `/profile/${segment(workspaceId)}`), editStudentNumber: path("PATCH", "/profile/schidnum/:workspaceId", (workspaceId) => `/profile/schidnum/${segment(workspaceId)}`), myProfile: query("GET", "/profile/me", (workspaceId) => `/profile/me?workspaceId=${segment(workspaceId)}`), workspaceMember: query("GET", "/profile/others", (workspaceId, memberId) => `/profile/others?workspaceId=${segment(workspaceId)}&memberId=${segment(memberId)}`),
+  createGroupRoom: route("POST", "/chat/group/create"), createPersonalRoom: route("POST", "/chat/personal/create"), groupRooms: path("GET", "/chat/group/search/:workspaceId", (id) => `/chat/group/search/${segment(id)}`), personalRooms: path("GET", "/chat/personal/search/:workspaceId", (id) => `/chat/personal/search/${segment(id)}`), searchGroupRooms: query("GET", "/chat/group/search", (workspaceId, word = "") => `/chat/group/search?workspace=${segment(workspaceId)}&word=${segment(word)}`), searchPersonalRooms: query("GET", "/chat/personal/search", (workspaceId, word = "") => `/chat/personal/search?workspace=${segment(workspaceId)}&word=${segment(word)}`), groupRoom: path("GET", "/chat/group/search/room/:roomId", (id) => `/chat/group/search/room/${segment(id)}`), personalRoom: path("GET", "/chat/personal/search/room/:roomId", (id) => `/chat/personal/search/room/${segment(id)}`), addGroupMembers: route("POST", "/chat/group/member/add"), removeGroupMembers: route("PATCH", "/chat/group/member/kick"), transferGroupAdmin: route("PATCH", "/chat/group/member/toss"), leaveGroupRoom: path("PATCH", "/chat/group/left/:roomId", (id) => `/chat/group/left/${segment(id)}`), messages: query("GET", "/message/search/:roomId", (id, timestamp) => `/message/search/${segment(id)}${timestamp ? `?timestamp=${segment(timestamp)}` : ""}`), addMessageEmoji: route("PUT", "/message/emoji"), removeMessageEmoji: route("DELETE", "/message/emoji"), deleteMessage: route("DELETE", "/message/delete"),
+  createNotification: route("POST", "/notification"), listNotifications: path("GET", "/notification/:workspaceId", (id) => `/notification/${segment(id)}`), updateNotification: route("PATCH", "/notification"), deleteNotification: path("DELETE", "/notification/:workspaceId/:id", (workspaceId, id) => `/notification/${segment(workspaceId)}/${segment(id)}`), toggleNotificationEmoji: route("PATCH", "/notification/emoji"),
+  createTimetable: route("POST", "/timetable"), updateTimetable: route("PATCH", "/timetable"), deleteTimetable: path("DELETE", "/timetable/:id", (id) => `/timetable/${segment(id)}`), resetTimetable: query("POST", "/timetable/reset", (id) => `/timetable/reset?workspaceId=${segment(id)}`), dailyTimetable: query("GET", "/timetable/day", (id) => `/timetable/day?workspaceId=${segment(id)}`), weeklyTimetable: query("GET", "/timetable/weekend", (id) => `/timetable/weekend?workspaceId=${segment(id)}`), mealForDate: query("GET", "/meal", (id, date) => `/meal?workspaceId=${segment(id)}&date=${segment(date)}`), meals: query("GET", "/meal/all", (id, year, month) => `/meal/all?workspaceId=${segment(id)}${year ? `&year=${segment(year)}` : ""}${month ? `&month=${segment(month)}` : ""}`), resetMeals: path("POST", "/meal/reset/:workspaceId", (id) => `/meal/reset/${segment(id)}`), schedules: path("GET", "/schedule/:workspaceId", (id) => `/schedule/${segment(id)}`), monthSchedules: query("GET", "/schedule/month", (id, month) => `/schedule/month?workspaceId=${segment(id)}&month=${segment(month)}`),
+  sendVerification: query("GET", "/email/send", (email) => `/email/send?email=${segment(email)}`), confirmVerification: route("POST", "/email/confirm"), authenticateOAuth: path("POST", "/oauth/:provider/authenticate", (provider) => `/oauth/${segment(provider)}/authenticate`), connectGoogle: route("POST", "/oauth/google/connect"), removeGoogleConnection: route("DELETE", "/oauth/google/remove"), googleConnection: route("GET", "/oauth/google/status"), askCatseugi: route("POST", "/ai"), uploadFile: path("POST", "/file/upload/:type", (type) => `/file/upload/${segment(type)}`),
+  createTask: route("POST", "/task"), listTasks: path("GET", "/task/:workspaceId", (id) => `/task/${segment(id)}`), classroomTasks: route("GET", "/task/classroom"), createWorkspace: route("POST", "/workspace"), updateWorkspace: route("PATCH", "/workspace"), listWorkspaces: route("GET", "/workspace"), workspaceDetails: path("GET", "/workspace/:workspaceId", (id) => `/workspace/${segment(id)}`), deleteWorkspace: path("DELETE", "/workspace/:workspaceId", (id) => `/workspace/${segment(id)}`), joinWorkspace: route("POST", "/workspace/join"), workspaceMembers: query("GET", "/workspace/members", (id) => `/workspace/members?workspaceId=${segment(id)}`), workspaceMemberChart: query("GET", "/workspace/members/chart", (id) => `/workspace/members/chart?workspaceId=${segment(id)}`), workspaceNotificationPreference: path("GET", "/workspace/:workspaceId/notifications", (id) => `/workspace/${segment(id)}/notifications`), setWorkspaceNotificationPreference: path("PATCH", "/workspace/:workspaceId/notifications", (id) => `/workspace/${segment(id)}/notifications`), workspaceCode: path("GET", "/workspace/code/:workspaceId", (id) => `/workspace/code/${segment(id)}`), searchWorkspace: path("GET", "/workspace/search/:code", (code) => `/workspace/search/${segment(code)}`), approveWorkspaceMembers: route("PATCH", "/workspace/add"), rejectWorkspaceMembers: route("DELETE", "/workspace/cancel"), workspaceWaitlist: query("GET", "/workspace/wait-list", (id, role = "STUDENT") => `/workspace/wait-list?workspaceId=${segment(id)}&role=${segment(role)}`), updateWorkspaceMemberRole: route("PATCH", "/workspace/permission"), kickWorkspaceMembers: route("PATCH", "/workspace/kick"), myWaitingWorkspaces: route("GET", "/workspace/my/wait-list"),
 } as const;
