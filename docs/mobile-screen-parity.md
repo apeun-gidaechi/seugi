@@ -52,7 +52,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 - A current iPad A16 simulator pass compared the email-registration layout and state transition to the native SwiftUI source. The form has labeled name/email/password/confirmation fields and a fixed continue action; continuing opens the code screen without sending mail, matching the native route sequence. Only dummy `.invalid` input was used and no email was sent. Code delivery and registration submission remain unverified.
 - Google sign-in was absent because `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is not configured; Apple, Google, realtime chat, and populated-school data still need credential-backed runtime checks. Push-token registration also remains unavailable without `EXPO_PUBLIC_EAS_PROJECT_ID`; the missing optional push configuration is logged without showing a global app error.
 - The meal calendar route opened, but the local API returned `NEIS_API_KEY is not configured`; real meal/timetable-backed content could not be verified.
-- Android device QA and source-vs-target capture/comparison remain outstanding. Update individual `device QA pending` rows only after those comparisons.
+- The Android native project now passes `apps/mobile/android/gradlew assembleDebug` (debug APK compilation, not device runtime QA). Android device QA and source-vs-target capture/comparison remain outstanding. Update individual `device QA pending` rows only after those comparisons.
 - The next parity pass should capture each source and TypeScript screen on Android and iOS, compare the interaction path, and update these statuses only after runtime verification.
 
 ## Design-system conversion status
