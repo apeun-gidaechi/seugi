@@ -1,5 +1,5 @@
-import React, { EventHandler } from 'react';
-import * as S from "@/Components/Button/Button.style"
+import React from 'react';
+import { Button as SystemButton } from '@/Components/ui';
 
 interface SeugiButtonProps {
   text?: string;
@@ -9,9 +9,9 @@ interface SeugiButtonProps {
 
 const Button: React.FC<SeugiButtonProps> = ({ text = '계속하기', onClick }) => {
   return (
-    <S.Continuebtn onClick={onClick}>
+    <SystemButton variant="seugi" fullWidth type="submit" onClick={onClick}>
       {text}
-    </S.Continuebtn>
+    </SystemButton>
   );
 };
 

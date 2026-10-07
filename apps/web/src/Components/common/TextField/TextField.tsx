@@ -1,5 +1,5 @@
 import React from 'react';
-import * as S from './TextField.style';
+import { SeugiTextControl } from '@/Components/ui';
 
 interface SeugiTextFieldProps {
     text?: string;
@@ -13,7 +13,7 @@ interface SeugiTextFieldProps {
 
 const TextField: React.FC<SeugiTextFieldProps> = ({ onChange, placeholder, type = 'text', onKeyDown, style, value }) => {
     return (
-        <S.TxtField
+        <SeugiTextControl
             onChange={onChange}
             placeholder={placeholder}
             type={type}

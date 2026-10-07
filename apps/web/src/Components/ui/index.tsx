@@ -1,8 +1,9 @@
 import React from "react";
 import styled, { css } from "styled-components";
 import { designTokens as t } from "@/Design/tokens";
+import { SeugiFont } from "@/Design/text/SeugiFont";
 
-type ButtonVariant = "primary" | "secondary" | "quiet";
+type ButtonVariant = "primary" | "secondary" | "quiet" | "seugi";
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; fullWidth?: boolean };
 
 const ButtonRoot = styled.button<{ $variant: ButtonVariant; $fullWidth: boolean }>`
@@ -24,6 +25,23 @@ const ButtonRoot = styled.button<{ $variant: ButtonVariant; $fullWidth: boolean 
   &:active:not(:disabled) { transform: translateY(1px); }
   &:focus-visible { outline: 3px solid ${t.color.focus}; outline-offset: 2px; }
   &:disabled { cursor: not-allowed; opacity: 0.55; }
+  ${({ $variant }) => $variant === "seugi" && css`
+    display: flex;
+    height: 54px;
+    min-height: 54px;
+    padding: 12px 180px;
+    align-self: stretch;
+    gap: 10px;
+    border: none;
+    border-radius: 12px;
+    background: ${t.color.primary};
+    color: ${t.color.surface};
+    ${SeugiFont.subtitle.subtitle2};
+    transition: none;
+    &:hover:not(:disabled), &:active:not(:disabled) { background: ${t.color.primary}; transform: none; }
+    &:focus-visible { outline: revert; outline-offset: revert; }
+    &:disabled { cursor: default; opacity: 1; }
+  `}
 `;
 
 export function Button({ variant = "primary", fullWidth = false, type = "button", ...props }: ButtonProps) {
@@ -61,6 +79,20 @@ export const TextControl = styled.input`
   color: ${t.color.ink};
   font: 400 15px ${t.type.family};
   &::placeholder { color: ${t.color.subtle}; }
+`;
+
+export const SeugiTextControl = styled.input`
+  flex-grow: 1;
+  padding: 17px 16px;
+  border: none;
+  ${SeugiFont.subtitle.subtitle2};
+  &:focus { outline: none; }
+  box-sizing: border-box;
+  width: 421px;
+  height: 52px;
+  background: ${t.color.surface};
+  border-radius: 12px;
+  &::placeholder { color: ${t.color.subtle}; ${SeugiFont.subtitle.subtitle2}; }
 `;
 const FieldMessage = styled.span<{ $error: boolean }>`
   color: ${({ $error }) => ($error ? t.color.danger : t.color.muted)};
