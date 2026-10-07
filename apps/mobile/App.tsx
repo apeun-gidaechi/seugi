@@ -264,11 +264,16 @@ export default function App() {
         onGoogleCode={authenticateGoogle}
         onAppleSignIn={authenticateApple}
         onError={setError}
-        onSendVerification={() => {
-          void api
-            .sendVerification(email)
-            .then(() => setError("인증 코드를 발송했습니다."))
-            .catch((e) => setError(e.message));
+        onSendVerification={async () => {
+          setError("");
+          try {
+            await api.sendVerification(email);
+            setError("인증 코드를 발송했습니다.");
+            return true;
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "인증 코드를 발송하지 못했습니다");
+            return false;
+          }
         }}
         onLogin={() => {
           void authenticate(false);
