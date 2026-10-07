@@ -30,7 +30,7 @@ The native projects have separate route destinations, while the TypeScript mobil
 | Timetable | `TimetablePage` in `HomeScreen.tsx` | device QA pending |
 | Assignments | `AssignmentsScreen` | device QA pending |
 | Create assignment | `TaskCreateScreen` | device QA pending |
-| Email/social onboarding | `AuthScreen` states and provider actions | iPad simulator verified the gradient/cloud start, sign-in option sheet, email-to-login transition, signup fields and code-entry transition against the iOS source flow; code delivery/submission and Google remain unverified; Apple action is visible but credential flow unverified |
+| Email/social onboarding | `AuthScreen` states and provider actions | iPad simulator verified the gradient/cloud start, sign-in option sheet and signup fields/code-entry transition; the email login route now mirrors native labels/footer but needs a fresh visual comparison. Code delivery/submission and Google remain unverified; Apple action is visible but credential flow unverified |
 
 ## iOS-only navigation differences
 
