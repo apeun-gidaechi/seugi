@@ -16,7 +16,7 @@ import Cookies from 'js-cookie';
 
 interface EmojiItem {
     emoji: string;
-    userList: number[];
+    userList: string[];
 }
 
 interface NotificationItem {
@@ -186,7 +186,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                             };
                         }
                     } else {
-                        existingEmoji.userList.push(user?.id ?? 0);
+                        existingEmoji.userList.push(user?.id ?? "");
                     }
 
                     return {
@@ -202,7 +202,7 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                         ...notification,
                         emoji: notification.emoji.concat({
                             emoji: emoji.emoji,
-                            userList: [user?.id ?? 0],
+                            userList: [user?.id ?? ""],
                         }),
                     };
                 }
@@ -287,9 +287,9 @@ const Notification = ({ notifications = [], mutateNotifications }: Props) => {
                                     <S.NotificationEmojiWrapper
                                         onClick={() => handleEmojiClick(parentKey, emoji)}
                                         key={childKey}
-                                        className={emoji.userList?.includes(user?.id ?? -1) ? "Clicked" : ""}
+                                        className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}
                                     >
-                                        <S.NotificationEmojiCount className={emoji.userList?.includes(user?.id ?? -1) ? "Clicked" : ""}>
+                                        <S.NotificationEmojiCount className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}>
                                             {emoji.emoji} {emoji.userList?.length}
                                         </S.NotificationEmojiCount>
                                     </S.NotificationEmojiWrapper>

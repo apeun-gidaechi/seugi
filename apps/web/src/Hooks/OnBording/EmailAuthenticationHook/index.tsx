@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios';
-// import config from '@/constants/config/config.json';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { paths } from '@/Constants/paths';
-
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
+import { registerMember, sendVerificationCode } from '@/Api/auth';
 
 const index = () => {
     const location = useLocation();
@@ -30,10 +27,8 @@ const index = () => {
     const handleSendCode = async () => {
         try {
             console.log(email);
-            const res = await axios.get(`${SERVER_URL}/email/send`, {
-                params: { email: email }
-            });
-            console.log('Code sent successfully:', res.data);
+            if (!email) return;
+            await sendVerificationCode(email);
             setTimer(300);
             setShowAlert(true);
             setIsCodeSent(true);
@@ -52,13 +47,12 @@ const index = () => {
         const verificationCode = code.join('');
         console.log(name, email, password, verificationCode);
         try {
-            const res = await axios.post(`${SERVER_URL}/member/register`, {
+            await registerMember({
                 name,
                 email,
                 password,
                 code: verificationCode,
             });
-            console.log(res);
             navigate(paths.login);
         } catch (error) {
             console.error('Error sending code:', error);

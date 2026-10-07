@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserDispatchContext } from '@/Contexts/userContext';
-import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getMyWorkspaces } from "@/Api/workspace";
 import { getMyInfos } from "@/Api/profile";
 import { paths } from "@/Constants/paths";
 import { appleAuthHelpers } from "react-apple-signin-auth";
 import Cookies from 'js-cookie';
-
-const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
+import { authenticateApple, authenticateGoogle, loginMember } from '@/Api/auth';
 
 const index = () => {
     const navigate = useNavigate();
@@ -38,7 +36,7 @@ const index = () => {
                 return;
             }
 
-            Cookies.set("workspaceId", checkWorkspaces[0].workspaceId);
+            Cookies.set("workspaceId", checkWorkspaces[0].id);
             navigate(paths.home);
         } catch (error) {
             console.log("Error fetching workspace:", error);
@@ -51,31 +49,14 @@ const index = () => {
 
     const handleLogin = async () => {
         try {
-            const res = await axios.post(
-                `${SERVER_URL}/member/login`,
-                {
-                    email,
-                    password,
-                    token: fcmToken,
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-
-            if (res.status !== 200) {
-                return;
-            }
-            const { accessToken, refreshToken } = res.data.data;
+            const { accessToken, refreshToken } = await loginMember({ email, password, token: fcmToken });
 
             Cookies.set("accessToken", accessToken);
             Cookies.set("refreshToken", refreshToken);
 
             // manageWorkspace 호출 전에 getMyInfo로 사용자 정보 가져오기
-            getMyInfo();
-            manageWorkspace();
+            await getMyInfo();
+            await manageWorkspace();
         } catch (error) {
             setAlertMessage(
                 "등록되지 않은 아이디이거나 아이디 또는 비밀번호를 잘못 입력했습니다"
@@ -99,7 +80,13 @@ const index = () => {
 
     const getMyInfo = async () => {
         const MyInfos = await getMyInfos();
-        setUser(MyInfos);
+        setUser({
+            id: MyInfos.id,
+            email: MyInfos.email,
+            birth: MyInfos.birth ?? "",
+            name: MyInfos.name,
+            picture: MyInfos.picture ?? "",
+        });
     }
 
     const scopes = [
@@ -115,25 +102,13 @@ const index = () => {
         scope: scopes.join(" "),
         onSuccess: async ({ code }) => {
             try {
-                const res = await axios.post(
-                    `${SERVER_URL}/oauth/google/authenticate`,
-                    {
-                        code,
-                        token: fcmToken,
-                        platform: "WEB"
-                    }
-                );
-
-                if (res.status !== 200) {
-                    return;
-                }
-
-                const { accessToken, refreshToken } = res.data.data;
+                const { accessToken, refreshToken } = await authenticateGoogle(code, fcmToken);
 
                 Cookies.set("accessToken", accessToken);
                 Cookies.set("refreshToken", refreshToken);
 
-                manageWorkspace();
+                await getMyInfo();
+                await manageWorkspace();
             } catch (error) {
                 setAlertMessage(
                     "구글 로그인 중 오류가 발생했습니다. 다시 시도해주세요."
@@ -165,18 +140,12 @@ const index = () => {
             const code = response.detail.authorization.code;
             const name = response.user?.name;
             try {
-                const token = await axios.post(`${SERVER_URL}/oauth/apple/authenticate`, {
-                    code,
-                    token: fcmToken,
-                    platform: "WEB",
-                    name: name
-                });
-                console.log(token)
-                const { accessToken, refreshToken } = token.data.data
+                const { accessToken, refreshToken } = await authenticateApple(code, name, fcmToken);
 
                 Cookies.set("accessToken", accessToken);
                 Cookies.set("refreshToken", refreshToken);
-                manageWorkspace();
+                await getMyInfo();
+                await manageWorkspace();
             } catch (error) {
                 console.error("애플 로그인 처리 중 오류:", error);
             }

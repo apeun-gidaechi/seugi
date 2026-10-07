@@ -18,3 +18,8 @@ export async function withSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ da
     }
   }
 }
+
+export async function withPublicSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ data?: T }>): Promise<T> {
+  const api = new SeugiApi(SERVER_URL);
+  return (await operation(api)).data as T;
+}

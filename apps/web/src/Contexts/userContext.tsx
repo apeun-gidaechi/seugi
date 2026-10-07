@@ -1,7 +1,7 @@
 import React, { createContext, PropsWithChildren, useContext, useState, useEffect } from "react";
 
 interface UserContextType {
-    id: number;
+    id: string;
     email: string;
     birth: string;
     name: string;

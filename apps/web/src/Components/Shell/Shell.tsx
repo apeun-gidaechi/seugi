@@ -12,7 +12,13 @@ const Shell = () => {
     const { data: user } = useSWR('user', getMyInfos);
 
     useEffect(() => {
-        setCurrentUser(user);
+        setCurrentUser(user ? {
+            id: user.id,
+            email: user.email,
+            birth: user.birth ?? '',
+            name: user.name,
+            picture: user.picture ?? '',
+        } : null);
     }, [user]);
 
     return (

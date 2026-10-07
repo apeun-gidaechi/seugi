@@ -26,9 +26,9 @@ export class SeugiApi {
   confirmVerification(input: EmailVerificationInput) { return this.request<void>(API_SPEC.confirmVerification.path, { method: API_SPEC.confirmVerification.method, body: JSON.stringify(input) }); }
   register(input: RegisterMemberInput) { return this.request<Tokens>(API_SPEC.registerMember.path, { method: API_SPEC.registerMember.method, body: JSON.stringify(input) }); }
   login(input: LoginMemberInput) { return this.request<Tokens>(API_SPEC.loginMember.path, { method: API_SPEC.loginMember.method, body: JSON.stringify(input) }); }
-  authenticateGoogle(input: AuthenticateOAuthInput & { platform: "ANDROID" | "IOS" }) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("google"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
-  authenticateApple(input: AuthenticateOAuthInput & { platform: "IOS" }) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("apple"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
-  connectGoogle(input: ConnectGoogleInput & { platform: "ANDROID" | "IOS" }) { return this.request<void>(API_SPEC.connectGoogle.path, { method: API_SPEC.connectGoogle.method, body: JSON.stringify(input) }); }
+  authenticateGoogle(input: AuthenticateOAuthInput) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("google"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
+  authenticateApple(input: AuthenticateOAuthInput) { return this.request<Tokens>(API_SPEC.authenticateOAuth.pathFor("apple"), { method: API_SPEC.authenticateOAuth.method, body: JSON.stringify(input) }); }
+  connectGoogle(input: ConnectGoogleInput) { return this.request<void>(API_SPEC.connectGoogle.path, { method: API_SPEC.connectGoogle.method, body: JSON.stringify(input) }); }
   googleConnection() { return this.request<boolean>(API_SPEC.googleConnection.path); }
   removeGoogleConnection() { return this.request<void>(API_SPEC.removeGoogleConnection.path, { method: API_SPEC.removeGoogleConnection.method }); }
   refreshAccessToken(refreshToken: string) { return this.request<string>(API_SPEC.refreshMember.pathFor(refreshToken), {}, false); }
