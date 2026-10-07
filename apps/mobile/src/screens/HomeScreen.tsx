@@ -78,8 +78,10 @@ export function HomeScreen({
     if (results[1].status === "fulfilled") setClassroomTasks(results[1].value.data ?? []);
     if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
     if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
+    else setMeals(undefined);
     setMealError(results[3].status === "rejected");
     if (results[4].status === "fulfilled") setSchedules(results[4].value.data ?? []);
+    else setSchedules([]);
     setScheduleError(results[4].status === "rejected");
     setScheduleLoading(false);
     setAssignmentError(Platform.OS === "ios"
