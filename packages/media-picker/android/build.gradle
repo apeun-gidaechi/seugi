@@ -1,0 +1,15 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+group = 'com.seugi.mediapicker'
+version = '0.1.0'
+
+apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+useExpoPublishing()
+
+android {
+  namespace 'expo.modules.seugimediapicker'
+}

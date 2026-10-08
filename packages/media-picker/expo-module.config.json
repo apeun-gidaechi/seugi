@@ -1,0 +1,10 @@
+{
+  "name": "@seugi/media-picker",
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["SeugiMediaPickerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.seugimediapicker.SeugiMediaPickerModule"]
+  }
+}
