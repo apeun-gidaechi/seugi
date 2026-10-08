@@ -13,7 +13,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | Command | Scope |
 | --- | --- |
 | `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (79+), mobile unit tests (113+), web tests |
+| `pnpm -r test` | API contract/integration (79+), mobile unit tests (114+), web tests |
 | `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
 
 | Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
@@ -23,6 +23,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
 | C-01 / C-02 room search / ordering / timestamps | `chat.test.ts`, `chat-room-list.test.ts` |
 | C-03 message search / list merge / unread | `chat.test.ts`, `chat-conversation.test.ts` |
+| C-04 create room member → name back stack | `shell-navigation.test.ts` (`previousCreateRoomDetail`) |
 | M-01 future-date dimming | `meal-calendar.test.ts` |
 | T-01 week label | `date.test.ts` |
 | A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
