@@ -12,15 +12,12 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { PlaygroundDemoEntry } from "./types";
 
 export function PlaygroundListScreen({
-  title,
   entries,
   onSelect,
-  onBack,
 }: {
   title: string;
   entries: PlaygroundDemoEntry[];
   onSelect: (id: string) => void;
-  onBack: () => void;
 }) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
@@ -94,11 +91,6 @@ export function PlaygroundListScreen({
         }
         renderItem={renderItem}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <Pressable accessibilityRole="button" onPress={onBack} style={styles.backLink}>
-            <Text style={styles.backText}>← 카탈로그 홈</Text>
-          </Pressable>
-        }
         ListEmptyComponent={<Text style={styles.empty}>일치하는 항목이 없습니다.</Text>}
       />
     </View>
@@ -119,8 +111,6 @@ const styles = StyleSheet.create({
     borderColor: SeugiColor.Gray300,
   },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
-  backLink: { marginBottom: 8 },
-  backText: { color: SeugiColor.Primary500, fontSize: 15, fontWeight: "600" },
   group: {
     marginTop: 16,
     marginBottom: 8,

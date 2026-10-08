@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { StyleSheet, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import { PlaygroundChrome } from "./PlaygroundChrome";
@@ -7,7 +8,13 @@ import { PlaygroundListScreen } from "./PlaygroundListScreen";
 import { DesignSystemCatalogScreen } from "./DesignSystemCatalogScreen";
 import { screenDemos } from "./screenDemos";
 import { componentDemos } from "./componentDemos";
-import type { PlaygroundRoute, PlaygroundSection } from "./types";
+import type { PlaygroundSection } from "./types";
+import {
+  type PlaygroundStackParamList,
+  playgroundStackScreenOptions,
+} from "./playgroundStack";
+
+const Stack = createNativeStackNavigator<PlaygroundStackParamList>();
 
 function sectionEntries(section: PlaygroundSection) {
   return section === "screens" ? screenDemos : componentDemos;
@@ -17,71 +24,70 @@ function sectionTitle(section: PlaygroundSection) {
   return section === "screens" ? "Screens" : "Components";
 }
 
-export function PlaygroundRoot() {
-  const [route, setRoute] = useState<PlaygroundRoute>({ name: "home" });
-
-  const chromeTitle = useMemo(() => {
-    if (route.name === "home") return "Playground";
-    if (route.name === "design-system") return "Design system";
-    if (route.name === "section") return sectionTitle(route.section);
-    if (route.name === "demo") {
-      const entry = sectionEntries(route.section).find((item) => item.id === route.id);
-      return entry?.title ?? "Demo";
-    }
-    return "Playground";
-  }, [route]);
-
-  const onBack = () => {
-    if (route.name === "demo") {
-      setRoute({ name: "section", section: route.section });
-      return;
-    }
-    if (route.name === "section" || route.name === "design-system") {
-      setRoute({ name: "home" });
-    }
-  };
-
-  const showChromeBack = route.name !== "home";
-
-  if (route.name === "design-system") {
-    return (
-      <DesignSystemCatalogScreen onBack={() => setRoute({ name: "home" })} />
-    );
-  }
-
+function HomeScreen({ navigation }: NativeStackScreenProps<PlaygroundStackParamList, "Home">) {
   return (
-    <PlaygroundChrome title={chromeTitle} onBack={showChromeBack ? onBack : undefined}>
-      {route.name === "home" ? (
-        <PlaygroundHomeScreen
-          onOpenDesignSystem={() => setRoute({ name: "design-system" })}
-          onOpenScreens={() => setRoute({ name: "section", section: "screens" })}
-          onOpenComponents={() => setRoute({ name: "section", section: "components" })}
-        />
-      ) : null}
-      {route.name === "section" ? (
-        <PlaygroundListScreen
-          title={sectionTitle(route.section)}
-          entries={sectionEntries(route.section)}
-          onSelect={(id) => setRoute({ name: "demo", section: route.section, id })}
-          onBack={() => setRoute({ name: "home" })}
-        />
-      ) : null}
-      {route.name === "demo" ? (
-        <DemoHost section={route.section} id={route.id} />
-      ) : null}
+    <PlaygroundChrome title="Playground">
+      <PlaygroundHomeScreen
+        onOpenDesignSystem={() => navigation.navigate("DesignSystem")}
+        onOpenScreens={() => navigation.navigate("Section", { section: "screens" })}
+        onOpenComponents={() => navigation.navigate("Section", { section: "components" })}
+      />
     </PlaygroundChrome>
   );
 }
 
-function DemoHost({ section, id }: { section: PlaygroundSection; id: string }) {
-  const entry = sectionEntries(section).find((item) => item.id === id);
-  if (!entry) {
-    return <View style={styles.missing} />;
-  }
+function DesignSystemScreen({
+  navigation,
+}: NativeStackScreenProps<PlaygroundStackParamList, "DesignSystem">) {
   return (
-    <View style={styles.demo}>
-      <entry.Component />
-    </View>
+    <PlaygroundChrome title="Design system" onBack={() => navigation.goBack()}>
+      <DesignSystemCatalogScreen />
+    </PlaygroundChrome>
+  );
+}
+
+function SectionScreen({
+  navigation,
+  route,
+}: NativeStackScreenProps<PlaygroundStackParamList, "Section">) {
+  const { section } = route.params;
+  return (
+    <PlaygroundChrome title={sectionTitle(section)} onBack={() => navigation.goBack()}>
+      <PlaygroundListScreen
+        title={sectionTitle(section)}
+        entries={sectionEntries(section)}
+        onSelect={(id) => navigation.navigate("Demo", { section, id })}
+      />
+    </PlaygroundChrome>
+  );
+}
+
+function DemoScreen({ navigation, route }: NativeStackScreenProps<PlaygroundStackParamList, "Demo">) {
+  const { section, id } = route.params;
+  const entry = sectionEntries(section).find((item) => item.id === id);
+  const title = entry?.title ?? "Demo";
+
+  return (
+    <PlaygroundChrome title={title} onBack={() => navigation.goBack()}>
+      {entry ? (
+        <View style={styles.demo}>
+          <entry.Component />
+        </View>
+      ) : (
+        <View style={styles.missing} />
+      )}
+    </PlaygroundChrome>
+  );
+}
+
+export function PlaygroundRoot() {
+  return (
+    <Stack.Navigator screenOptions={playgroundStackScreenOptions}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="DesignSystem" component={DesignSystemScreen} />
+      <Stack.Screen name="Section" component={SectionScreen} />
+      <Stack.Screen name="Demo" component={DemoScreen} />
+    </Stack.Navigator>
   );
 }
 

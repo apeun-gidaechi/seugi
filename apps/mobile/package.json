@@ -20,6 +20,8 @@
     "@babel/runtime": "^7.29.7",
     "@bittingz/expo-widgets": "2.9.0",
     "@react-native-google-signin/google-signin": "13.1.0",
+    "@react-navigation/native": "^7.5.0",
+    "@react-navigation/native-stack": "^7.20.0",
     "@seugi/api-client": "workspace:*",
     "@seugi/contracts": "workspace:*",
     "@seugi/design-tokens": "workspace:*",
@@ -39,6 +41,8 @@
     "react": "18.3.1",
     "react-native": "0.76.9",
     "react-native-android-widget": "^0.15.1",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.15.5",
     "socket.io-client": "^4.8.1"
   },

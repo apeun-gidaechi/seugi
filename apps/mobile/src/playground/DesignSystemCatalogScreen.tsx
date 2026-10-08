@@ -18,7 +18,6 @@ import { SeugiListItem } from "../design-system/ListItem";
 import { SeugiLoadingIndicator } from "../design-system/LoadingIndicator";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 import { SeugiToggle } from "../design-system/Toggle";
-import { SeugiTopBar } from "../design-system/TopBar";
 import { SeugiBottomNavigation, type SeugiTab } from "../design-system/BottomNavigation";
 import { SeugiShimmer } from "../design-system/Shimmer";
 import { SeugiTooltip } from "../design-system/Tooltip";
@@ -59,7 +58,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function DesignSystemCatalogScreen({ onBack }: { onBack?: () => void }) {
+export function DesignSystemCatalogScreen() {
   const [tab, setTab] = useState<SeugiTab>("home");
   const [role, setRole] = useState<"student" | "teacher">("student");
   const [checked, setChecked] = useState(true);
@@ -73,17 +72,6 @@ export function DesignSystemCatalogScreen({ onBack }: { onBack?: () => void }) {
 
   return (
     <View style={styles.root}>
-      <SeugiTopBar
-        leading={
-          onBack ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack}>
-              <SeugiBackIcon />
-            </Pressable>
-          ) : null
-        }
-        title={<Text style={styles.topTitle}>Design system</Text>}
-        trailing={null}
-      />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.meta}>Platform: {platform} · {buttonVariants.length} button variants</Text>
 
@@ -216,7 +204,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: "700", color: SeugiColor.Gray800 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
   shimmer: { height: 48, borderRadius: 8 },
-  topTitle: { fontSize: 18, fontWeight: "700", color: SeugiColor.Gray800 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarFallback: {
     width: 40,
