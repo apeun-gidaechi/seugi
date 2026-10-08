@@ -52,6 +52,7 @@ import {
   shellTabTitles,
 } from "../navigation/shellNavigation";
 import { ChatRoomMessages } from "./shell/ChatRoomMessages";
+import { canCreateWorkspaceNotice } from "../utils/workspaceNoticeAccess";
 
 type AuthenticatedAppShellProps = {
   tab: SeugiTab;
@@ -162,7 +163,9 @@ export function AuthenticatedAppShell({
     let active = true;
     Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
       if (!active) return;
-      setCanCreateNotice(workspace.ownerId === member.data?.id || (!!profile.data?.role && profile.data.role !== "STUDENT"));
+      setCanCreateNotice(
+        canCreateWorkspaceNotice(workspace, member.data?.id, profile.data?.role),
+      );
     }).catch(() => { if (active) setCanCreateNotice(false); });
     return () => { active = false; };
   }, [workspace.id, workspace.ownerId]);

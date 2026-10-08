@@ -27,6 +27,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | T-01 week label | `date.test.ts` |
 | A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
 | AI-01 CatSeugi rendering | `apps/api/test/ai.test.ts`, `catseugi.test.ts` (`catseugiVisibleText`) |
+| N-01 notice create permission | `workspace-notice-access.test.ts` |
 | W-01 members search / profile | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts` |
 | AU-01 auth CTAs / feedback | `auth-button.test.ts`, `auth-feedback.test.ts` |
 | S-01 tab conversation state | `tab-navigation.test.ts` |
@@ -57,7 +58,7 @@ Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
 | C-03 | Chat conversation | Composer, search, drawer, attachments, reactions, failed send retry, image preview |
 | C-04 | Create room | Member step → name step state; invite (Android group) |
 | P-01 | Profile / account settings | Field editors, photo picker, withdrawal flows |
-| N-01 | Notices | Paging (Android) vs full list (iOS), emoji picker, create/edit/delete permissions |
+| N-01 | Notices | Paging (Android) vs full list (iOS), emoji picker, create/edit/delete permissions (`workspace-notice-access.test.ts`) |
 | W-01 | Workspace detail / members / invite / notifications / general | Picker UI, toggles, member actions, join approvals |
 | J-01 | Join flow | Role → code → confirm → waiting; approval screen copy |
 | M-01 | Meal calendar | Grid, future-date dimming (Android), empty/failure |
@@ -80,6 +81,7 @@ Record device QA sessions here before updating `mobile-screen-parity.md` rows. K
 | Date | Commit | Scope | Environment | Result | Artifacts |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-08 | `aed2a66` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 103) | Terminal output; maps to checklist IDs in **Automated verification** above |
+| 2026-10-08 | `6ddda32` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 105, web 2); API `app.ts` route modules split | Terminal output; device rows still pending |
 | | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
 
 ## Sign-off
