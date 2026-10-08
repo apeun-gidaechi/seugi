@@ -1,7 +1,7 @@
 import { requireNativeModule } from "expo-modules-core";
-import { firstPickedImage, type PickImageResult, type PickedImage } from "./result";
+import { firstPickedImage, type PickImageResult, type PickedImage } from "./result.js";
 
-export type { PickedImage } from "./result";
+export type { PickedImage } from "./result.js";
 
 type NativeMediaPicker = { pickImage(): Promise<PickImageResult> };
 
