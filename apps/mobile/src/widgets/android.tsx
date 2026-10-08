@@ -11,6 +11,7 @@ import { SeugiApi } from "@seugi/api-client";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { Meal, Timetable } from "@seugi/contracts";
 import { API_URL } from "../config";
+import { androidMealWidgetPeriod } from "../utils/mealWidgetPeriod";
 
 const ACCESS_TOKEN_KEY = "seugi.access-token";
 const REFRESH_TOKEN_KEY = "seugi.refresh-token";
@@ -113,13 +114,6 @@ function TimetableWidget({ entries, date, status }: { entries: Timetable[]; date
   );
 }
 
-function mealPeriod(date: Date) {
-  const minutes = date.getHours() * 60 + date.getMinutes();
-  if (minutes < 8 * 60 + 10) return { type: "조식", label: "아침" };
-  if (minutes < 13 * 60 + 30) return { type: "중식", label: "점심" };
-  return { type: "석식", label: "저녁" };
-}
-
 async function createWidget(widgetName: string): Promise<React.ReactElement> {
   const now = new Date();
   const { api, workspaceId } = await authenticatedApi();
@@ -131,7 +125,7 @@ async function createWidget(widgetName: string): Promise<React.ReactElement> {
   }
 
   if (widgetName === "SeugiMealWidget") {
-    const { label, type } = mealPeriod(now);
+    const { label, type } = androidMealWidgetPeriod(now);
     try {
       const meals = (await api.meals(workspaceId, now.getFullYear(), now.getMonth() + 1)).data ?? [];
       const meal = meals.find((item) => item.date.slice(0, 10) === dateKey(now) && item.type.includes(type));

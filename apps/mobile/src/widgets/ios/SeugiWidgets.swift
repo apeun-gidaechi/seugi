@@ -39,13 +39,17 @@ private enum SeugiWidgetStore {
         return formatter.string(from: date)
     }
 
+    /// Matches upstream `MealType.from` (see `iosMealWidgetPeriod.ts` tests).
     static func mealPeriod(_ date: Date) -> (type: String, label: String) {
         let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
         let hour = parts.hour ?? 0
         let minute = parts.minute ?? 0
-        if hour < 8 || (hour == 8 && minute <= 20) { return ("조식", "아침") }
-        if hour < 13 || (hour == 13 && minute <= 30) { return ("중식", "점심") }
-        return ("석식", "저녁")
+        if hour <= 8 { return ("조식", "아침") }
+        if (9...12).contains(hour) || (hour == 13 && minute < 30) { return ("중식", "점심") }
+        if (hour == 13 && minute <= 30) || (14...19).contains(hour) || (hour == 19 && minute < 10) {
+            return ("석식", "저녁")
+        }
+        return ("조식", "아침")
     }
 }
 
