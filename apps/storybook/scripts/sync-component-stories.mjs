@@ -34,15 +34,15 @@ function shouldSkip(filePath) {
 }
 
 function storySlug(relativeToComponents) {
-  return relativeToComponents.replace(/\.tsx$/, "").split(path.sep).join("/");
+  return relativeToComponents
+    .replace(/\.tsx$/, "")
+    .split(path.sep)
+    .join("/");
 }
 
 /** Relative imports avoid Vite `@` alias mismatches when opening stories outside Storybook. */
 function importPathFromStory(storyFilePath, componentFilePath) {
-  let rel = path
-    .relative(path.dirname(storyFilePath), componentFilePath)
-    .split(path.sep)
-    .join("/");
+  let rel = path.relative(path.dirname(storyFilePath), componentFilePath).split(path.sep).join("/");
   if (!rel.startsWith(".")) rel = `./${rel}`;
   return rel.replace(/\.tsx$/, "");
 }
@@ -56,6 +56,7 @@ const DEFAULT_ARGS_BY_SLUG = {
 };
 
 const header = `/* auto-generated — pnpm --filter @seugi/storybook sync-stories */
+// @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
 

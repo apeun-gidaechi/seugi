@@ -5,14 +5,18 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["../web/src/*"],
+      "@/pages/*": ["../web/src/Pages/*"],
+      "@/components/*": ["../web/src/Components/*"],
       "@seugi/mobile/*": ["../mobile/src/*"]
     },
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
-  "include": [".storybook", "stories"]
+  "include": [".storybook", "stories", "env.d.ts", "../web/@types/**/*.d.ts"]
 }

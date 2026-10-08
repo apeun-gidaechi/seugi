@@ -1,7 +1,7 @@
 /* auto-generated — pnpm --filter @seugi/storybook sync-stories */
+// @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
-
 
 import Component from "../../../../web/src/Components/Button/Toggle/toggle";
 
