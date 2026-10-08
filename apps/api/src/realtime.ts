@@ -1,13 +1,13 @@
 import { Server } from "socket.io";
-import { CHAT_EMOJIS } from "@seugi/contracts";
+import { CHAT_EMOJIS, chatMessageInputSchema, legacyStompChatMessageSchema } from "@seugi/contracts";
 import type { ClientToServerEvents, ServerToClientEvents } from "@seugi/contracts";
 import type { FastifyInstance } from "fastify";
 import type { ChatMessage } from "@seugi/contracts";
 import type { MessageEmojiEvent, Store } from "./store.js";
 import { PushNotifications } from "./push.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
-import { z } from "zod";
 import { WebSocketServer, WebSocket } from "ws";
+import { acceptedChatMessageText } from "./chat-message.js";
 
 export function attachRealtime(app: FastifyInstance, store: Store) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, {}, { userId: string }>(app.server, { cors: { origin: true } });
@@ -26,13 +26,16 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
     const schoolAnswer = room ? answerSchoolQuestion(message.message, {
       meals: (store.meals.get(room.workspaceId) ?? []).filter((meal) => meal.date.slice(0, 10) === today),
       timetable,
-      notifications: [...store.notifications.values()].filter((item) => item.workspaceId === room.workspaceId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      notifications: [...store.notifications.values()]
+        .filter((item) => item.workspaceId === room.workspaceId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map((item) => ({ ...item, userName: store.members.get(item.authorId)?.name })),
       members: intent === "PICK_MEMBER" || intent === "MAKE_TEAMS" ? room.memberIds.map((id) => store.requireMember(id)) : [],
     }) : undefined;
-    void Promise.resolve(schoolAnswer ?? answerWithCatseugi(message.message)).then((answer) => store.withMutation(() => {
+    void Promise.resolve(schoolAnswer ?? answerWithCatseugi(message.message).then((data) => ({ keyword: "기타", data }))).then((answer) => store.withMutation(() => {
       const room = store.rooms.get(message.roomId);
       if (!room) return undefined;
-      const reply: ChatMessage = { id: store.id(), roomId: room.id, senderId: "-1", message: JSON.stringify({ keyword: "기타", data: answer }), createdAt: new Date().toISOString(), emojis: {}, type: "BOT", mention: [message.senderId], mentionAll: false };
+      const reply: ChatMessage = { id: store.id(), roomId: room.id, senderId: "-1", message: JSON.stringify(answer), createdAt: new Date().toISOString(), emojis: {}, type: "BOT", mention: [message.senderId], mentionAll: false };
       store.messages.set(reply.id, reply);
       return reply;
     })).then((reply) => { if (reply) { io.to(reply.roomId).emit("chat:message", reply); stomp.publishMessage(reply); } })
@@ -70,15 +73,15 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
         .catch((error) => app.log.error(error, "realtime room leave failed"));
     });
     socket.on("chat:message", (rawInput, done) => {
-      const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), type: z.enum(["MESSAGE", "IMG", "FILE"]).default("MESSAGE"), files: z.array(z.string().min(1).max(2048)).max(10).optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);
+      const parsed = chatMessageInputSchema.safeParse(rawInput);
       if (!parsed.success) return done?.({ message: "MESSAGE_INVALID" });
       void store.withMutation(() => {
         const input = parsed.data;
         const room = store.rooms.get(input.roomId);
         if (!room?.memberIds.includes(socket.data.userId)) return { error: "ROOM_NOT_FOUND" as const };
-        const shouldReply = (input.mention ?? []).some((id) => String(id) === "-1") || input.message.includes("스기야");
+        const shouldReply = (input.mention ?? []).some((id) => String(id) === "-1");
         const mention = [...new Set([...(input.mention ?? []).map(String), ...(shouldReply ? ["-1"] : [])])];
-        const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: socket.data.userId, message: input.message.trim(), files: input.files, type: input.type, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
+        const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: socket.data.userId, message: acceptedChatMessageText(input.message, input.files)!, files: input.files, type: input.type, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
         store.messages.set(message.id, message);
         const sender = store.requireMember(socket.data.userId);
         const tokens = store.pushTokensForWorkspace(room.workspaceId, room.memberIds, socket.data.userId);
@@ -100,7 +103,7 @@ export function attachRealtime(app: FastifyInstance, store: Store) {
 /** STOMP 1.2 compatibility endpoint for the original Android/iOS clients. */
 function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server, replyToMention: (message: ChatMessage) => void) {
   const wss = new WebSocketServer({ noServer: true });
-  const clients = new Map<WebSocket, { userId?: string; rooms: Set<string> }>();
+  const clients = new Map<WebSocket, { userId?: string; rooms: Set<string>; subscriptions: Map<string, string>; pendingSubscriptions: Map<string, string> }>();
   const write = (socket: WebSocket, command: string, headers: Record<string, string>, body = "") => {
     if (socket.readyState !== WebSocket.OPEN) return;
     const frame = `${command}\n${Object.entries(headers).map(([key, value]) => `${key}:${value}`).join("\n")}\ncontent-length:${Buffer.byteLength(body)}\n\n${body}\0`;
@@ -108,7 +111,11 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
   };
   const publish = (roomId: string, message: ChatMessage) => {
     const legacyType = message.type === "BOT" || message.type === "IMG" || message.type === "FILE" ? message.type : message.files?.length ? (/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(message.files[0]!) ? "IMG" : "FILE") : "MESSAGE";
-    const body = JSON.stringify({ type: legacyType, roomId, message: message.message || (message.files?.[0] ?? ""), uuid: message.id, eventList: [], emoticon: null, mention: message.mention ?? [], mentionAll: message.mentionAll ?? false, files: message.files, userId: message.senderId === "-1" ? -1 : message.senderId, timestamp: message.createdAt });
+    const body = JSON.stringify({ type: legacyType, roomId, message: message.message || (message.files?.[0] ?? ""), uuid: message.uuid ?? message.id, eventList: message.eventList ?? [], emoticon: message.emoticon ?? null, mention: message.mention ?? [], mentionAll: message.mentionAll ?? false, files: message.files, userId: message.senderId === "-1" ? -1 : message.senderId, timestamp: message.createdAt });
+    for (const [socket, state] of clients) if (state.rooms.has(roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${roomId}`, "content-type": "application/json" }, body);
+  };
+  const publishRoomEvent = (roomId: string, type: "SUB" | "UNSUB", userId: string) => {
+    const body = JSON.stringify({ type, userId });
     for (const [socket, state] of clients) if (state.rooms.has(roomId)) write(socket, "MESSAGE", { destination: `/exchange/chat.exchange/room.${roomId}`, "content-type": "application/json" }, body);
   };
   const publishEmoji = (event: MessageEmojiEvent) => {
@@ -120,7 +127,7 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
     wss.handleUpgrade(request, socket, head, (client) => wss.emit("connection", client, request));
   });
   wss.on("connection", (socket) => {
-    const state = { rooms: new Set<string>() } as { userId?: string; rooms: Set<string> };
+    const state = { rooms: new Set<string>(), subscriptions: new Map<string, string>(), pendingSubscriptions: new Map<string, string>() } as { userId?: string; rooms: Set<string>; subscriptions: Map<string, string>; pendingSubscriptions: Map<string, string> };
     clients.set(socket, state);
     let buffer = "";
     socket.on("message", (data) => {
@@ -137,19 +144,51 @@ function attachStompCompatibility(app: FastifyInstance, store: Store, io: Server
           catch { write(socket, "ERROR", { message: "UNAUTHORIZED" }, "인증에 실패했습니다."); socket.close(1008, "UNAUTHORIZED"); }
         } else if (command === "SUBSCRIBE" && state.userId) {
           const roomId = /\/room\.([0-9a-f-]{36})$/i.exec(headers.destination ?? "")?.[1];
+          const subscriptionId = headers.id ?? headers.destination ?? "";
+          if (!subscriptionId) { write(socket, "ERROR", { message: "SUBSCRIPTION_INVALID" }); continue; }
+          if (state.subscriptions.has(subscriptionId) || state.pendingSubscriptions.has(subscriptionId)) { write(socket, "ERROR", { message: "SUBSCRIPTION_ID_IN_USE" }); continue; }
+          state.pendingSubscriptions.set(subscriptionId, roomId ?? "");
           void store.withMutation(() => { const room = roomId ? store.rooms.get(roomId) : undefined; if (!room?.memberIds.includes(state.userId!)) return undefined; const readAt = new Date().toISOString(); room.memberReadAt ??= {}; room.memberReadAt[state.userId!] = readAt; return readAt; }).then((readAt) => {
-            if (readAt && roomId) { state.rooms.add(roomId); io.to(roomId).emit("chat:member-read", { roomId, userId: state.userId!, readAt }); } else write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }, "채팅방을 찾을 수 없습니다.");
-          }).catch((error) => app.log.error(error, "STOMP room authorization failed"));
+            if (state.pendingSubscriptions.get(subscriptionId) !== (roomId ?? "")) return;
+            state.pendingSubscriptions.delete(subscriptionId);
+            if (readAt && roomId) {
+              state.subscriptions.set(subscriptionId, roomId);
+              state.rooms.add(roomId);
+              io.to(roomId).emit("chat:member-read", { roomId, userId: state.userId!, readAt });
+              publishRoomEvent(roomId, "SUB", state.userId!);
+            } else write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }, "채팅방을 찾을 수 없습니다.");
+          }).catch((error) => { if (state.pendingSubscriptions.get(subscriptionId) === (roomId ?? "")) state.pendingSubscriptions.delete(subscriptionId); app.log.error(error, "STOMP room authorization failed"); });
+        } else if (command === "UNSUBSCRIBE" && state.userId) {
+          const subscriptionId = headers.id;
+          if (!subscriptionId) { write(socket, "ERROR", { message: "SUBSCRIPTION_INVALID" }); continue; }
+          const roomId = state.subscriptions.get(subscriptionId) ?? state.pendingSubscriptions.get(subscriptionId);
+          state.subscriptions.delete(subscriptionId);
+          state.pendingSubscriptions.delete(subscriptionId);
+          if (roomId && ![...state.subscriptions.values(), ...state.pendingSubscriptions.values()].includes(roomId)) state.rooms.delete(roomId);
+          if (roomId) void store.withMutation(() => {
+            const room = store.rooms.get(roomId);
+            if (!room?.memberIds.includes(state.userId!)) return undefined;
+            const readAt = new Date().toISOString();
+            room.memberReadAt ??= {};
+            room.memberReadAt[state.userId!] = readAt;
+            return readAt;
+          }).then((readAt) => {
+            if (readAt) {
+              io.to(roomId).emit("chat:member-read", { roomId, userId: state.userId!, readAt });
+              publishRoomEvent(roomId, "UNSUB", state.userId!);
+            }
+          })
+            .catch((error) => app.log.error(error, "STOMP room unsubscribe failed"));
         } else if (command === "SEND" && state.userId) {
           let rawInput: unknown; try { rawInput = JSON.parse(body); } catch { write(socket, "ERROR", { message: "MESSAGE_INVALID" }); continue; }
-          const parsed = z.object({ roomId: z.string().uuid(), message: z.string().max(20_000).default(""), files: z.array(z.string().min(1).max(2048)).max(10).optional(), uuid: z.string().optional(), mention: z.array(z.union([z.string(), z.number().int()])).max(100).optional(), mentionAll: z.boolean().optional() }).refine((input) => !!input.message.trim() || !!input.files?.length).safeParse(rawInput);
+          const parsed = legacyStompChatMessageSchema.safeParse(rawInput);
           if (!parsed.success) { write(socket, "ERROR", { message: "MESSAGE_INVALID" }); continue; }
           void store.withMutation(() => {
             const input = parsed.data; const room = store.rooms.get(input.roomId);
             if (!room?.memberIds.includes(state.userId!)) return undefined;
-            const shouldReply = (input.mention ?? []).some((id) => String(id) === "-1") || input.message.includes("스기야");
+            const shouldReply = (input.mention ?? []).some((id) => String(id) === "-1");
             const mention = [...new Set([...(input.mention ?? []).map(String), ...(shouldReply ? ["-1"] : [])])];
-            const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: state.userId!, message: input.message.trim(), files: input.files, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
+            const message: ChatMessage = { id: store.id(), roomId: room.id, senderId: state.userId!, type: input.type, message: acceptedChatMessageText(input.message, input.files)!, files: input.files, uuid: input.uuid, eventList: input.eventList, emoticon: input.emoticon, createdAt: new Date().toISOString(), emojis: {}, mention, mentionAll: input.mentionAll ?? false };
             store.messages.set(message.id, message); return message;
           }).then((message) => { if (!message) write(socket, "ERROR", { message: "ROOM_NOT_FOUND" }); else { io.to(message.roomId).emit("chat:message", message); publish(message.roomId, message); replyToMention(message); } }).catch((error) => app.log.error(error, "STOMP message persistence failed"));
         } else if (command === "DISCONNECT") socket.close();

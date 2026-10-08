@@ -65,13 +65,14 @@ import {
   type Workspace,
   type WorkspaceMemberChartProfile,
 } from "@seugi/contracts";
-import { Store } from "./store.js";
+import { Store, type WaitlistRole } from "./store.js";
 import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
+import { chatRoomName } from "./chatRoomName.js";
 import { sendVerificationEmail } from "./mailer.js";
 import { fetchClassroomTasks } from "./classroom.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
-import { PushNotifications } from "./push.js";
+import { notificationRecipientIds, PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
 
@@ -428,7 +429,19 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         !!roleIn(workspace, memberId)
       : role === "TEACHER"
         ? canManageWorkspace(workspace, memberId)
-        : workspace.ownerId === memberId;
+      : workspace.ownerId === memberId;
+  const pendingRoles = (workspace: Workspace, memberId: string): WaitlistRole[] =>
+    store.waitlistRoles.get(`${workspace.id}:${memberId}`) ??
+    (workspace.waitlist.includes(memberId) ? ["STUDENT"] : []);
+  const removePendingRole = (workspace: Workspace, memberId: string, role: WaitlistRole) => {
+    const roles = pendingRoles(workspace, memberId).filter((item) => item !== role);
+    if (roles.length) store.waitlistRoles.set(`${workspace.id}:${memberId}`, roles);
+    else {
+      store.waitlistRoles.delete(`${workspace.id}:${memberId}`);
+      workspace.waitlist = workspace.waitlist.filter((id) => id !== memberId);
+    }
+    return roles;
+  };
   app.post(
     API_SPEC.createWorkspace.path,
     { preHandler: auth },
@@ -576,15 +589,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
           );
       if (!workspace || (code && workspace.code !== code))
         throw new Error("WORKSPACE_NOT_FOUND");
-      if (
-        !workspace.members.includes(request.user.sub) &&
-        !workspace.waitlist.includes(request.user.sub)
-      )
-        workspace.waitlist.push(request.user.sub);
-      store.waitlistRoles.set(
-        `${workspace.id}:${request.user.sub}`,
-        input.role,
-      );
+      if (!workspace.members.includes(request.user.sub)) {
+        if (!workspace.waitlist.includes(request.user.sub))
+          workspace.waitlist.push(request.user.sub);
+        const roles = pendingRoles(workspace, request.user.sub);
+        if (!roles.includes(input.role))
+          store.waitlistRoles.set(`${workspace.id}:${request.user.sub}`, [...roles, input.role]);
+      }
       return ok("가입 신청 성공");
     },
   );
@@ -605,14 +616,9 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       ];
       if (!memberIds.length) throw new Error("MEMBER_NOT_FOUND");
       for (const memberId of memberIds) {
-        if (
-          store.waitlistRoles.get(`${workspace.id}:${memberId}`) !==
-            input.role &&
-          workspace.waitlist.includes(memberId)
-        )
-          continue;
-        workspace.waitlist = workspace.waitlist.filter((id) => id !== memberId);
-        store.waitlistRoles.delete(`${workspace.id}:${memberId}`);
+        if (!pendingRoles(workspace, memberId).includes(input.role))
+          throw new Error("MEMBER_NOT_FOUND");
+        removePendingRole(workspace, memberId, input.role);
         if (!workspace.members.includes(memberId))
           workspace.members.push(memberId);
         const member = store.requireMember(memberId);
@@ -649,15 +655,11 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       ];
       if (!targets.length) targets.push(request.user.sub);
       for (const memberId of targets) {
-        if (
-          memberId !== request.user.sub &&
+        if (memberId !== request.user.sub &&
           (!canApproveRole(workspace, request.user.sub, input.role) ||
-            store.waitlistRoles.get(`${workspace.id}:${memberId}`) !==
-              input.role)
-        )
+            !pendingRoles(workspace, memberId).includes(input.role)))
           throw new Error("권한이 없습니다");
-        workspace.waitlist = workspace.waitlist.filter((id) => id !== memberId);
-        store.waitlistRoles.delete(`${workspace.id}:${memberId}`);
+        removePendingRole(workspace, memberId, input.role);
       }
       return ok("가입 신청 취소 성공");
     },
@@ -675,8 +677,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         workspace.waitlist
           .filter(
             (id) =>
-              (store.waitlistRoles.get(`${workspace.id}:${id}`) ??
-                "STUDENT") === input.role,
+              pendingRoles(workspace, id).includes(input.role),
           )
           .map((id) => ({
             ...store.requireMember(id),
@@ -714,7 +715,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
               workspace.status !== "DELETE" &&
               workspace.waitlist.includes(request.user.sub),
           )
-          .map(legacyWorkspace),
+          .map((workspace) => ({
+            ...legacyWorkspace(workspace),
+            requestedRoles: pendingRoles(workspace, request.user.sub).filter(
+              (role): role is "STUDENT" | "TEACHER" =>
+                role === "STUDENT" || role === "TEACHER",
+            ),
+          })),
       ),
   );
   app.get(
@@ -825,10 +832,14 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
           ...(input.memberList ?? []),
         ]),
       ];
+      const actorRole = roleIn(workspace, request.user.sub);
       if (
-        workspace.ownerId !== request.user.sub ||
+        !canManageWorkspace(workspace, request.user.sub) ||
         memberIds.some(
-          (id) => id === workspace.ownerId || !workspace.members.includes(id),
+          (id) =>
+            id === workspace.ownerId ||
+            !workspace.members.includes(id) ||
+            (roleIn(workspace, id) === "MIDDLE_ADMIN" && actorRole !== "ADMIN"),
         )
       )
         throw new Error("권한이 없습니다");
@@ -883,11 +894,11 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       const workspace = store.requireWorkspace(workspaceId);
       const input = body(editStudentNumberSchema, request);
       const memberId = input.id ?? request.user.sub;
+      const actorRole = roleIn(workspace, request.user.sub) ?? "STUDENT";
       if (
         !workspace.members.includes(request.user.sub) ||
         !workspace.members.includes(memberId) ||
-        (memberId !== request.user.sub &&
-          !canManageWorkspace(workspace, request.user.sub))
+        actorRole === "STUDENT"
       )
         throw new Error("권한이 없습니다");
       const member = store.requireMember(memberId);
@@ -964,6 +975,26 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       .filter((message) => message.roomId === room.id)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const lastMessage = roomMessages.at(-1);
+    const joinUserInfo = room.memberIds.map((id) => {
+      const member = store.requireMember(id);
+      return {
+        userInfo: {
+          id,
+          email: member.email,
+          birth: member.birth ?? "",
+          name: member.name,
+          picture: member.picture ?? "",
+        },
+        timestamp:
+          room.memberReadAt?.[id] ??
+          room.createdAt ??
+          new Date(0).toISOString(),
+      };
+    });
+    const chatName = chatRoomName(room.type, room.name, joinUserInfo.map((entry) => ({
+      id: entry.userInfo.id,
+      name: entry.userInfo.name,
+    })), memberId);
     const readAt =
       room.memberReadAt?.[memberId] ??
       room.createdAt ??
@@ -971,26 +1002,11 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     return {
       ...room,
       roomAdmin: room.adminId,
-      chatName: room.name,
+      chatName,
       chatRoomImg: room.image ?? "",
       createdAt: room.createdAt ?? new Date(0).toISOString(),
       chatStatusEnum: room.status === "DELETE" ? "DELETE" : "ACTIVE",
-      joinUserInfo: room.memberIds.map((id) => {
-        const member = store.requireMember(id);
-        return {
-          userInfo: {
-            id,
-            email: member.email,
-            birth: member.birth ?? "",
-            name: member.name,
-            picture: member.picture ?? "",
-          },
-          timestamp:
-            room.memberReadAt?.[id] ??
-            room.createdAt ??
-            new Date(0).toISOString(),
-        };
-      }),
+      joinUserInfo,
       lastMessage:
         lastMessage &&
         lastMessage.messageStatus !== "DELETE" &&
@@ -1233,9 +1249,9 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       chatRoomId: message.roomId,
       type,
       userId: message.senderId === "-1" ? -1 : message.senderId,
-      uuid: message.id,
-      eventList: [],
-      emoticon: null,
+      uuid: message.uuid ?? message.id,
+      eventList: message.eventList ?? [],
+      emoticon: message.emoticon ?? null,
       emojiList: CHAT_EMOJIS.flatMap((emoji, index) => {
         const userIds = message.emojis[emoji] ?? [];
         return userIds.length ? [{ emojiId: index + 1, userId: userIds }] : [];
@@ -1358,7 +1374,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       .filter(([, userList]) => userList.length > 0)
       .map(([emoji, userList]) => ({ emoji, userList })),
     createdDate: item.createdAt,
-    lastModifiedDate: item.updatedAt ?? item.createdAt,
+    // The legacy NotificationMapper serializes creationDate for both date fields.
+    lastModifiedDate: item.createdAt,
   });
   app.post(
     API_SPEC.createNotification.path,
@@ -1380,8 +1397,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       store.notifications.set(notification.id, notification);
       const tokens = workspacePushTokens(
         workspace,
-        workspace.members,
-        request.user.sub,
+        notificationRecipientIds(workspace, request.user.sub, (memberId) => roleIn(workspace, memberId)),
       );
       void push
         .send(tokens, {
@@ -1881,7 +1897,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   );
   app.post(API_SPEC.askCatseugi.path, { preHandler: auth }, async (request) => {
     const input = body(aiPromptSchema, request);
-    if (!input.workspaceId) return ok("캣스기답변", await answerWithCatseugi(input.message));
+    if (!input.workspaceId) return ok("캣스기답변", JSON.stringify({ keyword: "기타", data: await answerWithCatseugi(input.message) }));
     if (!store.canAccess(input.workspaceId, request.user.sub))
       throw new Error("권한이 없습니다");
     const intent = schoolQuestionIntent(input.message);
@@ -1896,7 +1912,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const timetable = needsTimetable ? await timetableForMember(input.workspaceId, request.user.sub, false) : [];
     const notifications = [...store.notifications.values()]
       .filter((item) => item.workspaceId === input.workspaceId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((item) => ({ ...item, userName: store.members.get(item.authorId)?.name }));
     let members: ReturnType<typeof store.requireMember>[] = [];
     if (needsMembers) {
       const workspace = store.requireWorkspace(input.workspaceId);
@@ -1918,7 +1935,8 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       notifications,
       members,
     });
-    return ok("캣스기답변", schoolAnswer ?? await answerWithCatseugi(input.message));
+    const answer = schoolAnswer ?? { keyword: "기타", data: await answerWithCatseugi(input.message) };
+    return ok("캣스기답변", JSON.stringify(answer));
   });
   app.post(API_SPEC.uploadFile.path, { preHandler: auth }, async (request) => {
     const file = await request.file();

@@ -1,7 +1,20 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
+import type { Role, Workspace } from "@seugi/contracts";
 
 export type PushPayload = { title: string; body: string; imageUrl?: string };
+
+/** The original notice alert targets students, middle admins, and the owner; teachers are excluded. */
+export function notificationRecipientIds(
+  workspace: Pick<Workspace, "members" | "ownerId">,
+  authorId: string,
+  roleFor: (memberId: string) => Role | undefined,
+) {
+  return workspace.members.filter((memberId) =>
+    memberId !== authorId &&
+    ["STUDENT", "MIDDLE_ADMIN", "ADMIN"].includes(roleFor(memberId) ?? ""),
+  );
+}
 
 /** Firebase Cloud Messaging adapter. It is deliberately inert until credentials are configured. */
 export class PushNotifications {

@@ -1,17 +1,69 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { io } from "socket.io-client";
 import WebSocket from "ws";
-import { authenticateOAuthSchema, type ChatMessage } from "@seugi/contracts";
+import { authenticateOAuthSchema, createTaskSchema, type ChatMessage } from "@seugi/contracts";
 import { SeugiApi, SeugiApiError } from "../../../packages/api-client/src/index.js";
 import { createAuthenticatedSocket } from "../../mobile/src/realtime.js";
 import { buildApp } from "../src/app.js";
 import { attachRealtime } from "../src/realtime.js";
+import { clearMonthlyMealCache, clearWeeklyTimetableCache, nextLocalMonthBoundary, nextLocalSundayBoundary } from "../src/school-data-scheduler.js";
 import { Store } from "../src/store.js";
+
+async function loopbackSocketsAvailable() {
+  const probe = createServer();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      probe.once("error", reject);
+      probe.listen(0, "127.0.0.1", resolve);
+    });
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EPERM" || code === "EACCES") return false;
+    throw error;
+  } finally {
+    if (probe.listening) await new Promise<void>((resolve) => probe.close(() => resolve()));
+  }
+}
+
+test("task dates accept the native Android local-time format and reject invalid local dates", () => {
+  const base = { workspaceId: randomUUID(), title: "과제" };
+  assert.equal(createTaskSchema.safeParse({ ...base, dueDate: "2026-10-14T15:00:00.000000" }).success, true);
+  assert.equal(createTaskSchema.safeParse({ ...base, dueDate: "2026-10-15T00:00:00.000Z" }).success, true);
+  assert.equal(createTaskSchema.safeParse({ ...base, dueDate: "2026-10-15T09:00:00+09:00" }).success, true);
+  assert.equal(createTaskSchema.safeParse({ ...base, dueDate: "2026-02-30T15:00:00.000000" }).success, false);
+});
+
+// Keep real Socket.IO/STOMP integration coverage wherever the test host allows
+// loopback binding, and report it as skipped (not failed) in restricted sandboxes.
+const socketTest: typeof test = await loopbackSocketsAvailable() ? test : test.skip;
+
+test("monthly meal and weekly timetable maintenance clears caches at local boundaries", async () => {
+  const store = new Store();
+  const workspaceId = randomUUID();
+  const timetableId = randomUUID();
+  store.meals.set(workspaceId, [{ date: "2026-03-01", type: "중식", menu: ["이전 월 캐시"] }]);
+  store.timetables.set(timetableId, { id: timetableId, workspaceId, grade: "1", classNum: "1", time: "1", subject: "이전 주 캐시", date: "2026-03-02" });
+
+  await clearMonthlyMealCache(store);
+  assert.equal(store.meals.size, 0);
+  assert.equal(store.timetables.size, 1);
+  await clearWeeklyTimetableCache(store);
+  assert.equal(store.timetables.size, 0);
+
+  const monthBoundary = nextLocalMonthBoundary(new Date(2026, 2, 31, 23, 59));
+  assert.deepEqual([monthBoundary.getFullYear(), monthBoundary.getMonth(), monthBoundary.getDate(), monthBoundary.getHours()], [2026, 3, 1, 0]);
+  const sundayBoundary = nextLocalSundayBoundary(new Date(2026, 2, 7, 23, 59));
+  assert.deepEqual([sundayBoundary.getFullYear(), sundayBoundary.getMonth(), sundayBoundary.getDate(), sundayBoundary.getHours()], [2026, 2, 8, 0]);
+  const nextSunday = nextLocalSundayBoundary(new Date(2026, 2, 8, 0, 0));
+  assert.deepEqual([nextSunday.getFullYear(), nextSunday.getMonth(), nextSunday.getDate(), nextSunday.getHours()], [2026, 2, 15, 0]);
+});
 
 test("production API refuses to start without a JWT secret", async () => {
   const originalNodeEnv = process.env.NODE_ENV;
@@ -186,10 +238,16 @@ test("member can register, create a workspace, and retrieve it", async () => {
   assert.equal(tasks.json().data[0].content, "2단원 문제 풀기");
   assert.equal(tasks.json().data[0].description, "2단원 문제 풀기");
   assert.equal(tasks.json().data[0].dueDate, "2026-10-15T00:00:00.000Z");
+  const androidDueDate = "2026-10-14T15:00:00.000000";
+  const androidTask = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "원본 Android 날짜", description: "로컬 날짜 형식", dueDate: androidDueDate } });
+  assert.equal(androidTask.statusCode, 200);
+  const tasksWithAndroidDate = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
+  assert.equal(tasksWithAndroidDate.json().data.find((item: { title: string }) => item.title === "원본 Android 날짜").dueDate, androidDueDate);
   const legacyTask = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기" } });
   assert.equal(legacyTask.statusCode, 200);
   const tasksWithLegacyDescription = await app.inject({ method: "GET", url: `/task/${workspace.json().data}`, headers: { authorization } });
-  assert.deepEqual(tasksWithLegacyDescription.json().data[1], { id: tasksWithLegacyDescription.json().data[1].id, workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기", content: "단어 암기", createdAt: tasksWithLegacyDescription.json().data[1].createdAt });
+  const legacyTaskResult = tasksWithLegacyDescription.json().data.find((item: { title: string }) => item.title === "영어 과제");
+  assert.deepEqual(legacyTaskResult, { id: legacyTaskResult.id, workspaceId: workspace.json().data, title: "영어 과제", description: "단어 암기", content: "단어 암기", createdAt: legacyTaskResult.createdAt });
   const nativeLikeTaskTitle = " ".repeat(121);
   const nativeLikeTask = await app.inject({ method: "POST", url: "/task", headers: { authorization }, payload: { workspaceId: workspace.json().data, title: nativeLikeTaskTitle, description: "  " } });
   assert.equal(nativeLikeTask.statusCode, 200);
@@ -237,7 +295,9 @@ test("Catseugi school-data answers use the selected workspace and enforce member
     store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT", grade: 2, class: 4 });
     const picked = await app.inject({ method: "POST", url: "/ai", headers: ownerHeaders, payload: { workspaceId, message: "2학년 4반에서 아무나 한 명 뽑아줘" } });
     assert.equal(picked.statusCode, 200);
-    assert.equal(picked.json().data, "민지님이 뽑혔어요!");
+    const pickedAnswer = JSON.parse(picked.json().data) as { keyword: string; data: string };
+    assert.equal(pickedAnswer.keyword, "사람 뽑기");
+    assert.equal(pickedAnswer.data, `사람을 1명 뽑았어요\n::${studentId}::`);
 
     const outsider = await app.inject({ method: "POST", url: "/member/register", payload: { email: "catseugi-outsider@example.com", password: "password123", name: "외부인", code: "654321" } });
     const forbidden = await app.inject({ method: "POST", url: "/ai", headers: { authorization: `Bearer ${outsider.json().data.accessToken}` }, payload: { workspaceId, message: "오늘 급식 뭐야?" } });
@@ -336,7 +396,7 @@ test("message history uses an exclusive timestamp cursor and reports older pages
   for (let index = 0; index < 55; index += 1) {
     const createdAt = new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString();
     const id = `a4b44444-4444-4444-8444-${String(index).padStart(12, "0")}`;
-    store.messages.set(id, { id, roomId, senderId: memberId, message: `메시지 ${index}`, createdAt, emojis: index === 54 ? { "👍": [memberId], "😢": [memberId] } : {} });
+    store.messages.set(id, { id, roomId, senderId: memberId, message: `메시지 ${index}`, createdAt, emojis: index === 54 ? { "👍": [memberId], "😢": [memberId] } : {}, ...(index === 54 ? { type: "IMG" as const, uuid: "original-client-uuid", eventList: [42], emoticon: "📷" } : {}) });
   }
   const app = await buildApp(store);
   const headers = { authorization: `Bearer ${app.jwt.sign({ sub: memberId })}` };
@@ -346,8 +406,8 @@ test("message history uses an exclusive timestamp cursor and reports older pages
   assert.equal(firstPage.json().data.hasNext, true);
   assert.equal(firstPage.json().data.firstMessageId, firstPage.json().data.messages.at(-1).id);
   const legacyMessage = firstPage.json().data.messages[0];
-  assert.equal(legacyMessage.chatRoomId, roomId); assert.equal(legacyMessage.userId, memberId); assert.equal(legacyMessage.uuid, legacyMessage.id);
-  assert.equal(legacyMessage.type, "MESSAGE"); assert.equal(legacyMessage.messageStatus, "ALIVE"); assert.equal(legacyMessage.emojiList[0].emojiId, 1);
+  assert.equal(legacyMessage.chatRoomId, roomId); assert.equal(legacyMessage.userId, memberId); assert.equal(legacyMessage.uuid, "original-client-uuid");
+  assert.equal(legacyMessage.type, "IMG"); assert.equal(legacyMessage.eventList[0], 42); assert.equal(legacyMessage.emoticon, "📷"); assert.equal(legacyMessage.messageStatus, "ALIVE"); assert.equal(legacyMessage.emojiList[0].emojiId, 1);
   const cursor = firstPage.json().data.messages.at(-1).createdAt as string;
   const nextPage = await app.inject({ url: `/message/search/${roomId}?timestamp=${encodeURIComponent(cursor)}`, headers });
   assert.equal(nextPage.statusCode, 200);
@@ -411,6 +471,70 @@ test("meal API can serve the cached requested month and validates month ranges",
   const invalidRange = await app.inject({ method: "GET", url: `/meal/all?workspaceId=${workspaceId}&year=${year}`, headers: memberHeaders });
   assert.equal(invalidRange.statusCode, 400);
   await app.close();
+});
+
+test("schedule APIs fetch and cache the current school year, then filter the requested month", async () => {
+  const store = new Store();
+  const year = new Date().getFullYear();
+  const memberId = randomUUID();
+  const outsiderId = randomUUID();
+  const workspaceId = randomUUID();
+  store.members.set(memberId, { id: memberId, email: "schedule-member@example.com", name: "일정 구성원" });
+  store.members.set(outsiderId, { id: outsiderId, email: "schedule-outsider@example.com", name: "외부 사용자" });
+  store.workspaces.set(workspaceId, {
+    id: workspaceId,
+    code: "SCHEDULE",
+    name: "일정 학교",
+    ownerId: memberId,
+    members: [memberId],
+    waitlist: [],
+    educationOfficeCode: "J10",
+    schoolCode: "7530569",
+  });
+
+  const previousKey = process.env.NEIS_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.NEIS_API_KEY = "test-neis-key";
+  const requestedUrls: URL[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    requestedUrls.push(new URL(String(input)));
+    return new Response(JSON.stringify({
+      SchoolSchedule: [
+        {},
+        { row: [
+          { AA_YMD: `${year}1007`, EVENT_NM: "가을 행사" },
+          { AA_YMD: `${year}1102`, EVENT_NM: "겨울 행사" },
+        ] },
+      ],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+
+  let app: Awaited<ReturnType<typeof buildApp>> | undefined;
+  try {
+    app = await buildApp(store);
+    const memberHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: memberId })}` };
+    const outsiderHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: outsiderId })}` };
+    assert.equal((await app.inject({ method: "GET", url: `/schedule/${workspaceId}` })).statusCode, 401);
+    assert.equal((await app.inject({ method: "GET", url: `/schedule/${workspaceId}`, headers: outsiderHeaders })).statusCode, 403);
+
+    const all = await app.inject({ method: "GET", url: `/schedule/${workspaceId}`, headers: memberHeaders });
+    assert.equal(all.statusCode, 200);
+    assert.deepEqual(all.json().data.map((item: { name: string }) => item.name), ["가을 행사", "겨울 행사"]);
+    assert.equal(requestedUrls.length, 1);
+    assert.equal(requestedUrls[0]?.searchParams.get("AA_FROM_YMD"), `${year}0101`);
+    assert.equal(requestedUrls[0]?.searchParams.get("AA_TO_YMD"), `${year}1231`);
+
+    const october = await app.inject({ method: "GET", url: `/schedule/month?workspaceId=${workspaceId}&month=10`, headers: memberHeaders });
+    assert.equal(october.statusCode, 200);
+    assert.deepEqual(october.json().data.map((item: { name: string }) => item.name), ["가을 행사"]);
+    assert.equal(requestedUrls.length, 1, "monthly reads reuse the workspace schedule cache");
+    assert.equal((await app.inject({ method: "GET", url: `/schedule/month?workspaceId=${workspaceId}&month=13`, headers: memberHeaders })).statusCode, 400);
+  } finally {
+    if (previousKey === undefined) delete process.env.NEIS_API_KEY;
+    else process.env.NEIS_API_KEY = previousKey;
+    globalThis.fetch = previousFetch;
+    await app?.close();
+  }
 });
 
 test("member profile accepts a local uploaded-image URL but rejects arbitrary relative paths", async () => {
@@ -529,9 +653,10 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "TEACHER");
   assert.equal((await app.inject({ method: "PATCH", url: "/workspace/permission", headers: ownerHeaders, payload: { workspaceId, memberId: teacherId, role: "MIDDLE_ADMIN" } })).statusCode, 200);
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "MIDDLE_ADMIN");
-  assert.equal((await app.inject({ method: "PATCH", url: `/profile/${workspaceId}`, headers: teacherHeaders, payload: { role: "ADMIN", nick: "별명", status: "안녕하세요", spot: "담임" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PATCH", url: `/profile/${workspaceId}`, headers: teacherHeaders, payload: { role: "ADMIN", grade: 12, class: 9, number: 1, nick: "별명", status: "안녕하세요", spot: "담임" } })).statusCode, 200);
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.role, "MIDDLE_ADMIN");
   assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.nick, "별명");
+  assert.equal(store.profiles.get(`${workspaceId}:${teacherId}`)?.grade, undefined);
   const notification = await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "시험", content: "다음 주 시험입니다" } });
   assert.equal(notification.statusCode, 200);
   assert.equal(notification.json().data.userName, "teacher"); assert.deepEqual(notification.json().data.emoji, []); assert.equal(notification.json().data.createdDate, notification.json().data.lastModifiedDate);
@@ -540,7 +665,12 @@ test("workspace retains requested roles and permits a teacher announcement", asy
   assert.equal(store.notifications.get(notificationId)?.title, "시험 일정");
   assert.equal(store.notifications.get(notificationId)?.workspaceId, workspaceId);
   const refreshedNotices = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: teacherHeaders });
-  assert.equal(refreshedNotices.json().data[0].lastModifiedDate, store.notifications.get(notificationId)?.updatedAt);
+  assert.equal(refreshedNotices.json().data[0].lastModifiedDate, refreshedNotices.json().data[0].createdDate);
+  assert.equal(store.notifications.get(notificationId)?.updatedAt >= notification.json().data.createdDate, true);
+  const adminManagedNotice = await app.inject({ method: "POST", url: "/notification", headers: teacherHeaders, payload: { workspaceId, title: "관리자 삭제 대상", content: "작성자가 아닌 관리자가 삭제합니다" } });
+  const adminManagedNoticeId = adminManagedNotice.json().data.id as string;
+  assert.equal((await app.inject({ method: "DELETE", url: `/notification/${workspaceId}/${adminManagedNoticeId}`, headers: ownerHeaders })).statusCode, 200);
+  assert.equal(store.notifications.has(adminManagedNoticeId), false);
   assert.equal((await app.inject({ method: "DELETE", url: `/notification/${workspaceId}/${notificationId}`, headers: teacherHeaders })).statusCode, 200);
   assert.equal(store.notifications.has(notificationId), false);
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers: ownerHeaders, payload: { workspaceId, name: "교사 방", memberIds: [teacherId] } })).json().data as string;
@@ -560,6 +690,55 @@ test("workspace admins can update its name and image while students cannot", asy
     assert.equal(updated.statusCode, 200); assert.equal(store.workspaces.get(workspaceId)?.name, "변경 후"); assert.equal(store.workspaces.get(workspaceId)?.image, "https://example.test/school.png");
     assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers: studentAuth, payload: { workspaceId, name: "불가" } })).statusCode, 403);
     assert.equal((await app.inject({ method: "PATCH", url: "/workspace", headers: ownerAuth, payload: { workspaceId } })).statusCode, 400);
+  } finally { await app.close(); }
+});
+
+test("teachers can edit member student numbers but students cannot edit their own", async () => {
+  const store = new Store(); const app = await buildApp(store);
+  const emails = ["schid-owner@example.com", "schid-teacher@example.com", "schid-student@example.com"];
+  for (const email of emails) store.emailCodes.set(email, { code: "123456", expiresAt: Date.now() + 60_000 });
+  try {
+    const [owner, teacher, student] = await Promise.all(emails.map((email) => app.inject({ method: "POST", url: "/member/register", payload: { email, password: "password123", code: "123456" } })));
+    const token = (response: typeof owner) => response.json().data.accessToken as string;
+    const ownerId = app.jwt.decode<{ sub: string }>(token(owner))!.sub;
+    const teacherId = app.jwt.decode<{ sub: string }>(token(teacher))!.sub;
+    const studentId = app.jwt.decode<{ sub: string }>(token(student))!.sub;
+    const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: { authorization: `Bearer ${token(owner)}` }, payload: { name: "학번 수정 학교" } })).json().data as string;
+    const workspace = store.workspaces.get(workspaceId)!;
+    workspace.members.push(teacherId, studentId);
+    store.profiles.set(`${workspaceId}:${teacherId}`, { ...store.requireMember(teacherId), workspaceId, role: "TEACHER" });
+    store.profiles.set(`${workspaceId}:${studentId}`, { ...store.requireMember(studentId), workspaceId, role: "STUDENT" });
+
+    const teacherEdit = await app.inject({ method: "PATCH", url: `/profile/schidnum/${workspaceId}`, headers: { authorization: `Bearer ${token(teacher)}` }, payload: { id: studentId, schGrade: 2, schClass: 3, schNumber: 4 } });
+    assert.equal(teacherEdit.statusCode, 200);
+    assert.deepEqual([store.profiles.get(`${workspaceId}:${studentId}`)?.grade, store.profiles.get(`${workspaceId}:${studentId}`)?.class, store.profiles.get(`${workspaceId}:${studentId}`)?.number], [2, 3, 4]);
+    const studentEdit = await app.inject({ method: "PATCH", url: `/profile/schidnum/${workspaceId}`, headers: { authorization: `Bearer ${token(student)}` }, payload: { schGrade: 1, schClass: 1, schNumber: 1 } });
+    assert.equal(studentEdit.statusCode, 403);
+  } finally { await app.close(); }
+});
+
+test("workspace middle admins can kick regular members but only the owner can kick middle admins", async () => {
+  const store = new Store();
+  const ownerId = "00000000-0000-4000-8000-000000000061";
+  const managerId = "00000000-0000-4000-8000-000000000062";
+  const otherManagerId = "00000000-0000-4000-8000-000000000063";
+  const studentId = "00000000-0000-4000-8000-000000000064";
+  const workspaceId = "00000000-0000-4000-8000-000000000065";
+  for (const [id, role] of [[managerId, "MIDDLE_ADMIN"], [otherManagerId, "MIDDLE_ADMIN"], [studentId, "STUDENT"]] as const) {
+    store.members.set(id, { id, email: `${id}@example.com`, name: id });
+    store.profiles.set(`${workspaceId}:${id}`, { ...store.requireMember(id), workspaceId, role });
+  }
+  store.members.set(ownerId, { id: ownerId, email: "owner@example.com", name: "owner" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "KICK", name: "내보내기 학교", members: [ownerId, managerId, otherManagerId, studentId], waitlist: [], ownerId });
+  const app = await buildApp(store);
+  const managerHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: managerId })}` };
+  const ownerHeaders = { authorization: `Bearer ${app.jwt.sign({ sub: ownerId })}` };
+  try {
+    assert.equal((await app.inject({ method: "PATCH", url: "/workspace/kick", headers: managerHeaders, payload: { workspaceId, memberId: studentId } })).statusCode, 200);
+    assert.equal(store.workspaces.get(workspaceId)?.members.includes(studentId), false);
+    assert.equal((await app.inject({ method: "PATCH", url: "/workspace/kick", headers: managerHeaders, payload: { workspaceId, memberId: otherManagerId } })).statusCode, 403);
+    assert.equal((await app.inject({ method: "PATCH", url: "/workspace/kick", headers: ownerHeaders, payload: { workspaceId, memberId: otherManagerId } })).statusCode, 200);
+    assert.equal(store.workspaces.get(workspaceId)?.members.includes(otherManagerId), false);
   } finally { await app.close(); }
 });
 
@@ -607,10 +786,13 @@ test("announcement list follows the native page and size contract", async () => 
   const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`;
   try {
     const first = await app.inject({ method: "GET", url: `/notification/${workspaceId}`, headers: { authorization } });
+    const homeBatch = await app.inject({ method: "GET", url: `/notification/${workspaceId}?page=0&size=365`, headers: { authorization } });
     const second = await app.inject({ method: "GET", url: `/notification/${workspaceId}?page=1&size=20`, headers: { authorization } });
     const third = await app.inject({ method: "GET", url: `/notification/${workspaceId}?page=2&size=20`, headers: { authorization } });
     assert.equal(first.json().data.length, 20);
     assert.equal(first.json().data[0].title, "공지 25");
+    assert.equal(homeBatch.statusCode, 200);
+    assert.equal(homeBatch.json().data.length, 25);
     assert.equal(second.json().data.length, 5);
     assert.equal(second.json().data[0].title, "공지 5");
     assert.deepEqual(third.json().data, []);
@@ -626,7 +808,7 @@ test("legacy desktop workspace administration response and request fields remain
   const studentId = app.jwt.decode<{ sub: string }>(student.json().data.accessToken)?.sub; assert.ok(studentId);
   const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers: ownerHeaders, payload: { name: "관리 호환 학교" } })).json().data as string;
   const workspace = store.workspaces.get(workspaceId); assert.ok(workspace);
-  workspace.waitlist.push(studentId); store.waitlistRoles.set(`${workspaceId}:${studentId}`, "STUDENT");
+  workspace.waitlist.push(studentId); store.waitlistRoles.set(`${workspaceId}:${studentId}`, ["STUDENT"]);
   const myWaitlist = await app.inject({ url: "/workspace/my/wait-list", headers: studentHeaders });
   assert.equal(myWaitlist.statusCode, 200);
   assert.equal(myWaitlist.json().data[0].workspaceId, workspaceId);
@@ -669,10 +851,17 @@ test("workspace admins can approve or reject matching join requests, while membe
   assert.equal(unsupportedRole.statusCode, 400);
   assert.equal(store.workspaces.get(workspaceId)?.waitlist.includes(applicantId), false);
   assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code, role: "TEACHER" } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 1);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=TEACHER`, headers: ownerHeaders })).json().data.length, 1);
   const myRequests = await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders });
   assert.equal(myRequests.json().data[0].workspaceId, workspaceId);
   assert.equal(myRequests.json().data[0].workspaceName, "가입 흐름 학교");
+  assert.deepEqual(myRequests.json().data[0].requestedRoles, ["STUDENT", "TEACHER"]);
   assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: applicantHeaders, payload: { workspaceId } })).statusCode, 200);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 0);
+  assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=TEACHER`, headers: ownerHeaders })).json().data.length, 1);
+  assert.equal((await app.inject({ method: "DELETE", url: "/workspace/cancel", headers: applicantHeaders, payload: { workspaceId, role: "TEACHER" } })).statusCode, 200);
   assert.equal((await app.inject({ method: "GET", url: "/workspace/my/wait-list", headers: applicantHeaders })).json().data.length, 0);
   assert.equal((await app.inject({ method: "POST", url: "/workspace/join", headers: applicantHeaders, payload: { code } })).statusCode, 200);
   assert.equal((await app.inject({ method: "GET", url: `/workspace/wait-list?workspaceId=${workspaceId}&role=STUDENT`, headers: ownerHeaders })).json().data.length, 1);
@@ -851,7 +1040,7 @@ test("persistent store survives a new application instance", async () => {
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test("mobile realtime client refreshes an expired access token before connecting", async () => {
+socketTest("mobile realtime client refreshes an expired access token before connecting", async () => {
   const store = new Store();
   store.emailCodes.set("realtime-refresh@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
   const app = await buildApp(store);
@@ -879,7 +1068,7 @@ test("mobile realtime client refreshes an expired access token before connecting
   }
 });
 
-test("authenticated room members receive Socket.IO messages", async () => {
+socketTest("authenticated room members receive Socket.IO messages", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
   const oldApiKey = process.env.OPENAI_API_KEY; const oldFetch = globalThis.fetch;
   store.emailCodes.set("chat@example.com", { code: "123456", expiresAt: Date.now() + 60_000 }); const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "chat@example.com", password: "password123", code: "123456" } });
@@ -944,11 +1133,13 @@ test("authenticated room members receive Socket.IO messages", async () => {
     const schoolBotReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi school-data reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT" && message.message.includes("김치볶음밥")) { clearTimeout(timer); resolve(message); } }); });
     const schoolBotRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 오늘 급식 뭐야?", mention: [-1] }, resolve));
     assert.equal(schoolBotRequest.message, "메시지 전송 성공");
-    assert.match(JSON.parse((await schoolBotReply).message).data, /김치볶음밥/);
-    const participantBotReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi participant reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT" && message.message.includes("님이 뽑혔어요")) { clearTimeout(timer); resolve(message); } }); });
+    const schoolAnswer = JSON.parse((await schoolBotReply).message) as { keyword: string; data: Array<{ menu: string[] }> };
+    assert.equal(schoolAnswer.keyword, "급식"); assert.deepEqual(schoolAnswer.data[0]?.menu, ["김치볶음밥"]);
+    const participantBotReply = new Promise<ChatMessage>((resolve, reject) => { const timer = setTimeout(() => reject(new Error("Catseugi participant reply timed out")), 2_000); socket.on("chat:message", (message: ChatMessage) => { if (message.type === "BOT" && message.message.includes("뽑았어요")) { clearTimeout(timer); resolve(message); } }); });
     const participantBotRequest = await new Promise<{ message: string }>((resolve) => socket.emit("chat:message", { roomId, message: "스기야 사람 한 명 뽑아줘", mention: [-1] }, resolve));
     assert.equal(participantBotRequest.message, "메시지 전송 성공");
-    assert.match(JSON.parse((await participantBotReply).message).data, new RegExp(`${store.requireMember(app.jwt.decode<{ sub: string }>(token)!.sub).name}님이 뽑혔어요`));
+    const participantAnswer = JSON.parse((await participantBotReply).message) as { keyword: string; data: string };
+    assert.equal(participantAnswer.keyword, "사람 뽑기"); assert.match(participantAnswer.data, /^사람을 1명 뽑았어요\n::[0-9a-f-]+::$/i);
     let receivedAfterLeaving = false;
     const afterLeaveListener = () => { receivedAfterLeaving = true; };
     socket.on("chat:message", afterLeaveListener);
@@ -961,7 +1152,7 @@ test("authenticated room members receive Socket.IO messages", async () => {
   } finally { if (oldApiKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = oldApiKey; globalThis.fetch = oldFetch; socket.close(); await app.close(); }
 });
 
-test("withdrawn members cannot reconnect to Socket.IO or legacy STOMP with an old token", async () => {
+socketTest("withdrawn members cannot reconnect to Socket.IO or legacy STOMP with an old token", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
   const memberId = store.id(); store.members.set(memberId, { id: memberId, email: "deleted-realtime@example.com", name: "탈퇴 회원", deleted: true });
   const token = app.jwt.sign({ sub: memberId });
@@ -980,23 +1171,30 @@ test("withdrawn members cannot reconnect to Socket.IO or legacy STOMP with an ol
 });
 
 test("chat room API accepts original Android/iOS request names and exposes legacy response fields", async () => {
-  const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000011"; const peerId = "00000000-0000-4000-8000-000000000012"; const workspaceId = "00000000-0000-4000-8000-000000000013";
-  store.members.set(ownerId, { id: ownerId, email: "owner@rooms.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@rooms.test", name: "친구" });
-  store.workspaces.set(workspaceId, { id: workspaceId, code: "ROOMTEST", name: "방 호환 학교", members: [ownerId, peerId], waitlist: [], ownerId });
+  const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000011"; const peerId = "00000000-0000-4000-8000-000000000012"; const secondPeerId = "00000000-0000-4000-8000-000000000014"; const workspaceId = "00000000-0000-4000-8000-000000000013";
+  store.members.set(ownerId, { id: ownerId, email: "owner@rooms.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@rooms.test", name: "친구" }); store.members.set(secondPeerId, { id: secondPeerId, email: "second-peer@rooms.test", name: "두번째 친구" });
+  store.workspaces.set(workspaceId, { id: workspaceId, code: "ROOMTEST", name: "방 호환 학교", members: [ownerId, peerId, secondPeerId], waitlist: [], ownerId });
   const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: ownerId })}`;
   try {
     const created = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "", joinUsers: [peerId], chatRoomImg: "" } });
     assert.equal(created.statusCode, 200); const roomId = created.json().data as string; const room = store.rooms.get(roomId); assert.equal(room?.name, "친구");
     const fetched = await app.inject({ method: "GET", url: `/chat/personal/search/room/${roomId}`, headers: { authorization } }); const data = fetched.json().data;
     assert.equal(data.chatName, "친구"); assert.equal(data.roomAdmin, ownerId); assert.equal(data.chatRoomImg, ""); assert.equal(data.joinUserInfo.length, 2); assert.equal(data.notReadCnt, 0);
+    const peerAuthorization = `Bearer ${app.jwt.sign({ sub: peerId })}`;
+    const fetchedByPeer = await app.inject({ method: "GET", url: `/chat/personal/search/room/${roomId}`, headers: { authorization: peerAuthorization } });
+    assert.equal(fetchedByPeer.json().data.chatName, "방장");
     const repeated = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "", joinUsers: [peerId], chatRoomImg: "" } });
     assert.equal(repeated.json().data, roomId);
     const invalid = await app.inject({ method: "POST", url: "/chat/personal/create", headers: { authorization }, payload: { workspaceId, roomName: "잘못된 개인방", joinUsers: [], chatRoomImg: "" } });
     assert.equal(invalid.statusCode, 400);
+    const longName = ` ${"긴".repeat(90)} `;
+    const group = await app.inject({ method: "POST", url: "/chat/group/create", headers: { authorization }, payload: { workspaceId, roomName: longName, joinUsers: [peerId, secondPeerId], chatRoomImg: "" } });
+    assert.equal(group.statusCode, 200);
+    assert.equal(store.rooms.get(group.json().data as string)?.name, longName);
   } finally { await app.close(); }
 });
 
-test("chat room lists return the latest preview and unread count until a member subscribes", async () => {
+socketTest("chat room lists return the latest preview and unread count until a member subscribes", async () => {
   const store = new Store(); const ownerId = "00000000-0000-4000-8000-000000000021"; const peerId = "00000000-0000-4000-8000-000000000022"; const workspaceId = "00000000-0000-4000-8000-000000000023"; const roomId = "00000000-0000-4000-8000-000000000024";
   store.members.set(ownerId, { id: ownerId, email: "owner@preview.test", name: "방장" }); store.members.set(peerId, { id: peerId, email: "peer@preview.test", name: "친구" });
   store.workspaces.set(workspaceId, { id: workspaceId, code: "PREVIEW", name: "미리보기 학교", members: [ownerId, peerId], waitlist: [], ownerId });
@@ -1017,11 +1215,12 @@ test("chat room lists return the latest preview and unread count until a member 
   } finally { socket.close(); await app.close(); }
 });
 
-test("original mobile clients can authenticate, subscribe, and send over STOMP", async () => {
+socketTest("original mobile clients can authenticate, subscribe, and send over STOMP", async () => {
   const store = new Store(); const app = await buildApp(store); attachRealtime(app, store);
   store.emailCodes.set("stomp@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
   const registration = await app.inject({ method: "POST", url: "/member/register", payload: { email: "stomp@example.com", password: "password123", code: "123456" } });
   const token = registration.json().data.accessToken as string; const headers = { authorization: `Bearer ${token}` };
+  const memberId = [...store.members.values()].find((member) => member.email === "stomp@example.com")!.id;
   const workspaceId = (await app.inject({ method: "POST", url: "/workspace", headers, payload: { name: "STOMP 학교" } })).json().data as string;
   const roomId = (await app.inject({ method: "POST", url: "/chat/group/create", headers, payload: { workspaceId, name: "원본 클라이언트 방", memberIds: [] } })).json().data as string;
   await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");
@@ -1033,28 +1232,53 @@ test("original mobile clients can authenticate, subscribe, and send over STOMP",
     const connected = new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.startsWith("CONNECTED\n"))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error(`STOMP CONNECT timed out: ${frames.join(" | ")}`)); }, 2_000); });
     socket.send(`CONNECT\naccept-version:1.2\nAuthorization: Bearer ${token}\n\n\0`); await connected;
     socket.send(`SUBSCRIBE\nid:sub-0\ndestination:/exchange/chat.exchange/room.${roomId}\n\n\0`);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    const readStompEvent = (type: "SUB" | "UNSUB") => {
+      const frame = frames.find((item) => item.includes(`"type":"${type}"`));
+      assert.ok(frame, `expected ${type} room event`);
+      return JSON.parse(frame.slice(frame.indexOf("\n\n") + 2).replace(/\0$/, "")) as { type: string; userId: string };
+    };
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes('"type":"SUB"'))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("STOMP subscribe event timed out")); }, 2_000); });
+    assert.deepEqual(readStompEvent("SUB"), { type: "SUB", userId: memberId });
+    socket.send(`SUBSCRIBE\nid:sub-observer\ndestination:/exchange/chat.exchange/room.${roomId}\n\n\0`);
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.filter((frame) => frame.includes('"type":"SUB"')).length >= 2) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("second STOMP subscribe event timed out")); }, 2_000); });
     migratedClient = io(`http://127.0.0.1:${address.port}`, { auth: { token }, transports: ["websocket"] });
     await new Promise<void>((resolve, reject) => { migratedClient!.once("connect", resolve); migratedClient!.once("connect_error", reject); });
     migratedClient.emit("room:join", roomId);
     await new Promise((resolve) => setTimeout(resolve, 30));
     const socketMessage = new Promise<ChatMessage>((resolve) => migratedClient.once("chat:message", resolve));
-    socket.send(`SEND\ndestination:/pub/chat.message\ncontent-type:application/json\n\n${JSON.stringify({ roomId, type: "MESSAGE", message: "구형 앱 호환", uuid: "client-uuid" })}\0`);
+    socket.send(`SEND\ndestination:/pub/chat.message\ncontent-type:application/json\n\n${JSON.stringify({ roomId, type: "MESSAGE", message: "구형 앱 호환 스기야 문구", uuid: "client-uuid" })}\0`);
     await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { const message = store.messages.values().next().value as ChatMessage | undefined; if (message) { clearInterval(timer); resolve(); } if (frames.some((frame) => frame.startsWith("ERROR\n"))) { clearInterval(timer); reject(new Error(frames.at(-1))); } }, 5); setTimeout(() => reject(new Error("STOMP message timed out")), 2_000); });
-    const message = store.messages.values().next().value as ChatMessage; assert.equal(message.message, "구형 앱 호환");
-    assert.ok(frames.some((frame) => frame.includes(`destination:/exchange/chat.exchange/room.${roomId}`) && frame.includes("구형 앱 호환")));
-    assert.equal((await socketMessage).message, "구형 앱 호환");
-    const migratedSend = new Promise<{ message: string }>((resolve) => migratedClient.emit("chat:message", { roomId, message: "Socket.IO 호환" }, resolve));
+    const message = store.messages.values().next().value as ChatMessage; assert.equal(message.message, "구형 앱 호환 스기야 문구"); assert.deepEqual(message.mention, []);
+    assert.ok(frames.some((frame) => frame.includes(`destination:/exchange/chat.exchange/room.${roomId}`) && frame.includes("구형 앱 호환 스기야 문구")));
+    assert.equal((await socketMessage).message, "구형 앱 호환 스기야 문구");
+    socket.send(`SEND\ndestination:/pub/chat.message\ncontent-type:application/json\n\n${JSON.stringify({ roomId, type: "IMG", message: "https://files.example/photo.png::photo.png", uuid: "legacy-image-uuid", eventList: [23], emoticon: "📷" })}\0`);
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if ([...store.messages.values()].some((item) => item.uuid === "legacy-image-uuid")) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("STOMP image message timed out")); }, 2_000); });
+    const imageMessage = [...store.messages.values()].find((item) => item.uuid === "legacy-image-uuid");
+    assert.equal(imageMessage?.type, "IMG"); assert.deepEqual(imageMessage?.eventList, [23]); assert.equal(imageMessage?.emoticon, "📷");
+    assert.ok(frames.some((frame) => frame.includes('"type":"IMG"') && frame.includes('"uuid":"legacy-image-uuid"')));
+    const migratedSend = new Promise<{ message: string }>((resolve) => migratedClient.emit("chat:message", { roomId, message: "Socket.IO 호환 스기야 문구" }, resolve));
     assert.equal((await migratedSend).message, "메시지 전송 성공");
+    const socketMessageStored = [...store.messages.values()].find((item) => item.message === "Socket.IO 호환 스기야 문구"); assert.deepEqual(socketMessageStored?.mention, []);
     await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("Socket.IO 호환"))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("Socket.IO to STOMP message timed out")); }, 2_000); });
     await app.inject({ method: "PUT", url: "/message/emoji", headers: { authorization: `Bearer ${token}` }, payload: { messageId: message.id, emoji: "👍" } });
     await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("ADD_EMOJI") && frame.includes('"emojiId":1'))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("STOMP emoji event timed out")); }, 2_000); });
     const deleted = await app.inject({ method: "DELETE", url: "/message/delete", headers: { authorization: `Bearer ${token}` }, payload: { roomId, messageId: message.id } }); assert.equal(deleted.statusCode, 200);
     await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { if (frames.some((frame) => frame.includes("DELETE_MESSAGE") && frame.includes(message.id))) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error(`STOMP deletion event timed out: ${frames.join(" | ")}`)); }, 2_000); });
+    const readAtBeforeUnsubscribe = store.rooms.get(roomId)?.memberReadAt?.[memberId] ?? "";
+    socket.send("UNSUBSCRIBE\nid:sub-0\n\n\0");
+    await new Promise<void>((resolve, reject) => { const timer = setInterval(() => { const readAt = store.rooms.get(roomId)?.memberReadAt?.[memberId] ?? ""; if (readAt > readAtBeforeUnsubscribe) { clearInterval(timer); clearTimeout(timeout); resolve(); } }, 5); const timeout = setTimeout(() => { clearInterval(timer); reject(new Error("STOMP unsubscribe did not update the room read timestamp")); }, 2_000); });
+    assert.deepEqual(readStompEvent("UNSUB"), { type: "UNSUB", userId: memberId });
+    socket.send("UNSUBSCRIBE\nid:sub-observer\n\n\0");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const frameCountAfterUnsubscribe = frames.length;
+    const afterUnsubscribe = new Promise<{ message: string }>((resolve) => migratedClient!.emit("chat:message", { roomId, message: "해제 후 메시지" }, resolve));
+    await afterUnsubscribe;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(frames.length, frameCountAfterUnsubscribe, "an unsubscribed STOMP client must not receive room messages");
   } finally { socket.close(); migratedClient?.close(); await app.close(); }
 });
 
-test("uploaded files are persisted and served back", async () => {
+socketTest("uploaded files are persisted and served back", async () => {
   const directory = mkdtempSync(join(tmpdir(), "seugi-upload-")); const previous = process.env.UPLOAD_DIR; process.env.UPLOAD_DIR = directory;
   const store = new Store(); const memberId = store.id(); store.members.set(memberId, { id: memberId, email: "upload@example.com", name: "업로드 사용자" });
   const app = await buildApp(store); const authorization = `Bearer ${app.jwt.sign({ sub: memberId })}`; await app.listen({ port: 0, host: "127.0.0.1" }); const address = app.server.address(); assert.ok(address && typeof address !== "string");

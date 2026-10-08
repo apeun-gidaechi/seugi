@@ -1,6 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PushNotifications } from "../src/push.js";
+import { notificationRecipientIds, PushNotifications } from "../src/push.js";
+
+test("notice alerts match native recipient roles and exclude teachers and the author", () => {
+  const workspace = { ownerId: "owner", members: ["owner", "middle", "student", "teacher", "author"] };
+  const roles = new Map([
+    ["owner", "ADMIN"],
+    ["middle", "MIDDLE_ADMIN"],
+    ["student", "STUDENT"],
+    ["teacher", "TEACHER"],
+    ["author", "TEACHER"],
+  ] as const);
+
+  assert.deepEqual(
+    notificationRecipientIds(workspace, "author", (memberId) => roles.get(memberId)),
+    ["owner", "middle", "student"],
+  );
+});
 
 test("push adapter sends Expo tokens through the Expo gateway without Firebase credentials", async () => {
   const previous = process.env.FIREBASE_SERVICE_ACCOUNT_JSON; delete process.env.FIREBASE_SERVICE_ACCOUNT_JSON;

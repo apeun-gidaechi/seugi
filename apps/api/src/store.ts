@@ -17,9 +17,10 @@ export type StoreSnapshot = {
   emailCodes: Array<[string, { code: string; expiresAt: number }]>;
   oauth: Array<[string, { provider: "google" | "apple"; accessToken: string; refreshToken?: string }]>;
   deviceTokens: Array<[string, string[]]>;
-  waitlistRoles: Array<[string, "STUDENT" | "TEACHER" | "MIDDLE_ADMIN"]>;
+  waitlistRoles: Array<[string, WaitlistRole | WaitlistRole[]]>;
   workspacePushPreferences: Array<[string, boolean]>;
 };
+export type WaitlistRole = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN";
 export type MessageDeletedEvent = { roomId: string; messageId: string; senderId: string };
 export type MessageEmojiEvent = { roomId: string; messageId: string; senderId: string; emoji: string; action: "ADD" | "REMOVE" };
 
@@ -41,7 +42,7 @@ export class Store {
   emailCodes = new Map<string, { code: string; expiresAt: number }>();
   oauth = new Map<string, { provider: "google" | "apple"; accessToken: string; refreshToken?: string }>();
   deviceTokens = new Map<string, string[]>();
-  waitlistRoles = new Map<string, "STUDENT" | "TEACHER" | "MIDDLE_ADMIN">();
+  waitlistRoles = new Map<string, WaitlistRole[]>();
   workspacePushPreferences = new Map<string, boolean>();
   private readonly messageDeletedListeners = new Set<(event: MessageDeletedEvent) => void>();
   private readonly messageEmojiListeners = new Set<(event: MessageEmojiEvent) => void>();
@@ -72,7 +73,7 @@ export class Store {
     this.workspaces = new Map(snapshot.workspaces ?? []); this.rooms = new Map(snapshot.rooms ?? []);
     this.messages = new Map(snapshot.messages ?? []); this.notifications = new Map(snapshot.notifications ?? []);
     this.timetables = new Map(snapshot.timetables ?? []); this.tasks = new Map(snapshot.tasks ?? []);
-    this.schedules = snapshot.schedules ?? []; this.meals = new Map(snapshot.meals ?? []); this.emailCodes = new Map(snapshot.emailCodes ?? []); this.oauth = new Map(snapshot.oauth ?? []); this.deviceTokens = new Map(snapshot.deviceTokens ?? []); this.waitlistRoles = new Map(snapshot.waitlistRoles ?? []); this.workspacePushPreferences = new Map(snapshot.workspacePushPreferences ?? []);
+    this.schedules = snapshot.schedules ?? []; this.meals = new Map(snapshot.meals ?? []); this.emailCodes = new Map(snapshot.emailCodes ?? []); this.oauth = new Map(snapshot.oauth ?? []); this.deviceTokens = new Map(snapshot.deviceTokens ?? []); this.waitlistRoles = new Map((snapshot.waitlistRoles ?? []).map(([key, roles]) => [key, Array.isArray(roles) ? roles : [roles]])); this.workspacePushPreferences = new Map(snapshot.workspacePushPreferences ?? []);
   }
   snapshot(): StoreSnapshot {
     return { members: [...this.members], profiles: [...this.profiles], workspaces: [...this.workspaces], rooms: [...this.rooms], messages: [...this.messages], notifications: [...this.notifications], timetables: [...this.timetables], tasks: [...this.tasks], schedules: this.schedules, meals: [...this.meals], emailCodes: [...this.emailCodes], oauth: [...this.oauth], deviceTokens: [...this.deviceTokens], waitlistRoles: [...this.waitlistRoles], workspacePushPreferences: [...this.workspacePushPreferences] };
