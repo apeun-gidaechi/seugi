@@ -6,7 +6,7 @@ export function sortChatRooms(items?: Room[]) {
   );
 }
 
-export function formatChatRoomTimestamp(value?: string | null, platform: "ios" | "android") {
+export function formatChatRoomTimestamp(value: string | null | undefined, platform: "ios" | "android") {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
