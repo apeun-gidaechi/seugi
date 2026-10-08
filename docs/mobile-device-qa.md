@@ -13,7 +13,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | Command | Scope |
 | --- | --- |
 | `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (75+), mobile unit tests (95+), web tests |
+| `pnpm -r test` | API contract/integration (75+), mobile unit tests (97+), web tests |
 | `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
 
 | Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
@@ -79,7 +79,7 @@ Record device QA sessions here before updating `mobile-screen-parity.md` rows. K
 
 | Date | Commit | Scope | Environment | Result | Artifacts |
 | --- | --- | --- | --- | --- | --- |
-| 2026-10-08 | (run `git rev-parse --short HEAD`) | Automated gate | CI/local | `pnpm check`, `pnpm -r test`, `pnpm --filter @seugi/mobile build` green | Terminal output; maps to checklist IDs in **Automated verification** above |
+| 2026-10-08 | `5573229` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (mobile 95 tests) | Terminal output; maps to checklist IDs in **Automated verification** above |
 | | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
 
 ## Sign-off
