@@ -20,7 +20,7 @@ Open [http://localhost:6006](http://localhost:6006).
 | **Web/Components/**   | **53 auto stories** — one per `apps/web/src/Components/**/*.tsx` |
 | **Mobile/Playground** | How to open the RN playground on device                          |
 
-`pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`.
+`pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`. Auto stories merge defaults from `stories/web/storybookComponentMocks.ts` so components render without the full app shell.
 
 React Native design-system and screens: **Seugi Playground** on iOS/Android (Storybook does not bundle RN).
 
@@ -81,6 +81,8 @@ After launch, the playground home lists:
 3. **Components** — shared `src/components/*` demos
 
 The playground variant wires `PlaygroundSeugiApi` (in-memory fixtures) so Home, Chat, Notices, Assignments, and most workspace screens render with sample data. Real-time chat sockets are not simulated.
+
+`pnpm --filter @seugi/mobile test` runs `scripts/check-playground-screen-coverage.mjs` so every `src/screens/**/*Screen.tsx` stays listed in `screenDemos`.
 
 ## Production app on a physical iPhone
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { SeugiButtonVariant } from "../design-system/Button";
 import { SeugiButton } from "../design-system/Button";
@@ -63,10 +64,12 @@ export function DesignSystemCatalogScreen() {
   const [code, setCode] = useState("AB12CD");
   const [chatDraft, setChatDraft] = useState("안녕하세요");
   const platform = nativePlatform();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomInset + 72 }]}>
         <Text style={styles.meta}>
           Platform: {platform} · {buttonVariants.length} button variants
         </Text>
@@ -184,14 +187,25 @@ export function DesignSystemCatalogScreen() {
           </View>
         </Section>
       </ScrollView>
-      <SeugiBottomNavigation selected={tab} onSelect={setTab} />
+      <View style={[styles.bottomNav, { paddingBottom: bottomInset }]}>
+        <SeugiBottomNavigation selected={tab} onSelect={setTab} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: SeugiColor.Primary050 },
-  content: { padding: 16, paddingBottom: 32, gap: 8 },
+  content: { padding: 16, gap: 8 },
+  bottomNav: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: SeugiColor.White,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: SeugiColor.Gray300,
+  },
   meta: { color: SeugiColor.Gray600, fontSize: 13, marginBottom: 8 },
   section: {
     backgroundColor: SeugiColor.White,
