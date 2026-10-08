@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { SeugiColor } from "@seugi/design-tokens";
+import { isPlaygroundApp } from "../appVariant";
+
+/** Playground native builds omit Google Sign-In autolinking; never load the TurboModule. */
+function loadGoogleSignin() {
+  if (isPlaygroundApp()) return null;
+  try {
+    return require("@react-native-google-signin/google-signin").GoogleSignin as typeof import("@react-native-google-signin/google-signin").GoogleSignin;
+  } catch {
+    return null;
+  }
+}
 
 export function GoogleAuthButton({
   label,
@@ -24,6 +34,11 @@ export function GoogleAuthButton({
     if (busy || disabled) return;
     if (!configured) {
       onError("Google 로그인을 사용하려면 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID 설정이 필요합니다.");
+      return;
+    }
+    const GoogleSignin = loadGoogleSignin();
+    if (!GoogleSignin) {
+      onError("이 빌드에서는 Google 로그인 네이티브 모듈을 사용할 수 없습니다.");
       return;
     }
     setBusy(true);

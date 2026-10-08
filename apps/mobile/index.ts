@@ -1,10 +1,15 @@
 import { registerRootComponent } from "expo";
 import { Platform } from "react-native";
-import App from "./App";
+import { isPlaygroundApp } from "./src/appVariant";
 
-registerRootComponent(App);
+const playground = isPlaygroundApp();
 
-if (Platform.OS === "android") {
-  const { registerSeugiWidgetTask } = require("./src/widgets/android");
-  registerSeugiWidgetTask();
+if (playground) {
+  registerRootComponent(require("./PlaygroundApp").default);
+} else {
+  registerRootComponent(require("./App").default);
+  if (Platform.OS === "android") {
+    const { registerSeugiWidgetTask } = require("./src/widgets/android");
+    registerSeugiWidgetTask();
+  }
 }
