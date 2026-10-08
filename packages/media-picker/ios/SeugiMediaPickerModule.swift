@@ -47,7 +47,9 @@ private final class SeugiPhotoPickerDelegate: NSObject, PHPickerViewControllerDe
     }
 
     let provider = result.itemProvider
-    let typeIdentifier = provider.registeredTypeIdentifiers.first(where: { UTType($0)?.conforms(to: .image) }) ?? UTType.image.identifier
+    let typeIdentifier =
+      provider.registeredTypeIdentifiers.first(where: { UTType($0)?.conforms(to: .image) == true })
+      ?? UTType.image.identifier
     provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { [weak self] source, error in
       guard let self else { return }
       guard let source, error == nil else {
