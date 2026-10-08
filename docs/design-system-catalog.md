@@ -13,12 +13,13 @@ pnpm --filter @seugi/storybook dev
 
 Open [http://localhost:6006](http://localhost:6006).
 
-| Sidebar               | Contents                                                         |
-| --------------------- | ---------------------------------------------------------------- |
-| **Design system**     | Color tokens, typography                                         |
-| **Web/Ui**            | Shared `Components/ui` primitives                                |
-| **Web/Components/**   | **53 auto stories** — one per `apps/web/src/Components/**/*.tsx` |
-| **Mobile/Playground** | How to open the RN playground on device                          |
+| Sidebar               | Contents                                                                 |
+| --------------------- | ------------------------------------------------------------------------ |
+| **Design system**     | Color tokens, typography                                                 |
+| **Web/Ui**            | Shared `Components/ui` primitives                                        |
+| **Web/Components/**   | Auto stories — one per `apps/web/src/Components/**/*.tsx` default export |
+| **Web/Pages/**        | Auto stories — one per `apps/web/src/Pages/**/*.tsx` default export      |
+| **Mobile/Playground** | How to open the RN playground on device                                  |
 
 `pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`. Auto stories merge defaults from `stories/web/storybookComponentMocks.ts` so components render without the full app shell.
 
@@ -88,7 +89,7 @@ The playground variant wires `PlaygroundSeugiApi` (in-memory fixtures) so Home, 
 - `check-playground-design-system-coverage.mjs` — every `src/design-system/*.tsx` imported in `DesignSystemCatalogScreen`
 - `check-playground-component-coverage.mjs` — every `src/components/*.tsx` in `componentDemos`
 
-`pnpm --filter @seugi/storybook check` also verifies auto stories exist for each web `Components` default export.
+`pnpm --filter @seugi/storybook check` verifies auto stories for each web `Components` and `Pages` default export. Global `StoryProviders` seeds a demo user for context-dependent UI.
 
 ## Production app on a physical iPhone
 

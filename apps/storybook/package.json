@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "pnpm sync-stories && storybook dev -p 6006",
     "build": "pnpm sync-stories && storybook build --disable-telemetry",
-    "check": "tsc --noEmit && node scripts/check-component-story-coverage.mjs",
-    "sync-stories": "node scripts/sync-component-stories.mjs"
+    "check": "tsc --noEmit && node scripts/check-component-story-coverage.mjs && node scripts/check-page-story-coverage.mjs",
+    "sync-stories": "node scripts/sync-component-stories.mjs && node scripts/sync-page-stories.mjs"
   },
   "dependencies": {
     "@seugi/design-tokens": "workspace:*",

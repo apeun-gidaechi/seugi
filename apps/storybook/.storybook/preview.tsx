@@ -1,7 +1,15 @@
 import type { Preview } from "@storybook/react";
 import { SeugiColor } from "@seugi/design-tokens";
+import { StoryProviders } from "./StoryProviders";
 
 const preview: Preview = {
+  decorators: [
+    (Story) => (
+      <StoryProviders>
+        <Story />
+      </StoryProviders>
+    ),
+  ],
   parameters: {
     backgrounds: {
       default: "gray100",
