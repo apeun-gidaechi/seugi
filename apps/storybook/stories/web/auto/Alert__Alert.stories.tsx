@@ -2,6 +2,7 @@
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
+import { withDefaultStoryProps } from "../storybookComponentMocks";
 
 import Component from "../../../../web/src/Components/Alert/Alert";
 
@@ -24,6 +25,5 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Component {...args} />,
-  args: { position: "top-right", subtext: "Storybook demo", titletext: "Alert" },
+  render: (args) => <Component {...withDefaultStoryProps("Alert/Alert", args)} />,
 };

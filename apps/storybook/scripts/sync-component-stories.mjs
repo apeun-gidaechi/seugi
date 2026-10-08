@@ -51,14 +51,11 @@ function storyFileName(slug) {
   return slug.replace(/\//g, "__") + ".stories.tsx";
 }
 
-const DEFAULT_ARGS_BY_SLUG = {
-  "Alert/Alert": { position: "top-right", subtext: "Storybook demo", titletext: "Alert" },
-};
-
 const header = `/* auto-generated — pnpm --filter @seugi/storybook sync-stories */
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
+import { withDefaultStoryProps } from "../storybookComponentMocks";
 
 `;
 
@@ -104,8 +101,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Component {...args} />,
-  args: ${JSON.stringify(DEFAULT_ARGS_BY_SLUG[slug] ?? {})},
+  render: (args) => <Component {...withDefaultStoryProps("${slug}", args)} />,
 };
 `;
   fs.writeFileSync(path.join(outDir, outName), body);

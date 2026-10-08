@@ -2,6 +2,7 @@
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
 import { MemoryRouter } from "react-router-dom";
+import { withDefaultStoryProps } from "../storybookComponentMocks";
 
 import Component from "../../../../web/src/Components/Onboarding/Signup/EmailSignup/emailsignup";
 
@@ -24,6 +25,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Component {...args} />,
-  args: {},
+  render: (args) => (
+    <Component {...withDefaultStoryProps("Onboarding/Signup/EmailSignup/emailsignup", args)} />
+  ),
 };
