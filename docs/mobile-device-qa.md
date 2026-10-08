@@ -6,6 +6,33 @@ Use this while closing `device QA pending` rows in `mobile-screen-parity.md`. Ea
 
 For each screen: note device/simulator model, OS version, app build (commit hash), workspace fixture (empty vs seeded), and attach screenshots or a short screen recording. Link PR or issue when a row is updated.
 
+## Automated verification (run before device sessions)
+
+These do **not** replace on-device QA; they catch regressions in native rules already encoded in TypeScript.
+
+| Command | Scope |
+| --- | --- |
+| `pnpm check` | TypeScript across all workspaces |
+| `pnpm -r test` | API contract/integration (75+), mobile unit tests (89+), web tests |
+| `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
+
+| Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
+| --- | --- |
+| H-01 meal carousel / Classroom | `home.test.ts` |
+| WG-01 Android meal widget period | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`) |
+| WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
+| C-01 / C-02 room search | `chat.test.ts` |
+| C-03 message search | `chat.test.ts` |
+| M-01 future-date dimming | `meal-calendar.test.ts` |
+| T-01 week label | `date.test.ts` |
+| A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
+| AI-01 CatSeugi rendering | `apps/api/test/ai.test.ts` (shared `catseugiVisibleText`) |
+| W-01 members search / profile | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts` |
+| AU-01 auth CTAs / feedback | `auth-button.test.ts`, `auth-feedback.test.ts` |
+| S-01 tab conversation state | `tab-navigation.test.ts` |
+
+Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
+
 ## Prerequisites
 
 - Local API with required env (see repo `README.md`): at minimum a test workspace; for meal/timetable cards configure `NEIS_API_KEY` when validating NEIS-backed UI.

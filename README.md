@@ -19,6 +19,17 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 
 Run `pnpm check` for TypeScript checks across every workspace, `pnpm --filter @seugi/api test` for API and client integration tests, and `pnpm build` for all workspace production builds.
 
+### Mobile (Expo)
+
+```sh
+cp apps/mobile/.env.example apps/mobile/.env   # set API URL, OAuth, EAS project id as needed
+pnpm --filter @seugi/api dev                   # API on :8080
+pnpm --filter @seugi/mobile start              # dev client
+pnpm --filter @seugi/mobile ios                # or android — requires native toolchain
+```
+
+Migration parity is tracked in `docs/mobile-screen-parity.md`. Close `device QA pending` only after `docs/mobile-device-qa.md` checklist (automated tests listed there are a prerequisite, not a substitute).
+
 ## Run
 
 ```sh
