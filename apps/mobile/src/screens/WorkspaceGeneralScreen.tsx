@@ -1,5 +1,6 @@
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
+import { SeugiListItem } from "../design-system/ListItem";
 
 export function WorkspaceGeneralScreen() {
   const leaveWorkspace = () => {
@@ -10,30 +11,17 @@ export function WorkspaceGeneralScreen() {
       ]);
       return;
     }
-    Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.");
+    Alert.alert("탈퇴 실패 안내", "시연 모드에서는 탈퇴가 불가능합니다.", [{ text: "확인" }]);
   };
 
   return (
-    <ScrollView style={styles.content}>
-      <TouchableOpacity accessibilityRole="button" onPress={leaveWorkspace} style={styles.generalAction}>
-        <Text style={styles.leaveWorkspace}>학교 나가기</Text>
-        <Text style={styles.muted}>›</Text>
-      </TouchableOpacity>
+    <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <SeugiListItem title="학교 나가기" titleColor={SeugiColor.Red500} onPress={leaveWorkspace} showChevron />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: 16 },
-  generalAction: {
-    minHeight: 56,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderColor: SeugiColor.Gray100,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  leaveWorkspace: { color: SeugiColor.Red500, fontSize: 15, fontWeight: "600" },
-  muted: { color: SeugiColor.Gray500, fontSize: 12 },
+  content: { flex: 1 },
+  contentContainer: { paddingTop: 6 },
 });
