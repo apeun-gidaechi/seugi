@@ -1,0 +1,55 @@
+# Mobile device QA checklist
+
+Use this while closing `device QA pending` rows in `mobile-screen-parity.md`. Each item needs **both** Android and iOS unless the native source is platform-specific.
+
+## How to record evidence
+
+For each screen: note device/simulator model, OS version, app build (commit hash), workspace fixture (empty vs seeded), and attach screenshots or a short screen recording. Link PR or issue when a row is updated.
+
+## Prerequisites
+
+- Local API with required env (see repo `README.md`): at minimum a test workspace; for meal/timetable cards configure `NEIS_API_KEY` when validating NEIS-backed UI.
+- Mobile: `EXPO_PUBLIC_*` for API URL; Google `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; push `EXPO_PUBLIC_EAS_PROJECT_ID` when testing notifications.
+- Compare against native builds from `.upstream/` analysis snapshots or installed legacy apps on the same workspace data where possible.
+
+## Authenticated shell (all tabs)
+
+| ID | Screen | Verify |
+| --- | --- | --- |
+| S-01 | Tab switch | Tab roots stay mounted; returning preserves list scroll and open chat per platform rules |
+| S-02 | System back | Android back and iOS edge swipe pop the expected route (detail → tab, search mode → list) |
+| S-03 | No-workspace mode | Five tabs, registration alert, 10s approval poll, platform-specific chat add targets |
+
+## Main navigation (parity table)
+
+| ID | Destination | Key checks |
+| --- | --- | --- |
+| H-01 | Home | Card order/spacing, meal carousel time rules, timetable empty/failure copy, assignment card platform empty states, pull-to-refresh |
+| C-01 | Personal chat list | Avatar 36pt, search mode, ordering, unread badges, timestamps |
+| C-02 | Group chat list | Member count on iOS only; search/filter rules |
+| C-03 | Chat conversation | Composer, search, drawer, attachments, reactions, failed send retry, image preview |
+| C-04 | Create room | Member step → name step state; invite (Android group) |
+| P-01 | Profile / account settings | Field editors, photo picker, withdrawal flows |
+| N-01 | Notices | Paging (Android) vs full list (iOS), emoji picker, create/edit/delete permissions |
+| W-01 | Workspace detail / members / invite / notifications / general | Picker UI, toggles, member actions, join approvals |
+| J-01 | Join flow | Role → code → confirm → waiting; approval screen copy |
+| M-01 | Meal calendar | Grid, future-date dimming (Android), empty/failure |
+| T-01 | Timetable | Week label range, loading replaces grid (iOS), shadows |
+| A-01 | Assignments / task create | Sort order, badges, date picker validation and wire format |
+| AI-01 | CatSeugi | Suggestion chips, structured answers, draw/team name resolution |
+| AU-01 | Auth | Email + Google + Apple sheets; verification timers per platform |
+
+## Widgets
+
+| ID | Check |
+| --- | --- |
+| WG-01 | Android meal/timetable widgets refresh after login, workspace change, foreground |
+| WG-02 | iOS App Group snapshot updates and WidgetKit timeline |
+
+## Sign-off
+
+Migration is **not** complete until:
+
+1. Every parity-table row has evidence linked here or in the PR that updated the row.
+2. P1/P2 design-system “Remaining work” in `mobile-screen-parity.md` is empty or explicitly deferred with owner.
+3. `docs/migration.md` mobile row no longer says “device-level parity still requires verification” without a dated sign-off.

@@ -100,9 +100,15 @@ This route-level inventory is not a screen-count parity claim: the current TS ta
 - Native builds now pass for Android (`apps/mobile/android/gradlew assembleDebug`) and iOS Simulator (`xcodebuild -workspace apps/mobile/ios/Seugi.xcworkspace -scheme Seugi -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' ... build`). These prove native project compilation, not device interaction parity. Android device QA and source-vs-target capture/comparison remain outstanding. Update individual `device QA pending` rows only after those comparisons.
 - The next parity pass should capture each source and TypeScript screen on Android and iOS, compare the interaction path, and update these statuses only after runtime verification.
 
-## Code-level parity gate
+## Migration completion criteria
 
-The Expo/React Native target and `apps/api` companion changes are **code-complete** for the migration scope tracked in this document: every native route destination listed above has a TypeScript entry point, shared contracts and HTTP route inventory tests pass, realtime/chat validation and Catseugi intent coverage are in place, and the P0 design-system items called out below (footer CTAs, tab haptics, field/button primitives) are implemented in source. Rows in the tables above still read `device QA pending` because **visual, timing, safe-area, OAuth credential, NEIS-backed content, and widget refresh behavior** have not been compared on physical Android/iOS hardware or captured side-by-side with the Kotlin/SwiftUI sources. Treat those rows as a **device verification backlog**, not as missing TypeScript screens. Update a row only after on-device capture confirms layout and interaction parity; do not block merging on device QA when the code path already matches the documented native rules.
+**Not done:** A TypeScript route or passing unit test does **not** mean migration is complete. Project goal (see `docs/migration.md`) is a **verified** Expo client plus API that native users can replace Android/iOS apps with equivalent behavior.
+
+**Done so far (implementation):** Destination coverage in the tables below, shared contracts, API route inventory tests, realtime/chat contract tests, and most documented native *rules* encoded in TypeScript (search matching, platform branches, widget refresh hooks, etc.).
+
+**Still required:** Side-by-side Android and iOS comparison with the original apps for every row still marked `device QA pending` or with open items in the design-system table—layout, typography, motion, safe area, system back, OAuth/Apple sign-in, push tokens, NEIS-backed meal/timetable content, and widget updates. Remove `device QA pending` only after capture-backed verification. P1/P2 design-system rows remain open until components and screen captures match.
+
+Track device QA in `docs/mobile-device-qa.md` (checklist and evidence log).
 
 ## Design-system conversion status
 
