@@ -75,6 +75,7 @@ import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "
 import { notificationRecipientIds, PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
+import { body, ok, query } from "./http/helpers.js";
 
 const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const createWorkspaceCode = () =>
@@ -86,12 +87,6 @@ declare module "@fastify/jwt" {
     user: Claims;
   }
 }
-const ok = <T>(message: string, data?: T): ApiResponse<T> =>
-  data === undefined ? { message } : { message, data };
-const body = <T extends z.ZodTypeAny>(schema: T, request: FastifyRequest) =>
-  schema.parse(request.body);
-const query = <T extends z.ZodTypeAny>(schema: T, request: FastifyRequest) =>
-  schema.parse(request.query);
 const idParam = idParamSchema;
 const workspaceParam = workspaceIdParamSchema;
 

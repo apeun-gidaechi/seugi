@@ -18,8 +18,19 @@ import { api } from "../services/api";
 import { API_URL } from "../config";
 import { createAuthenticatedSocket } from "../realtime";
 import { absoluteApiUrl } from "../utils/url";
-import { catseugiVisibleText } from "../utils/catseugi";
-import { canSendChatText, chatDownloadedFileUri, chatReactionMutation, hasChatPayload, isChatListAtBottom, matchesChatMessageSearch, prepareChatText } from "../utils/chat";
+import { canSendChatText, chatDownloadedFileUri, chatReactionMutation, hasChatPayload, isChatListAtBottom, prepareChatText } from "../utils/chat";
+import {
+  chatVisibleMessage,
+  filterChatMessagesForSearch,
+  formatChatLocalDate,
+  formatChatLocalTime,
+  fileNameFromChatUrl,
+  mergeOlderChatMessages,
+  mimeTypeForFileName,
+  ownMessageUnreadCount,
+  shouldShowChatDateDivider,
+  shouldShowChatSender,
+} from "../utils/chatConversation";
 import { chatAttachmentMenuItems, type ChatAttachmentAction } from "../utils/chatAttachmentMenu";
 import { SeugiChatTextField } from "../design-system/TextField";
 import { SeugiChatAttachmentIcon } from "../design-system/ChatAttachmentIcon";
@@ -75,10 +86,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom, onPreviewImag
     try {
       const result = await api.messages(room.id, cursor);
       const older = (result.data?.messages ?? []).reverse();
-      setMessages((current) => {
-        const currentIds = new Set(current.map((item) => item.id));
-        return [...older.filter((item) => !currentIds.has(item.id)), ...current];
-      });
+      setMessages((current) => mergeOlderChatMessages(current, older));
       setHasOlderMessages(result.data?.hasNext ?? false);
     } catch (error) {
       Alert.alert("이전 대화를 불러오지 못했습니다", error instanceof Error ? error.message : "네트워크 연결을 확인해 주세요");
@@ -198,7 +206,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom, onPreviewImag
       const result = await FileSystem.downloadAsync(absoluteApiUrl(url), destination);
       if (result.status < 200 || result.status >= 300) throw new Error(`다운로드에 실패했습니다 (${result.status})`);
     }
-    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(destination, { dialogTitle: safeName, mimeType: mimeTypeForName(safeName) });
+    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(destination, { dialogTitle: safeName, mimeType: mimeTypeForFileName(safeName) });
     else Alert.alert("파일 저장 완료", `앱 문서에 저장했습니다: ${safeName}`);
   };
   const openFile = (url: string, name?: string) => {
@@ -249,9 +257,7 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom, onPreviewImag
     animateTailScroll.current = false;
     requestAnimationFrame(() => messageListRef.current?.scrollToEnd({ animated }));
   };
-  const visibleMessages = messages
-    .filter((item) => searchText.length === 0 || item.messageStatus !== "DELETE")
-    .filter((item) => matchesChatMessageSearch(Platform.OS === "ios" ? "ios" : "android", item.message, searchText));
+  const visibleMessages = filterChatMessagesForSearch(messages, Platform.OS === "ios" ? "ios" : "android", searchText);
   return <View style={styles.chatPage}>
     <View style={styles.chatHeader}>
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={searchMode ? "검색 닫기" : "채팅 목록으로 돌아가기"} onPress={back} style={[styles.backButton, Platform.OS === "ios" && styles.iosBackButton]}>
@@ -286,26 +292,22 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom, onPreviewImag
           const fileName = item.type === "FILE" ? parts[1] : undefined;
           const ownMessage = item.senderId === memberId;
           const previous = visibleMessages[index - 1];
-          const showDate = !previous || localDateKey(previous.createdAt) !== localDateKey(item.createdAt);
-          const showSender = !ownMessage && (showDate || previous?.senderId !== item.senderId);
+          const showDate = shouldShowChatDateDivider(previous, item);
+          const showSender = shouldShowChatSender(previous, item, ownMessage, showDate);
           const sender = currentRoom.joinUserInfo?.find(({ userInfo }) => userInfo.id === item.senderId)?.userInfo;
-          const unreadCount = ownMessage ? currentRoom.memberIds.filter((id) => {
-            if (id === memberId) return false;
-            const readAt = currentRoom.memberReadAt?.[id] ?? currentRoom.joinUserInfo?.find(({ userInfo }) => userInfo.id === id)?.timestamp;
-            return !readAt || readAt < item.createdAt;
-          }).length : 0;
+          const unreadCount = ownMessage ? ownMessageUnreadCount(currentRoom, memberId, item.createdAt) : 0;
           const reactions = Object.entries(item.emojis).filter(([, users]) => users.length > 0);
           return <View>
-            {showDate ? <Text style={styles.dateDivider}>{formatLocalDate(item.createdAt)}</Text> : null}
+            {showDate ? <Text style={styles.dateDivider}>{formatChatLocalDate(item.createdAt)}</Text> : null}
             <TouchableOpacity activeOpacity={1} onLongPress={() => item.messageStatus !== "DELETE" && setSelectedMessage(item)} style={[styles.message, ownMessage ? styles.ownMessage : styles.otherMessage]}>
             {showSender ? <View style={styles.senderHeader}><SeugiAvatar uri={sender?.picture ? absoluteApiUrl(sender.picture) : undefined} name={sender?.name} imageStyle={styles.senderAvatar} fallbackStyle={styles.senderAvatarFallback} labelStyle={styles.muted} /><Text style={styles.senderName}>{sender?.name ?? "구성원"}</Text></View> : null}
             {item.messageStatus === "DELETE" ? <Text style={styles.muted}>메시지가 삭제되었습니다.</Text> : <>
               {imageUrl ? <TouchableOpacity onPress={() => openImagePreview({ url: imageUrl, name: parts[1] || "채팅 이미지" })}><Image source={{ uri: absoluteApiUrl(imageUrl) }} resizeMode="cover" style={styles.imageMessage} /></TouchableOpacity> : null}
               {fileUrl ? <TouchableOpacity onPress={() => openFile(fileUrl, fileName)} style={styles.fileMessage}><Text style={styles.fileIcon}>↧</Text><View style={{ flex: 1 }}><Text numberOfLines={1} style={styles.rowTitle}>{fileName || "첨부 파일"}</Text><Text style={styles.link}>파일 저장/공유 ↗</Text></View></TouchableOpacity> : null}
-              {visibleMessage(item, currentRoom) && !imageUrl && !fileUrl ? <Text>{visibleMessage(item, currentRoom)}</Text> : null}
-              {item.files?.map((url) => <TouchableOpacity key={url} onPress={() => /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? openImagePreview({ url, name: fileNameFromUrl(url) }) : openFile(url)}><Text style={styles.link}>{/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? "이미지 미리보기" : "첨부 파일 저장/공유 ↗"}</Text></TouchableOpacity>)}
+              {chatVisibleMessage(item, currentRoom) && !imageUrl && !fileUrl ? <Text>{chatVisibleMessage(item, currentRoom)}</Text> : null}
+              {item.files?.map((url) => <TouchableOpacity key={url} onPress={() => /\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? openImagePreview({ url, name: fileNameFromChatUrl(url) }) : openFile(url)}><Text style={styles.link}>{/\.(?:png|jpe?g|gif|webp|heic|bmp)(?:[?#]|$)/i.test(url) ? "이미지 미리보기" : "첨부 파일 저장/공유 ↗"}</Text></TouchableOpacity>)}
             </>}
-            <View style={styles.messageMeta}>{unreadCount ? <Text style={styles.unreadCount}>안읽음 {unreadCount}</Text> : null}<Text style={styles.muted}>{formatLocalTime(item.createdAt)}</Text></View>
+            <View style={styles.messageMeta}>{unreadCount ? <Text style={styles.unreadCount}>안읽음 {unreadCount}</Text> : null}<Text style={styles.muted}>{formatChatLocalTime(item.createdAt)}</Text></View>
             {item.messageStatus !== "DELETE" && reactions.length ? <View style={styles.reactions}>{reactions.map(([emoji, users]) => <TouchableOpacity key={emoji} onPress={() => react(item, emoji)}><Text>{emoji} {users.length}</Text></TouchableOpacity>)}</View> : null}
             </TouchableOpacity>
           </View>;
@@ -340,19 +342,9 @@ export function ChatConversationScreen({ room, onBack, onOpenRoom, onPreviewImag
       onClose={() => setPreviewImage(undefined)}
       onDownload={() => void downloadPreviewImage()}
     />
-    <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={() => setSelectedMessage(undefined)}><View style={styles.contextBackdrop}><TouchableOpacity style={styles.contextDismiss} activeOpacity={1} onPress={() => setSelectedMessage(undefined)} /><View style={styles.contextDialog}><TouchableOpacity accessibilityRole="button" disabled={!selectedMessage || !visibleMessage(selectedMessage, currentRoom)} onPress={() => { if (!selectedMessage) return; void Clipboard.setStringAsync(visibleMessage(selectedMessage, currentRoom)).then(() => setSelectedMessage(undefined)).catch((error) => Alert.alert("메시지를 복사하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); }}><Text style={!selectedMessage || !visibleMessage(selectedMessage, currentRoom) ? styles.disabledAction : styles.copyAction}>메세지 복사하기</Text></TouchableOpacity><View style={styles.contextEmojis}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" onPress={() => { if (!selectedMessage) return; const message = selectedMessage; setSelectedMessage(undefined); void mutateReaction(message, emoji, "add"); }}><Text style={styles.contextEmoji}>{emoji}</Text></TouchableOpacity>)}</View></View></View></Modal>
+    <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={() => setSelectedMessage(undefined)}><View style={styles.contextBackdrop}><TouchableOpacity style={styles.contextDismiss} activeOpacity={1} onPress={() => setSelectedMessage(undefined)} /><View style={styles.contextDialog}><TouchableOpacity accessibilityRole="button" disabled={!selectedMessage || !chatVisibleMessage(selectedMessage, currentRoom)} onPress={() => { if (!selectedMessage) return; void Clipboard.setStringAsync(chatVisibleMessage(selectedMessage, currentRoom)).then(() => setSelectedMessage(undefined)).catch((error) => Alert.alert("메시지를 복사하지 못했습니다", error instanceof Error ? error.message : "다시 시도해 주세요")); }}><Text style={!selectedMessage || !chatVisibleMessage(selectedMessage, currentRoom) ? styles.disabledAction : styles.copyAction}>메세지 복사하기</Text></TouchableOpacity><View style={styles.contextEmojis}>{CHAT_EMOJIS.map((emoji) => <TouchableOpacity key={emoji} accessibilityRole="button" onPress={() => { if (!selectedMessage) return; const message = selectedMessage; setSelectedMessage(undefined); void mutateReaction(message, emoji, "add"); }}><Text style={styles.contextEmoji}>{emoji}</Text></TouchableOpacity>)}</View></View></View></Modal>
   </View>;
 }
-
-function visibleMessage(message: ChatMessage, room: Room) {
-  const participants = room.joinUserInfo?.map(({ userInfo }) => ({ id: userInfo.id, name: userInfo.name })) ?? [];
-  return message.type === "BOT" ? catseugiVisibleText(message.message, participants) : message.message;
-}
-function localDateKey(value: string) { const date = new Date(value); return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
-function formatLocalDate(value: string) { return new Date(value).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" }); }
-function formatLocalTime(value: string) { return new Date(value).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true }); }
-function fileNameFromUrl(url: string) { const segment = url.split(/[?#]/, 1)[0]?.split("/").pop() || "첨부 파일"; try { return decodeURIComponent(segment); } catch { return segment; } }
-function mimeTypeForName(name: string) { const extension = name.split(".").pop()?.toLowerCase(); return ({ pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", heic: "image/heic", txt: "text/plain", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", zip: "application/zip" } as Record<string, string>)[extension ?? ""] ?? "application/octet-stream"; }
 
 const styles = StyleSheet.create({
   chatPage: { flex: 1, backgroundColor: SeugiColor.Primary050 },

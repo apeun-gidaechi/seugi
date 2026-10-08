@@ -22,7 +22,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | WG-01 Android meal widget period | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`) |
 | WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
 | C-01 / C-02 room search | `chat.test.ts` |
-| C-03 message search | `chat.test.ts` |
+| C-03 message search / list merge / unread | `chat.test.ts`, `chat-conversation.test.ts` |
 | M-01 future-date dimming | `meal-calendar.test.ts` |
 | T-01 week label | `date.test.ts` |
 | A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
@@ -72,6 +72,15 @@ Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
 | --- | --- |
 | WG-01 | Android meal/timetable widgets refresh after login, workspace change, foreground |
 | WG-02 | iOS App Group snapshot updates and WidgetKit timeline |
+
+## Evidence log
+
+Record device QA sessions here before updating `mobile-screen-parity.md` rows. Keep `device QA pending` until both platforms are captured.
+
+| Date | Commit | Scope | Environment | Result | Artifacts |
+| --- | --- | --- | --- | --- | --- |
+| 2026-10-08 | (run `git rev-parse --short HEAD`) | Automated gate | CI/local | `pnpm check`, `pnpm -r test`, `pnpm --filter @seugi/mobile build` green | Terminal output; maps to checklist IDs in **Automated verification** above |
+| | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
 
 ## Sign-off
 
