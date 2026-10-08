@@ -13,7 +13,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | Command | Scope |
 | --- | --- |
 | `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (75+), mobile unit tests (89+), web tests |
+| `pnpm -r test` | API contract/integration (75+), mobile unit tests (95+), web tests |
 | `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
 
 | Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
