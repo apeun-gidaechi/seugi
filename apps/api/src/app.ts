@@ -57,9 +57,7 @@ import { notificationRecipientIds, PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
 import { body, ok, query } from "./http/helpers.js";
-import { registerCoreRoutes } from "./routes/core.js";
-import { registerMemberRoutes } from "./routes/member.js";
-import { registerAuthRoutes } from "./routes/auth.js";
+import { registerEarlyRoutes } from "./routes/early.js";
 import { registerLateRoutes } from "./routes/late.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
 import { localDateString, schoolWeekRange } from "./school/dates.js";
@@ -154,7 +152,6 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
                 : 500);
     return reply.code(status).send({ message });
   });
-  registerCoreRoutes(app, storage);
   const rememberDeviceToken = (memberId: string, token?: string) => {
     if (token) {
       store.deviceTokens.set(memberId, [
@@ -162,15 +159,15 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       ]);
     }
   };
-  registerMemberRoutes(app, {
+  registerEarlyRoutes(app, {
     store,
+    storage,
+    oauth,
     auth,
     issueTokens,
-    verifyRefreshToken: (token) => app.jwt.verify<Claims>(token),
-    signAccessToken: (memberId) => app.jwt.sign({ sub: memberId }, { expiresIn: accessTokenTtl }),
+    accessTokenTtl,
     rememberDeviceToken,
   });
-  registerAuthRoutes(app, { store, oauth, auth, issueTokens, rememberDeviceToken });
 
   const {
     roleIn,
