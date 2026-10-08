@@ -174,7 +174,12 @@ export function playgroundTasks(): Task[] {
 
 export function playgroundClassroomTasks(): ClassroomTask[] {
   return [
-    { id: "ct-1", title: "Google Classroom: 영어 단어", dueDate: today(), link: "https://classroom.google.com" },
+    {
+      id: "ct-1",
+      title: "Google Classroom: 영어 단어",
+      dueDate: today(),
+      link: "https://classroom.google.com",
+    },
   ];
 }
 

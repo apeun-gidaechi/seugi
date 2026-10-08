@@ -9,10 +9,7 @@ import { DesignSystemCatalogScreen } from "./DesignSystemCatalogScreen";
 import { screenDemos } from "./screenDemos";
 import { componentDemos } from "./componentDemos";
 import type { PlaygroundSection } from "./types";
-import {
-  type PlaygroundStackParamList,
-  playgroundStackScreenOptions,
-} from "./playgroundStack";
+import { type PlaygroundStackParamList, playgroundStackScreenOptions } from "./playgroundStack";
 
 const Stack = createNativeStackNavigator<PlaygroundStackParamList>();
 
@@ -62,7 +59,10 @@ function SectionScreen({
   );
 }
 
-function DemoScreen({ navigation, route }: NativeStackScreenProps<PlaygroundStackParamList, "Demo">) {
+function DemoScreen({
+  navigation,
+  route,
+}: NativeStackScreenProps<PlaygroundStackParamList, "Demo">) {
   const { section, id } = route.params;
   const entry = sectionEntries(section).find((item) => item.id === id);
   const title = entry?.title ?? "Demo";

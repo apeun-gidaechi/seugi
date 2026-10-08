@@ -3,7 +3,9 @@ import { SeugiColor } from "@seugi/design-tokens";
 
 function MobilePlaygroundNote() {
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 560, lineHeight: 1.6 }}>
+    <div
+      style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 560, lineHeight: 1.6 }}
+    >
       <h1 style={{ color: SeugiColor.Gray800 }}>Mobile (React Native)</h1>
       <p style={{ color: SeugiColor.Gray600 }}>
         Native <code>design-system</code> and <code>screens</code> run in the{" "}
@@ -13,8 +15,8 @@ function MobilePlaygroundNote() {
         {`pnpm --filter @seugi/mobile start:playground`}
       </pre>
       <p style={{ color: SeugiColor.Gray600 }}>
-        Web Storybook covers <strong>apps/web/Components</strong> (auto-generated sidebar entries) and
-        shared tokens.
+        Web Storybook covers <strong>apps/web/Components</strong> (auto-generated sidebar entries)
+        and shared tokens.
       </p>
     </div>
   );

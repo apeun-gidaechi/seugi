@@ -13,12 +13,12 @@ pnpm --filter @seugi/storybook dev
 
 Open [http://localhost:6006](http://localhost:6006).
 
-| Sidebar | Contents |
-|--------|-----------|
-| **Design system** | Color tokens, typography |
-| **Web/Ui** | Shared `Components/ui` primitives |
-| **Web/Components/** | **53 auto stories** — one per `apps/web/src/Components/**/*.tsx` |
-| **Mobile/Playground** | How to open the RN playground on device |
+| Sidebar               | Contents                                                         |
+| --------------------- | ---------------------------------------------------------------- |
+| **Design system**     | Color tokens, typography                                         |
+| **Web/Ui**            | Shared `Components/ui` primitives                                |
+| **Web/Components/**   | **53 auto stories** — one per `apps/web/src/Components/**/*.tsx` |
+| **Mobile/Playground** | How to open the RN playground on device                          |
 
 `pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`.
 

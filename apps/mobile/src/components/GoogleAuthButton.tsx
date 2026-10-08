@@ -8,7 +8,8 @@ import { isPlaygroundApp } from "../appVariant";
 function loadGoogleSignin() {
   if (isPlaygroundApp()) return null;
   try {
-    return require("@react-native-google-signin/google-signin").GoogleSignin as typeof import("@react-native-google-signin/google-signin").GoogleSignin;
+    return require("@react-native-google-signin/google-signin")
+      .GoogleSignin as typeof import("@react-native-google-signin/google-signin").GoogleSignin;
   } catch {
     return null;
   }

@@ -209,13 +209,7 @@ function CreateGroupRoomNameDemo() {
 
 function ImagePreviewDemo() {
   return (
-    <ImagePreviewScreen
-      visible
-      uri={demoImageUri}
-      onClose={noop}
-      onDownload={noop}
-      fileIsExist
-    />
+    <ImagePreviewScreen visible uri={demoImageUri} onClose={noop} onDownload={noop} fileIsExist />
   );
 }
 
@@ -295,12 +289,7 @@ function ChatListDemo() {
 
 function ChatConversationDemo() {
   return (
-    <ChatConversationScreen
-      room={mockRoom}
-      onBack={noop}
-      onOpenRoom={noop}
-      onPreviewImage={noop}
-    />
+    <ChatConversationScreen room={mockRoom} onBack={noop} onOpenRoom={noop} onPreviewImage={noop} />
   );
 }
 
@@ -340,7 +329,13 @@ function CreateRoomMembersDemo() {
 }
 
 export const screenDemos: PlaygroundDemoEntry[] = [
-  { id: "auth-flow", title: "AuthScreen", group: "Auth", subtitle: "Full auth coordinator", Component: AuthFlowDemo },
+  {
+    id: "auth-flow",
+    title: "AuthScreen",
+    group: "Auth",
+    subtitle: "Full auth coordinator",
+    Component: AuthFlowDemo,
+  },
   { id: "auth-start", title: "AuthStartScreen", group: "Auth", Component: AuthStartDemo },
   { id: "email-login", title: "EmailLoginScreen", group: "Auth", Component: EmailLoginDemo },
   { id: "email-signup", title: "EmailSignupScreen", group: "Auth", Component: EmailSignupDemo },
@@ -561,11 +556,7 @@ export const screenDemos: PlaygroundDemoEntry[] = [
     group: "Notices",
     Component: () => (
       <FlexScreen>
-        <NoticeEditorScreen
-          workspace={mockWorkspace}
-          onSaved={noopAsync}
-          onCancel={noop}
-        />
+        <NoticeEditorScreen workspace={mockWorkspace} onSaved={noopAsync} onCancel={noop} />
       </FlexScreen>
     ),
   },

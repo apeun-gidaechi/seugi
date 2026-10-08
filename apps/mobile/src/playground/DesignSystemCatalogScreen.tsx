@@ -28,15 +28,9 @@ import { SeugiAddFillIcon, SeugiAddIcon } from "../design-system/AddIcon";
 import { SeugiSearchIcon } from "../design-system/SearchIcon";
 import { SeugiCalendarIcon } from "../design-system/CalendarIcon";
 import { SeugiChatAttachmentIcon } from "../design-system/ChatAttachmentIcon";
-import {
-  SeugiChevronRight,
-  SeugiCrownIcon,
-} from "../design-system/NativeIndicators";
+import { SeugiChevronRight, SeugiCrownIcon } from "../design-system/NativeIndicators";
 import { SeugiHomeCardIcon } from "../design-system/HomeCardIcon";
-import {
-  SeugiProfileEditIcon,
-  SeugiProfileSettingsIcon,
-} from "../design-system/ProfileIcons";
+import { SeugiProfileEditIcon, SeugiProfileSettingsIcon } from "../design-system/ProfileIcons";
 import { nativePlatform } from "../utils/platform";
 import { demoImageUri } from "./mockData";
 
@@ -73,7 +67,9 @@ export function DesignSystemCatalogScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.meta}>Platform: {platform} · {buttonVariants.length} button variants</Text>
+        <Text style={styles.meta}>
+          Platform: {platform} · {buttonVariants.length} button variants
+        </Text>
 
         <Section title="Buttons">
           <View style={styles.row}>
@@ -176,7 +172,10 @@ export function DesignSystemCatalogScreen() {
             <SeugiCrownIcon />
             <SeugiProfileEditIcon />
             <SeugiProfileSettingsIcon />
-            <ChatNotificationToggle enabled={chatAlerts} onToggle={() => setChatAlerts((v) => !v)} />
+            <ChatNotificationToggle
+              enabled={chatAlerts}
+              onToggle={() => setChatAlerts((v) => !v)}
+            />
           </View>
           <View style={styles.row}>
             {(["school", "meal", "timetable", "task", "schedule", "cat"] as const).map((name) => (

@@ -154,7 +154,12 @@ export const componentDemos: PlaygroundDemoEntry[] = [
     Component: WorkspaceJoinConfirmationDemo,
   },
   { id: "zoomable-image", title: "ZoomableImage", group: "Media", Component: ZoomableImageDemo },
-  { id: "ui-primitives", title: "Card · Button (ui)", group: "Primitives", Component: UiPrimitivesDemo },
+  {
+    id: "ui-primitives",
+    title: "Card · Button (ui)",
+    group: "Primitives",
+    Component: UiPrimitivesDemo,
+  },
   {
     id: "google-auth-button",
     title: "GoogleAuthButton",

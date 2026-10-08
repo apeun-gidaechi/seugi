@@ -60,11 +60,7 @@ export function PlaygroundListScreen({
     }
     const row = item.item;
     return (
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => onSelect(row.id)}
-        style={styles.row}
-      >
+      <Pressable accessibilityRole="button" onPress={() => onSelect(row.id)} style={styles.row}>
         <Text style={styles.rowTitle}>{row.title}</Text>
         {row.subtitle ? <Text style={styles.rowSubtitle}>{row.subtitle}</Text> : null}
       </Pressable>

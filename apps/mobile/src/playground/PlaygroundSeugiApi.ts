@@ -19,7 +19,7 @@ import {
 } from "./playgroundApiFixtures";
 import { mockRoom, mockWorkspace } from "./mockData";
 
-const ok = <T,>(data: T): Promise<ApiResponse<T>> =>
+const ok = <T>(data: T): Promise<ApiResponse<T>> =>
   Promise.resolve({ message: "playground", data });
 
 const voidOk = (): Promise<ApiResponse<void>> => ok(undefined as void);

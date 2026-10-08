@@ -17,7 +17,10 @@ function TypographyScale() {
       </p>
       <div style={{ display: "grid", gap: 16, marginTop: 24 }}>
         {rows.map(([name, style]) => (
-          <div key={name} style={{ borderBottom: `1px solid ${SeugiColor.Gray200}`, paddingBottom: 12 }}>
+          <div
+            key={name}
+            style={{ borderBottom: `1px solid ${SeugiColor.Gray200}`, paddingBottom: 12 }}
+          >
             <div style={{ fontSize: 12, color: SeugiColor.Gray500, marginBottom: 4 }}>{name}</div>
             <div style={{ color: SeugiColor.Gray800, ...style }}>스기 디자인 시스템 123</div>
             <code style={{ fontSize: 11, color: SeugiColor.Gray600 }}>
