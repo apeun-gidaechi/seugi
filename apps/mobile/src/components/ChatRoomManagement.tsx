@@ -15,11 +15,13 @@ import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
 import type { LegacyProfile, Room, WorkspaceMemberView } from "@seugi/contracts";
 import { ChatInviteScreen } from "../screens/ChatInviteScreen";
+import { SeugiButton } from "../design-system/Button";
 import { SeugiAvatar } from "../design-system/Avatar";
 import { SeugiChevronRight, SeugiCrownIcon } from "../design-system/NativeIndicators";
 import { ChatNotificationToggle } from "../design-system/ChatNotificationToggle";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { authPrimaryButtonProps } from "../utils/authButton";
 import { canInviteRoomMembers } from "../utils/chat";
 
 type RoomMember = NonNullable<Room["joinUserInfo"]>[number]["userInfo"];
@@ -295,9 +297,7 @@ export function ChatRoomManagement({
                   <Text style={styles.memberName}>{value}</Text>
                 </View>
               ))}
-            <TouchableOpacity disabled={busy} onPress={() => void startPersonalChat()} style={styles.startChatButton}>
-              <Text style={styles.startChatText}>{busy ? "여는 중…" : "개인 채팅 시작"}</Text>
-            </TouchableOpacity>
+            <SeugiButton label="개인 채팅 시작" onPress={() => void startPersonalChat()} variant="black" disabled={busy} loading={busy} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} style={styles.startChatButton} />
           </View>
         </View>
       </Modal>
@@ -335,6 +335,5 @@ const styles = StyleSheet.create({
   profileRole: { color: SeugiColor.Gray500, fontSize: 12 },
   profileClose: { color: SeugiColor.Primary500 },
   profileField: { borderTopWidth: 1, borderColor: SeugiColor.Gray100, paddingTop: 10, gap: 4 },
-  startChatButton: { minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: SeugiColor.Primary500 },
-  startChatText: { color: SeugiColor.White, fontSize: 15, fontWeight: "600" },
+  startChatButton: { marginTop: 8 },
 });

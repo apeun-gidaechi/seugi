@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { LegacyProfile, Workspace } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { Button } from "../components/ui";
 import { api } from "../services/api";
+import { authPrimaryButtonProps } from "../utils/authButton";
 
 type StudentInfoScreenProps = {
   visible: boolean;
@@ -52,12 +53,12 @@ export function StudentInfoScreen({ visible, workspace, profile, onClose }: Stud
       <TouchableOpacity accessibilityRole="button" accessibilityLabel="학생 정보 수정 닫기" style={styles.dismiss} onPress={() => onClose(false)} />
       <View style={styles.sheet}>
         <View style={styles.handle} />
-        <View style={styles.header}><Text style={styles.title}>학생 정보 수정</Text><TouchableOpacity accessibilityRole="button" onPress={() => void save()} disabled={busy}><Text style={styles.done}>{busy ? "저장 중…" : "수정"}</Text></TouchableOpacity></View>
+        <View style={styles.header}><Text style={styles.title}>학생 정보 수정</Text>{Platform.OS === "ios" ? <TouchableOpacity accessibilityRole="button" onPress={() => void save()} disabled={busy}><Text style={[styles.done, busy && styles.doneDisabled]}>수정</Text></TouchableOpacity> : null}</View>
         <NumberPicker label="학년" value={grade} options={[1, 2, 3]} onChange={setGrade} />
         <NumberPicker label="반" value={classNum} options={[1, 2, 3, 4]} onChange={setClassNum} />
         <NumberPicker label="번호" value={number} options={Array.from({ length: 30 }, (_, index) => index + 1)} onChange={setNumber} />
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        <Button label={busy ? "저장 중…" : "수정"} onPress={() => void save()} disabled={busy} />
+        <Button label="수정" onPress={() => void save()} disabled={busy} loading={busy} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} />
       </View>
     </View>
   </Modal>;
@@ -82,6 +83,7 @@ const styles = StyleSheet.create({
   header: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { color: SeugiColor.Gray800, fontSize: 18, fontWeight: "700" },
   done: { color: SeugiColor.Primary500, fontSize: 15, fontWeight: "700" },
+  doneDisabled: { color: SeugiColor.Gray400 },
   field: { gap: 8 },
   label: { color: SeugiColor.Gray700, fontSize: 14, fontWeight: "600" },
   options: { gap: 8, paddingVertical: 2 },

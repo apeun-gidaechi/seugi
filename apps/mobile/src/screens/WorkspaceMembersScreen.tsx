@@ -6,6 +6,7 @@ import type { LegacyProfile, Role, Room, Workspace, WorkspaceMemberView } from "
 import { SeugiButton } from "../components/ui";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 import { api } from "../services/api";
+import { authPrimaryButtonProps } from "../utils/authButton";
 import { absoluteApiUrl } from "../utils/url";
 import { workspaceMemberActionAvailability } from "../utils/workspaceMemberActions";
 import { SeugiAvatar } from "../design-system/Avatar";
@@ -172,7 +173,7 @@ export function WorkspaceMembersScreen({ workspace, search, onOpenRoom }: { work
           <View style={styles.identityText}><Text style={styles.profileName}>{selected ? workspaceMemberProfileHeader(Platform.OS === "ios" ? "ios" : "android", { name: selected.member.name, nick: selected.nick }) : ""}</Text></View>
         </View>
         {selected ? workspaceMemberProfileRows(Platform.OS === "ios" ? "ios" : "android", selected).map(({ label, value }) => <View key={label} style={styles.profileField}><Text style={styles.role}>{label}</Text><Text style={styles.profileValue}>{value}</Text></View>) : null}
-        <SeugiButton label={openingChat ? "채팅방 여는 중…" : "채팅"} onPress={() => void startPersonalChat()} variant="black" size="small" disabled={openingChat} />
+        <SeugiButton label="채팅" onPress={() => void startPersonalChat()} variant="black" disabled={openingChat} loading={openingChat} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} />
       </View>
       {chatFailureNotice && Platform.OS === "android" ? <View accessibilityRole="alert" style={styles.snackbar}><Text style={styles.snackbarText}>{chatFailureNotice}</Text></View> : null}
       </View>
