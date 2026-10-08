@@ -55,6 +55,25 @@ export function isWorkspaceJoinDetail(detail?: AppDetail) {
   );
 }
 
+const shellFullscreenDetails: AppDetail[] = [
+  "createNotice",
+  "editNotice",
+  "createRoom",
+  "createGroupRoomName",
+  "createTask",
+];
+
+export function shellShowsMainTopBar(
+  detail: AppDetail | undefined,
+  hasActiveConversation: boolean,
+) {
+  if (hasActiveConversation) return false;
+  if (!detail) return true;
+  if (shellFullscreenDetails.includes(detail)) return false;
+  if (isWorkspaceJoinDetail(detail)) return false;
+  return true;
+}
+
 export function shellRouteKey(tab: SeugiTab, detailStack: AppDetail[], activeConversationId?: string) {
   return `${tab}:${detailStack.join("/")}:${activeConversationId ?? ""}`;
 }

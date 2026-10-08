@@ -49,6 +49,7 @@ import {
   isWorkspaceJoinDetail,
   shellDetailTitles,
   shellRouteKey,
+  shellShowsMainTopBar,
   shellTabTitles,
 } from "../navigation/shellNavigation";
 import { ChatRoomMessages } from "./shell/ChatRoomMessages";
@@ -133,6 +134,7 @@ export function AuthenticatedAppShell({
   };
   const title = detail ? shellDetailTitles[detail] : activeConversation?.name ?? shellTabTitles[tab];
   const workspaceJoinRoute = isWorkspaceJoinDetail(detail);
+  const showMainTopBar = shellShowsMainTopBar(detail, !!activeConversation);
   const routeKey = shellRouteKey(tab, detailStack, activeConversation?.id);
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export function AuthenticatedAppShell({
   return (
     <SafeAreaView style={styles.page}>
       <Animated.View style={[styles.routeContent, { opacity: routeProgress, transform: [{ translateX: routeTranslateX }] }]}>
-      {!activeConversation && detail !== "createNotice" && detail !== "editNotice" && detail !== "createRoom" && detail !== "createGroupRoomName" && detail !== "createTask" && !workspaceJoinRoute ? <SeugiTopBar
+      {showMainTopBar ? <SeugiTopBar
         backgroundColor={tab === "chat" || tab === "group" ? SeugiColor.White : SeugiColor.Primary050}
         shadow={tab === "chat" || tab === "group"}
         leading={detail || (roomSearchActive && (tab === "chat" || tab === "group")) ? (
