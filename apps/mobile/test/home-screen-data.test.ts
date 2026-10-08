@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getCurrentTimetablePeriod,
+  homeAssignmentsLoadFailed,
   homeMealPages,
   homeTodaysMeals,
   homeUpcomingSchedules,
 } from "../src/utils/homeScreenData.ts";
+
+test("home assignment card errors when native tasks fail on iOS or both sources fail on Android", () => {
+  assert.equal(homeAssignmentsLoadFailed("ios", true, false), true);
+  assert.equal(homeAssignmentsLoadFailed("ios", false, true), false);
+  assert.equal(homeAssignmentsLoadFailed("android", true, false), false);
+  assert.equal(homeAssignmentsLoadFailed("android", true, true), true);
+});
 
 test("home meal pages use fixed slots on Android and dynamic list on iOS", () => {
   const meals = [

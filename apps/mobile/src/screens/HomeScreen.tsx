@@ -36,6 +36,7 @@ import {
   homeTodaysMeals,
   homeTodaysTimetable,
   homeUpcomingSchedules,
+  homeAssignmentsLoadFailed,
 } from "../utils/homeScreenData";
 import { refreshHomeWidgets } from "../widgets/refresh";
 
@@ -105,9 +106,13 @@ export function HomeScreen({
     else setSchedules([]);
     setScheduleError(results[4].status === "rejected");
     setScheduleLoading(false);
-    setAssignmentError(Platform.OS === "ios"
-      ? results[0].status === "rejected"
-      : results[0].status === "rejected" && results[1].status === "rejected");
+    setAssignmentError(
+      homeAssignmentsLoadFailed(
+        Platform.OS === "ios" ? "ios" : "android",
+        results[0].status === "rejected",
+        results[1].status === "rejected",
+      ),
+    );
     setAssignmentsLoading(false);
     setRefreshing(false);
     void refreshHomeWidgets().catch(() => undefined);

@@ -57,6 +57,14 @@ export function homeScheduleMonthDay(value: string) {
   return `${Number(month)}/${day}`;
 }
 
+export function homeAssignmentsLoadFailed(
+  platform: "ios" | "android",
+  tasksFailed: boolean,
+  classroomTasksFailed: boolean,
+) {
+  return platform === "ios" ? tasksFailed : tasksFailed && classroomTasksFailed;
+}
+
 export function getCurrentTimetablePeriod(entries: Timetable[], now = new Date()) {
   const startTime = new Date(now);
   startTime.setHours(8, 50, 0, 0);
