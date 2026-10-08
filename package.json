@@ -7,6 +7,7 @@
     "build": "pnpm -r build",
     "check": "pnpm -r check",
     "dev": "pnpm --parallel --filter @seugi/api --filter @seugi/web dev",
+    "storybook": "pnpm --filter @seugi/storybook dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint apps/api apps/mobile packages",
