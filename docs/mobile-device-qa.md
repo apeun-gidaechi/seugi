@@ -31,6 +31,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | W-01 members search / profile | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts` |
 | AU-01 auth CTAs / feedback | `auth-button.test.ts`, `auth-feedback.test.ts` |
 | S-01 tab conversation state | `tab-navigation.test.ts` |
+| S-03 no-workspace registration / add targets | `no-workspace-shell.test.ts` |
 
 Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
 

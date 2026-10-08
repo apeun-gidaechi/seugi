@@ -22,6 +22,11 @@ import { WorkspaceMembersScreen } from "./WorkspaceMembersScreen";
 import { WorkspaceSetupScreen } from "./WorkspaceSetupScreen";
 import { absoluteApiUrl } from "../utils/url";
 import { markTabVisited, updateTabConversation } from "../utils/tabNavigation";
+import {
+  NO_WORKSPACE_APPROVAL_POLL_MS,
+  noWorkspaceInitialCreateRoomDetail,
+  noWorkspaceRegistrationActionOrder,
+} from "../utils/noWorkspaceShell";
 
 const emptyWorkspace: Workspace = { id: "", code: "", name: "", members: [], waitlist: [], ownerId: "" };
 type NoWorkspaceDetail = "workspaceMembers" | "createRoom" | "createGroupRoomName";
@@ -58,9 +63,20 @@ export function NoWorkspaceShell({
   const [activeImagePreview, setActiveImagePreview] = useState<ChatImagePreview>();
   const prompted = useRef(false);
   const showRegistrationPrompt = useCallback(() => {
-    const join = { text: "기존 학교 가입", onPress: () => setSetupRoute("role") };
-    const create = { text: "새 학교 만들기", onPress: () => setSetupRoute("create") };
-    Alert.alert("학교 등록하기", "학교를 등록한 뒤 스기를 사용할 수 있어요", Platform.OS === "android" ? [create, join] : [join, create], { cancelable: Platform.OS === "ios" });
+    const handlers = {
+      join: () => setSetupRoute("role"),
+      create: () => setSetupRoute("create"),
+    };
+    const labels = {
+      join: "기존 학교 가입",
+      create: "새 학교 만들기",
+    };
+    const buttons = noWorkspaceRegistrationActionOrder(
+      Platform.OS === "ios" ? "ios" : "android",
+    ).map((action) => ({ text: labels[action], onPress: handlers[action] }));
+    Alert.alert("학교 등록하기", "학교를 등록한 뒤 스기를 사용할 수 있어요", buttons, {
+      cancelable: Platform.OS === "ios",
+    });
   }, []);
   useEffect(() => {
     if (tab !== "home" || prompted.current) return;
@@ -69,7 +85,7 @@ export function NoWorkspaceShell({
   }, [showRegistrationPrompt, tab]);
 
   useEffect(() => {
-    const timer = setInterval(() => { void onReload().catch(() => undefined); }, 10_000);
+    const timer = setInterval(() => { void onReload().catch(() => undefined); }, NO_WORKSPACE_APPROVAL_POLL_MS);
     return () => clearInterval(timer);
   }, [onReload]);
 
@@ -127,7 +143,7 @@ export function NoWorkspaceShell({
           : tab === "chat" || tab === "group"
           ? roomSearchActive
             ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="검색 완료" onPress={() => { setRoomSearchActive(false); setRoomSearch(""); }}><Text style={styles.link}>완료</Text></TouchableOpacity>
-            : <View style={styles.headerActions}><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => setDetail(tab === "chat" && Platform.OS === "ios" ? "workspaceMembers" : "createRoom")}><SeugiAddFillIcon /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => setRoomSearchActive(true)}><SeugiSearchIcon size={24} color={SeugiColor.Primary500} /></TouchableOpacity></View>
+            : <View style={styles.headerActions}><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => setDetail(noWorkspaceInitialCreateRoomDetail(Platform.OS === "ios" ? "ios" : "android", tab))}><SeugiAddFillIcon /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => setRoomSearchActive(true)}><SeugiSearchIcon size={24} color={SeugiColor.Primary500} /></TouchableOpacity></View>
           : null}
     /> : null}
     {visitedTabs.has("home") ? <View style={tab === "home" ? styles.tabRoot : styles.hiddenTabRoot} pointerEvents={tab === "home" ? "auto" : "none"}>
