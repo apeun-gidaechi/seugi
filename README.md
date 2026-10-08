@@ -5,7 +5,7 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 | Package | Purpose |
 | --- | --- |
 | `apps/web` | Existing React/Vite desktop web client, retained and migrated into the workspace |
-| `apps/api` | TypeScript Fastify API and Socket.IO real-time service (`src/routes/` domain handlers, slim `src/app.ts` bootstrap) |
+| `apps/api` | TypeScript Fastify API and Socket.IO real-time service (`src/routes/` handlers, `src/registerRoutes.ts` wiring, `src/app.ts` bootstrap) |
 | `packages/contracts` | Shared API route registry, domain schemas, and DTO types |
 | `packages/api-client` | Shared typed HTTP client, token refresh, and domain operations |
 | `packages/design-tokens` | Shared canonical Seugi colors and typography values |
