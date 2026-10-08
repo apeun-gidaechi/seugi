@@ -1,5 +1,6 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
+import { authPrimaryButtonProps } from "../utils/authButton";
 import { Button, type WorkspaceJoinRole } from "./ui";
 
 const roles = [
@@ -41,7 +42,7 @@ export function WorkspaceRoleSelection({
           })}
         </View>
       </View>
-      <Button label="계속하기" onPress={onContinue} />
+      <Button label="계속하기" onPress={onContinue} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} />
     </View>
   );
 }

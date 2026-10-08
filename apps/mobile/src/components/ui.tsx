@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import { SeugiButton } from "../design-system/Button";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
+import { SeugiChevronRight } from "../design-system/NativeIndicators";
 
 export { SeugiButton } from "../design-system/Button";
 
@@ -26,7 +27,7 @@ export function Card({
           style={styles.cardHeader}
         >
           <Text style={styles.cardTitle}>{title}</Text>
-          <Text style={styles.cardArrow}>›</Text>
+          <SeugiChevronRight />
         </TouchableOpacity>
       ) : (
         <Text style={styles.cardTitle}>{title}</Text>
@@ -41,13 +42,22 @@ export function Button({
   onPress,
   kind = "primary",
   disabled,
+  loading = false,
+  size = "small",
+  fullWidth = false,
+  style,
 }: {
   label: string;
   onPress: () => void;
-  kind?: "primary" | "secondary";
+  kind?: "primary" | "secondary" | "danger";
   disabled?: boolean;
+  loading?: boolean;
+  size?: "large" | "medium" | "small";
+  fullWidth?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
-  return <SeugiButton label={label} onPress={onPress} variant={kind === "primary" ? "primary" : "gray"} disabled={disabled} style={styles.buttonSpacing} />;
+  const variant = kind === "danger" ? "red" : kind === "secondary" ? "gray" : "primary";
+  return <SeugiButton label={label} onPress={onPress} variant={variant} size={size} fullWidth={fullWidth} disabled={disabled} loading={loading} style={[styles.buttonSpacing, style]} />;
 }
 
 export function WorkspaceRolePicker({
@@ -84,6 +94,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  cardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 24 },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
 });
