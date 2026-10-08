@@ -1,5 +1,4 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
-import { basename } from "node:path";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
@@ -12,7 +11,6 @@ import {
   chatEmojiSchema,
   chatMemberEventSchema,
   chatRoomSearchSchema,
-  connectGoogleSchema,
   createChatRoomSchema,
   createNotificationSchema,
   createTaskSchema,
@@ -21,7 +19,6 @@ import {
   deleteMessageSchema,
   editProfileSchema,
   editStudentNumberSchema,
-  emailVerificationSchema,
   idParamSchema,
   joinWorkspaceSchema,
   kickWorkspaceMembersSchema,
@@ -32,15 +29,12 @@ import {
   timetableQuerySchema,
   notificationEmojiSchema,
   notificationPageQuerySchema,
-  oauthProviderSchema,
   otherProfileQuerySchema,
   profileWorkspaceQuerySchema,
-  sendVerificationQuerySchema,
   updateNotificationSchema,
   updateTimetableSchema,
   updateWorkspaceMemberRoleSchema,
   updateWorkspaceSchema,
-  uploadTypeSchema,
   workspaceCodeParamSchema,
   workspaceIdParamSchema,
   workspaceNotificationsSchema,
@@ -60,7 +54,6 @@ import { Store, type WaitlistRole } from "./store.js";
 import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { chatRoomName } from "./chatRoomName.js";
-import { sendVerificationEmail } from "./mailer.js";
 import { fetchClassroomTasks } from "./classroom.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { notificationRecipientIds, PushNotifications } from "./push.js";
@@ -70,6 +63,7 @@ import { body, ok, query } from "./http/helpers.js";
 import { registerCoreRoutes } from "./routes/core.js";
 import { registerMemberRoutes } from "./routes/member.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerFileRoutes } from "./routes/files.js";
 
 const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const createWorkspaceCode = () =>
@@ -1705,22 +1699,6 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     const answer = schoolAnswer ?? { keyword: "기타", data: await answerWithCatseugi(input.message) };
     return ok("캣스기답변", JSON.stringify(answer));
   });
-  app.post(API_SPEC.uploadFile.path, { preHandler: auth }, async (request) => {
-    const file = await request.file();
-    if (!file) throw new Error("FILE_REQUIRED");
-    const requestedType = uploadTypeSchema.parse(request.params).type;
-    const type = requestedType === "IMG" ? "IMAGE" : requestedType;
-    const bytes = await file.toBuffer();
-    const name = `${store.id()}-${basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const uploaded = await storage.put(name, bytes, file.mimetype);
-    return ok("파일 업로드 성공", {
-      name,
-      type,
-      mimeType: file.mimetype,
-      size: bytes.length,
-      byte: bytes.length,
-      url: uploaded.url,
-    });
-  });
+  registerFileRoutes(app, { store, storage, auth });
   return app;
 }
