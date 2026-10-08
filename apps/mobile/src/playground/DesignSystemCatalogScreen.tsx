@@ -20,6 +20,7 @@ import { SeugiLoadingIndicator } from "../design-system/LoadingIndicator";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
 import { SeugiToggle } from "../design-system/Toggle";
 import { SeugiBottomNavigation, type SeugiTab } from "../design-system/BottomNavigation";
+import { SeugiTopBar } from "../design-system/TopBar";
 import { SeugiShimmer } from "../design-system/Shimmer";
 import { SeugiTooltip } from "../design-system/Tooltip";
 import { ChatNotificationToggle } from "../design-system/ChatNotificationToggle";
@@ -149,6 +150,19 @@ export function DesignSystemCatalogScreen() {
           />
         </Section>
 
+        <Section title="Top bar">
+          <SeugiTopBar
+            leading={
+              <Pressable accessibilityRole="button" accessibilityLabel="뒤로">
+                <SeugiBackIcon />
+              </Pressable>
+            }
+            title={<Text style={styles.topBarTitle}>타이틀</Text>}
+            trailing={<SeugiAddIcon />}
+            shadow
+          />
+        </Section>
+
         <Section title="List · Divider · Tooltip">
           <SeugiListItem title="워크스페이스 설정" showChevron onPress={() => undefined} />
           <SeugiDivider />
@@ -215,6 +229,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: SeugiColor.Gray800 },
+  topBarTitle: { fontSize: 17, fontWeight: "600", color: SeugiColor.Gray800, textAlign: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" },
   shimmer: { height: 48, borderRadius: 8 },
   avatar: { width: 40, height: 40, borderRadius: 20 },

@@ -14,7 +14,7 @@
     "ios:playground:device": "sh scripts/ios-playground-device.sh",
     "build": "tsc --noEmit && expo export --platform android --platform ios",
     "check": "tsc --noEmit",
-    "test": "tsc --noEmit && node --experimental-strip-types --test test/*.test.ts && node scripts/check-playground-screen-coverage.mjs"
+    "test": "tsc --noEmit && node --experimental-strip-types --test test/*.test.ts && node scripts/check-playground-screen-coverage.mjs && node scripts/check-playground-design-system-coverage.mjs && node scripts/check-playground-component-coverage.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.7",
