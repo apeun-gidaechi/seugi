@@ -24,19 +24,14 @@ type MemberRouteDeps = {
 };
 
 export function registerMemberRoutes(app: FastifyInstance, deps: MemberRouteDeps) {
-  const { store, auth, issueTokens, verifyRefreshToken, signAccessToken, rememberDeviceToken } = deps;
+  const { store, auth, issueTokens, verifyRefreshToken, signAccessToken, rememberDeviceToken } =
+    deps;
 
   app.post(API_SPEC.registerMember.path, async (request, reply) => {
     const input = body(registerMemberSchema, request);
     const verification = store.emailCodes.get(input.email);
-    if (
-      !verification ||
-      verification.expiresAt < Date.now() ||
-      verification.code !== input.code
-    ) {
-      return reply
-        .code(409)
-        .send({ message: "이메일 인증 코드가 일치하지 않거나 만료되었습니다" });
+    if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) {
+      return reply.code(409).send({ message: "이메일 인증 코드가 일치하지 않거나 만료되었습니다" });
     }
     if ([...store.members.values()].some((member) => member.email === input.email)) {
       return reply.code(409).send({ message: "이미 가입된 이메일입니다" });
@@ -66,14 +61,11 @@ export function registerMemberRoutes(app: FastifyInstance, deps: MemberRouteDeps
       (item) => item.email === input.email && !item.deleted,
     );
     const member =
-      candidate?.password &&
-      (await bcrypt.compare(input.password, candidate.password))
+      candidate?.password && (await bcrypt.compare(input.password, candidate.password))
         ? candidate
         : undefined;
     if (!member) {
-      return reply
-        .code(401)
-        .send({ message: "이메일 또는 비밀번호가 올바르지 않습니다" });
+      return reply.code(401).send({ message: "이메일 또는 비밀번호가 올바르지 않습니다" });
     }
     const tokens = issueTokens(member.id);
     member.refreshToken = tokens.refreshToken;
@@ -89,9 +81,7 @@ export function registerMemberRoutes(app: FastifyInstance, deps: MemberRouteDeps
       if (member.refreshToken !== token) throw new Error();
       return ok("토큰 재발급 성공", signAccessToken(member.id));
     } catch {
-      return reply
-        .code(401)
-        .send({ message: "유효하지 않은 리프레시 토큰입니다" });
+      return reply.code(401).send({ message: "유효하지 않은 리프레시 토큰입니다" });
     }
   });
 
@@ -134,9 +124,7 @@ export function registerMemberRoutes(app: FastifyInstance, deps: MemberRouteDeps
     if (deviceToken) {
       store.deviceTokens.set(
         request.user.sub,
-        (store.deviceTokens.get(request.user.sub) ?? []).filter(
-          (value) => value !== deviceToken,
-        ),
+        (store.deviceTokens.get(request.user.sub) ?? []).filter((value) => value !== deviceToken),
       );
     }
     return ok("로그아웃 성공");

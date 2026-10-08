@@ -12,8 +12,7 @@ import {
 } from "@seugi/contracts";
 import type { Store } from "../store.js";
 import { body, ok, query } from "../http/helpers.js";
-
-const workspaceParam = workspaceIdParamSchema;
+import { workspaceParam } from "./params.js";
 
 export function registerProfileRoutes(
   app: FastifyInstance,
@@ -26,13 +25,9 @@ export function registerProfileRoutes(
 ) {
   const { store, auth, roleIn, legacyProfile } = deps;
 
-app.patch(
-  API_SPEC.editProfile.path,
-  { preHandler: auth },
-  async (request) => {
+  app.patch(API_SPEC.editProfile.path, { preHandler: auth }, async (request) => {
     const workspaceId = workspaceParam.parse(request.params).workspaceId;
-    if (!store.canAccess(workspaceId, request.user.sub))
-      throw new Error("권한이 없습니다");
+    if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다");
     const member = store.requireMember(request.user.sub);
     const key = `${workspaceId}:${member.id}`;
     const existing = store.profiles.get(key);
@@ -41,19 +36,12 @@ app.patch(
       workspaceId,
       ...existing,
       ...editProfileSchema.parse(request.body),
-      role:
-        roleIn(store.requireWorkspace(workspaceId), member.id) ??
-        existing?.role ??
-        "STUDENT",
+      role: roleIn(store.requireWorkspace(workspaceId), member.id) ?? existing?.role ?? "STUDENT",
     };
     store.profiles.set(key, profile);
     return ok("프로필 수정 성공");
-  },
-);
-app.patch(
-  API_SPEC.editStudentNumber.path,
-  { preHandler: auth },
-  async (request) => {
+  });
+  app.patch(API_SPEC.editStudentNumber.path, { preHandler: auth }, async (request) => {
     const workspaceId = workspaceParam.parse(request.params).workspaceId;
     const workspace = store.requireWorkspace(workspaceId);
     const input = body(editStudentNumberSchema, request);
@@ -78,27 +66,22 @@ app.patch(
       number: input.number ?? input.schNumber!,
     });
     return ok("학번 수정 성공");
-  },
-);
-app.get(API_SPEC.myProfile.path, { preHandler: auth }, async (request) => {
-  const workspaceId = query(profileWorkspaceQuerySchema, request).workspaceId;
-  if (!store.canAccess(workspaceId, request.user.sub))
-    throw new Error("권한이 없습니다");
-  return ok(
-    "프로필 조회 성공",
-    legacyProfile(
-      store.profiles.get(`${workspaceId}:${request.user.sub}`) ?? {
-        ...store.requireMember(request.user.sub),
-        workspaceId,
-        role: "STUDENT" satisfies Role,
-      },
-    ),
-  );
-});
-app.get(
-  API_SPEC.workspaceMember.path,
-  { preHandler: auth },
-  async (request) => {
+  });
+  app.get(API_SPEC.myProfile.path, { preHandler: auth }, async (request) => {
+    const workspaceId = query(profileWorkspaceQuerySchema, request).workspaceId;
+    if (!store.canAccess(workspaceId, request.user.sub)) throw new Error("권한이 없습니다");
+    return ok(
+      "프로필 조회 성공",
+      legacyProfile(
+        store.profiles.get(`${workspaceId}:${request.user.sub}`) ?? {
+          ...store.requireMember(request.user.sub),
+          workspaceId,
+          role: "STUDENT" satisfies Role,
+        },
+      ),
+    );
+  });
+  app.get(API_SPEC.workspaceMember.path, { preHandler: auth }, async (request) => {
     const input = query(otherProfileQuerySchema, request);
     const workspace = store.requireWorkspace(input.workspaceId);
     if (
@@ -117,7 +100,5 @@ app.get(
         },
       ),
     );
-  },
-);
-
+  });
 }

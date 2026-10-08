@@ -24,7 +24,10 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps) {
   app.post(API_SPEC.askCatseugi.path, { preHandler: auth }, async (request) => {
     const input = body(aiPromptSchema, request);
     if (!input.workspaceId) {
-      return ok("캣스기답변", JSON.stringify({ keyword: "기타", data: await answerWithCatseugi(input.message) }));
+      return ok(
+        "캣스기답변",
+        JSON.stringify({ keyword: "기타", data: await answerWithCatseugi(input.message) }),
+      );
     }
     if (!store.canAccess(input.workspaceId, request.user.sub)) {
       throw new Error("권한이 없습니다");
@@ -73,7 +76,10 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps) {
       notifications,
       members,
     });
-    const answer = schoolAnswer ?? { keyword: "기타", data: await answerWithCatseugi(input.message) };
+    const answer = schoolAnswer ?? {
+      keyword: "기타",
+      data: await answerWithCatseugi(input.message),
+    };
     return ok("캣스기답변", JSON.stringify(answer));
   });
 }

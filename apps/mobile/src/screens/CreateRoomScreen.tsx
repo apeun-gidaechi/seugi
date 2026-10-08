@@ -6,7 +6,13 @@ import { CreateRoomMembersScreen } from "./CreateRoomMembersScreen";
 import { CreateGroupRoomNameScreen } from "./CreateGroupRoomNameScreen";
 
 /** Owns the shared selection state while rendering the source app's two distinct destinations. */
-export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreated }: {
+export function CreateRoomScreen({
+  workspace,
+  step,
+  onNavigate,
+  onBack,
+  onCreated,
+}: {
   workspace: Workspace;
   step: "members" | "name";
   onNavigate: (route: "createGroupRoomName") => void;
@@ -19,16 +25,27 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
   const [busy, setBusy] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [error, setError] = useState("");
-  const selectedMembers = useMemo(() => members.filter((member) => selectedIds.includes(member.id)), [members, selectedIds]);
+  const selectedMembers = useMemo(
+    () => members.filter((member) => selectedIds.includes(member.id)),
+    [members, selectedIds],
+  );
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.workspaceMembers(workspace.id), api.memberInfo()]).then(([result, current]) => {
-      if (!active) return;
-      setMembers((result.data ?? []).filter((member) => member.id !== current.data?.id));
-    }).catch((reason) => active && setError(reason instanceof Error ? reason.message : "구성원을 불러오지 못했습니다"))
+    Promise.all([api.workspaceMembers(workspace.id), api.memberInfo()])
+      .then(([result, current]) => {
+        if (!active) return;
+        setMembers((result.data ?? []).filter((member) => member.id !== current.data?.id));
+      })
+      .catch(
+        (reason) =>
+          active &&
+          setError(reason instanceof Error ? reason.message : "구성원을 불러오지 못했습니다"),
+      )
       .finally(() => active && setLoadingMembers(false));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [workspace.id]);
 
   const create = async (name: string) => {
@@ -37,7 +54,11 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
     setError("");
     try {
       const actualType = selectedIds.length === 1 ? "personal" : "group";
-      const result = await api.createRoom(actualType, { workspaceId: workspace.id, name, memberIds: selectedIds });
+      const result = await api.createRoom(actualType, {
+        workspaceId: workspace.id,
+        name,
+        memberIds: selectedIds,
+      });
       const list = await api.rooms(workspace.id, actualType);
       const room = list.data?.find((item) => item.id === result.data);
       if (!room) throw new Error("생성한 채팅방을 불러오지 못했습니다");
@@ -49,7 +70,10 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
     }
   };
 
-  const toggleMember = (id: string) => setSelectedIds((current) => current.includes(id) ? current.filter((selected) => selected !== id) : [...current, id]);
+  const toggleMember = (id: string) =>
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((selected) => selected !== id) : [...current, id],
+    );
   const complete = () => {
     if (busy) return;
     if (step === "members") {
@@ -67,27 +91,33 @@ export function CreateRoomScreen({ workspace, step, onNavigate, onBack, onCreate
 
   if (step === "name") {
     const placeholder = `${selectedMembers[0] ? workspaceMemberDisplayName(selectedMembers[0]) : "멤버"}${selectedMembers.length > 1 ? ` 외 ${selectedMembers.length - 1}명` : ""}`;
-    return <CreateGroupRoomNameScreen
-      placeholder={placeholder}
-      roomName={roomName}
-      error={error}
-      busy={busy}
-      onRoomNameChange={setRoomName}
-      onBack={onBack}
-      onComplete={complete}
-    />;
+    return (
+      <CreateGroupRoomNameScreen
+        placeholder={placeholder}
+        roomName={roomName}
+        error={error}
+        busy={busy}
+        onRoomNameChange={setRoomName}
+        onBack={onBack}
+        onComplete={complete}
+      />
+    );
   }
 
-  return <CreateRoomMembersScreen
-    members={members}
-    selectedMembers={selectedMembers}
-    selectedIds={selectedIds}
-    error={error}
-    busy={busy}
-    loading={loadingMembers}
-    onToggleMember={toggleMember}
-    onRemoveSelected={(id) => setSelectedIds((current) => current.filter((selected) => selected !== id))}
-    onBack={onBack}
-    onComplete={complete}
-  />;
+  return (
+    <CreateRoomMembersScreen
+      members={members}
+      selectedMembers={selectedMembers}
+      selectedIds={selectedIds}
+      error={error}
+      busy={busy}
+      loading={loadingMembers}
+      onToggleMember={toggleMember}
+      onRemoveSelected={(id) =>
+        setSelectedIds((current) => current.filter((selected) => selected !== id))
+      }
+      onBack={onBack}
+      onComplete={complete}
+    />
+  );
 }

@@ -11,15 +11,28 @@ export function canInviteRoomMembers(roomType: "GROUP" | "PERSONAL", platform: C
 export function chatDownloadedFileUri(directory: string, url: string, name?: string) {
   const segment = url.split(/[?#]/, 1)[0]?.split("/").pop() || "첨부 파일";
   let decodedName = segment;
-  try { decodedName = decodeURIComponent(segment); } catch { /* Keep the encoded path segment. */ }
-  const safeName = (name || decodedName).replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").trim() || "첨부 파일";
+  try {
+    decodedName = decodeURIComponent(segment);
+  } catch {
+    /* Keep the encoded path segment. */
+  }
+  const withoutControlChars = (value: string) =>
+    value
+      .split("")
+      .map((char) => (char.charCodeAt(0) < 32 ? "_" : char))
+      .join("");
+  const safeName =
+    withoutControlChars(name || decodedName)
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .trim() || "첨부 파일";
   return `${directory}${encodeURIComponent(safeName)}`;
 }
 
 export function prepareChatText(text: string, platform: ChatPlatform) {
-  const mentionsBot = platform === "android"
-    ? text.startsWith("스기야 ")
-    : platform === "ios" && text.includes("스기야");
+  const mentionsBot =
+    platform === "android"
+      ? text.startsWith("스기야 ")
+      : platform === "ios" && text.includes("스기야");
   return { content: text, mention: mentionsBot ? [-1] : [] };
 }
 

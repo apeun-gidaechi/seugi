@@ -9,28 +9,57 @@ import { EAS_PROJECT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "../co
 import { SeugiToggle } from "../design-system/Toggle";
 import { notificationTokenAction } from "../utils/notificationTokenAction";
 
-export function WorkspaceNotificationsScreen({ workspace, deviceToken, onDeviceTokenChange }: { workspace: Workspace; deviceToken?: string; onDeviceTokenChange?: (token?: string) => void }) {
+export function WorkspaceNotificationsScreen({
+  workspace,
+  deviceToken,
+  onDeviceTokenChange,
+}: {
+  workspace: Workspace;
+  deviceToken?: string;
+  onDeviceTokenChange?: (token?: string) => void;
+}) {
   return (
     <View style={styles.screen}>
-      <WorkspaceNotificationSettings workspace={workspace} deviceToken={deviceToken} onDeviceTokenChange={onDeviceTokenChange} />
+      <WorkspaceNotificationSettings
+        workspace={workspace}
+        deviceToken={deviceToken}
+        onDeviceTokenChange={onDeviceTokenChange}
+      />
     </View>
   );
 }
 
-function WorkspaceNotificationSettings({ workspace, deviceToken, onDeviceTokenChange }: { workspace: Workspace; deviceToken?: string; onDeviceTokenChange?: (token?: string) => void }) {
+function WorkspaceNotificationSettings({
+  workspace,
+  deviceToken,
+  onDeviceTokenChange,
+}: {
+  workspace: Workspace;
+  deviceToken?: string;
+  onDeviceTokenChange?: (token?: string) => void;
+}) {
   const [enabled, setEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let active = true;
-    const load = Platform.OS === "ios"
-      ? SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY).then((value) => value !== "false")
-      : api.workspaceNotificationPreference(workspace.id).then((result) => result.data ?? true);
+    const load =
+      Platform.OS === "ios"
+        ? SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY).then((value) => value !== "false")
+        : api.workspaceNotificationPreference(workspace.id).then((result) => result.data ?? true);
     load
-      .then((value) => { if (active) setEnabled(value); })
-      .catch((error) => active && setNotice(error instanceof Error ? error.message : "알림 설정을 불러오지 못했습니다"));
-    return () => { active = false; };
+      .then((value) => {
+        if (active) setEnabled(value);
+      })
+      .catch(
+        (error) =>
+          active &&
+          setNotice(error instanceof Error ? error.message : "알림 설정을 불러오지 못했습니다"),
+      );
+    return () => {
+      active = false;
+    };
   }, [workspace.id]);
 
   const toggle = async (next: boolean) => {
@@ -81,7 +110,9 @@ function WorkspaceNotificationSettings({ workspace, deviceToken, onDeviceTokenCh
           >
             <Text style={styles.label}>전체 알림 허용</Text>
           </TouchableOpacity>
-        ) : <Text style={styles.label}>전체 알림 허용</Text>}
+        ) : (
+          <Text style={styles.label}>전체 알림 허용</Text>
+        )}
         <SeugiToggle
           accessibilityLabel="전체 알림 허용"
           value={enabled}
@@ -97,7 +128,13 @@ function WorkspaceNotificationSettings({ workspace, deviceToken, onDeviceTokenCh
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: SeugiColor.White },
   settings: { flex: 1, paddingTop: 6 },
-  row: { minHeight: 56, paddingHorizontal: 20, paddingVertical: 12, flexDirection: "row", alignItems: "center" },
+  row: {
+    minHeight: 56,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   labelAction: { flex: 1, alignSelf: "stretch", justifyContent: "center" },
   label: { color: SeugiColor.Gray800, fontSize: 15, fontWeight: "600", flex: 1 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },

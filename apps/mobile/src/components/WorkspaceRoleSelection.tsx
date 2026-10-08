@@ -2,6 +2,7 @@ import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react
 import { SeugiColor } from "@seugi/design-tokens";
 import { authPrimaryButtonProps } from "../utils/authButton";
 import { Button, type WorkspaceJoinRole } from "./ui";
+import { nativePlatform } from "../utils/platform";
 
 const roles = [
   ["STUDENT", "학생", require("../../assets/img_student.png")],
@@ -42,19 +43,49 @@ export function WorkspaceRoleSelection({
           })}
         </View>
       </View>
-      <Button label="계속하기" onPress={onContinue} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} />
+      <Button label="계속하기" onPress={onContinue} {...authPrimaryButtonProps(nativePlatform())} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16, backgroundColor: SeugiColor.White },
+  screen: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: SeugiColor.White,
+  },
   content: { flex: 1, justifyContent: "center", gap: 8 },
-  heading: { color: SeugiColor.Gray800, fontSize: 20, fontWeight: "700", lineHeight: 28, marginLeft: 4, marginBottom: 8 },
+  heading: {
+    color: SeugiColor.Gray800,
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 28,
+    marginLeft: 4,
+    marginBottom: 8,
+  },
   options: { flex: 1, flexDirection: "row", gap: 8, maxHeight: 430 },
-  card: { flex: 1, minHeight: 240, alignItems: "center", justifyContent: "space-evenly", overflow: "hidden", backgroundColor: SeugiColor.Gray100, borderColor: SeugiColor.Gray100, borderWidth: 1, borderRadius: 12, paddingTop: 18 },
+  card: {
+    flex: 1,
+    minHeight: 240,
+    alignItems: "center",
+    justifyContent: "space-evenly",
+    overflow: "hidden",
+    backgroundColor: SeugiColor.Gray100,
+    borderColor: SeugiColor.Gray100,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingTop: 18,
+  },
   cardSelected: { borderColor: SeugiColor.Primary500 },
-  labelRow: { minHeight: 26, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  labelRow: {
+    minHeight: 26,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
   label: { color: SeugiColor.Gray500, fontSize: 16, fontWeight: "600" },
   labelSelected: { color: SeugiColor.Gray800 },
   check: { color: SeugiColor.Primary500, fontSize: 18, fontWeight: "700" },

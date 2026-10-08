@@ -23,6 +23,7 @@ import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
 import { authPrimaryButtonProps } from "../utils/authButton";
 import { canInviteRoomMembers } from "../utils/chat";
+import { nativePlatform } from "../utils/platform";
 
 type RoomMember = NonNullable<Room["joinUserInfo"]>[number]["userInfo"];
 
@@ -56,14 +57,14 @@ export function ChatRoomManagement({
   const [inviting, setInviting] = useState(false);
   const [profile, setProfile] = useState<LegacyProfile>();
 
-  const drawerWidth = Platform.OS === "ios"
-    ? Math.max(0, Math.min(320, width - 80))
-    : Math.max(0, width - 62);
+  const drawerWidth =
+    Platform.OS === "ios" ? Math.max(0, Math.min(320, width - 80)) : Math.max(0, width - 62);
   const drawerInset = Platform.OS === "ios" ? width - drawerWidth : 62;
   const isGroupRoom = room.type === "GROUP";
   const canInvite = canInviteRoomMembers(room.type, Platform.OS);
-  const members: RoomMember[] = room.joinUserInfo?.map(({ userInfo }) => userInfo)
-    ?? room.memberIds.map((id) => ({ id, name: "구성원", email: "", birth: "" }));
+  const members: RoomMember[] =
+    room.joinUserInfo?.map(({ userInfo }) => userInfo) ??
+    room.memberIds.map((id) => ({ id, name: "구성원", email: "", birth: "" }));
 
   const refreshRoom = useCallback(async () => {
     const [result, workspaceResult] = await Promise.all([
@@ -175,9 +176,13 @@ export function ChatRoomManagement({
             setInviting(false);
             setSelectedIds([]);
           }}
-          onToggle={(id) => setSelectedIds((current) => current.includes(id)
-            ? current.filter((selected) => selected !== id)
-            : [...current, id])}
+          onToggle={(id) =>
+            setSelectedIds((current) =>
+              current.includes(id)
+                ? current.filter((selected) => selected !== id)
+                : [...current, id],
+            )
+          }
           onComplete={() => {
             void run(() => api.addGroupMembers(room.id, selectedIds)).then((success) => {
               if (success) {
@@ -206,23 +211,27 @@ export function ChatRoomManagement({
         <FlatList
           data={members}
           keyExtractor={(member) => member.id}
-          ListHeaderComponent={canInvite ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => {
-                setNotice("");
-                setInviting(true);
-              }}
-              style={styles.inviteRow}
-            >
-              <Text style={styles.plus}>⊕</Text>
-              <Text style={styles.inviteText}>멤버 초대하기</Text>
-            </TouchableOpacity>
-          ) : null}
+          ListHeaderComponent={
+            canInvite ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => {
+                  setNotice("");
+                  setInviting(true);
+                }}
+                style={styles.inviteRow}
+              >
+                <Text style={styles.plus}>⊕</Text>
+                <Text style={styles.inviteText}>멤버 초대하기</Text>
+              </TouchableOpacity>
+            ) : null
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               accessibilityRole={Platform.OS === "android" ? "button" : undefined}
-              accessibilityLabel={Platform.OS === "android" ? `${item.name} 프로필 보기` : undefined}
+              accessibilityLabel={
+                Platform.OS === "android" ? `${item.name} 프로필 보기` : undefined
+              }
               disabled={Platform.OS !== "android" || item.id === memberId}
               onPress={() => void openProfile(item.id)}
               style={styles.memberRow}
@@ -233,14 +242,20 @@ export function ChatRoomManagement({
                 imageStyle={styles.avatar}
                 fallbackStyle={styles.avatarFallback}
               />
-              <Text numberOfLines={1} style={styles.memberName}>{item.name}</Text>
+              <Text numberOfLines={1} style={styles.memberName}>
+                {item.name}
+              </Text>
               {item.id === room.adminId ? <SeugiCrownIcon color="#FFC700" size={20} /> : null}
               {Platform.OS === "android" ? <SeugiChevronRight /> : null}
             </TouchableOpacity>
           )}
           ItemSeparatorComponent={() => <View style={styles.rowDivider} />}
         />
-        {notice ? <Text accessibilityRole="alert" style={styles.error}>{notice}</Text> : null}
+        {notice ? (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {notice}
+          </Text>
+        ) : null}
         <View style={styles.footerDivider} />
         <View style={styles.footer}>
           {isGroupRoom ? (
@@ -252,27 +267,56 @@ export function ChatRoomManagement({
               style={styles.footerButton}
             >
               <Svg width={28} height={28} viewBox="0 0 24 24">
-                <Path d="M4 3.75C4 3.336 4.336 3 4.75 3H14.25C14.664 3 15 3.336 15 3.75V3.886C15 4.301 14.664 4.636 14.25 4.636H6.285C5.871 4.636 5.535 4.972 5.535 5.386V18.614C5.535 19.028 5.871 19.364 6.285 19.364H14.25C14.664 19.364 15 19.699 15 20.114V20.25C15 20.664 14.664 21 14.25 21H4.75C4.336 21 4 20.664 4 20.25V3.75Z" fill={SeugiColor.Gray600} fillRule="evenodd" />
-                <Path d="M14.757 6.697L19.53 11.47C19.823 11.763 19.823 12.238 19.53 12.53L14.757 17.303C14.465 17.596 13.99 17.596 13.697 17.303C13.404 17.01 13.404 16.536 13.697 16.243L17.189 12.75H9.75C9.336 12.75 9 12.414 9 12C9 11.586 9.336 11.25 9.75 11.25H17.189L13.697 7.757C13.404 7.464 13.404 6.99 13.697 6.697C13.99 6.404 14.465 6.404 14.757 6.697Z" fill={SeugiColor.Gray600} fillRule="evenodd" />
+                <Path
+                  d="M4 3.75C4 3.336 4.336 3 4.75 3H14.25C14.664 3 15 3.336 15 3.75V3.886C15 4.301 14.664 4.636 14.25 4.636H6.285C5.871 4.636 5.535 4.972 5.535 5.386V18.614C5.535 19.028 5.871 19.364 6.285 19.364H14.25C14.664 19.364 15 19.699 15 20.114V20.25C15 20.664 14.664 21 14.25 21H4.75C4.336 21 4 20.664 4 20.25V3.75Z"
+                  fill={SeugiColor.Gray600}
+                  fillRule="evenodd"
+                />
+                <Path
+                  d="M14.757 6.697L19.53 11.47C19.823 11.763 19.823 12.238 19.53 12.53L14.757 17.303C14.465 17.596 13.99 17.596 13.697 17.303C13.404 17.01 13.404 16.536 13.697 16.243L17.189 12.75H9.75C9.336 12.75 9 12.414 9 12C9 11.586 9.336 11.25 9.75 11.25H17.189L13.697 7.757C13.404 7.464 13.404 6.99 13.697 6.697C13.99 6.404 14.465 6.404 14.757 6.697Z"
+                  fill={SeugiColor.Gray600}
+                  fillRule="evenodd"
+                />
               </Svg>
             </TouchableOpacity>
           ) : null}
           <View style={styles.footerSpacer} />
           {Platform.OS === "android" ? (
             <>
-              <ChatNotificationToggle enabled={notificationEnabled} onToggle={onNotificationToggle} />
-              <View accessibilityRole="button" accessibilityLabel="설정" accessibilityState={{ disabled: true }} style={[styles.footerButton, styles.settingsButton]}>
+              <ChatNotificationToggle
+                enabled={notificationEnabled}
+                onToggle={onNotificationToggle}
+              />
+              <View
+                accessibilityRole="button"
+                accessibilityLabel="설정"
+                accessibilityState={{ disabled: true }}
+                style={[styles.footerButton, styles.settingsButton]}
+              >
                 <Svg width={28} height={28} viewBox="0 0 24 24">
-                  <Path d="M10.878 3L9.756 5.671C9.531 5.738 9.329 5.85 9.127 5.963L6.456 4.84L4.84 6.456L5.963 9.127C5.85 9.352 5.761 9.531 5.671 9.756L3 10.878V13.122L5.671 14.244C5.761 14.469 5.85 14.648 5.963 14.873L4.84 17.544L6.456 19.16L9.127 18.037C9.329 18.127 9.531 18.239 9.756 18.329L10.878 21H13.122L14.244 18.329C14.446 18.239 14.671 18.15 14.873 18.037L17.544 19.16L19.16 17.544L18.037 14.873C18.127 14.671 18.239 14.446 18.329 14.244L21 13.122V10.878L18.329 9.756C18.262 9.554 18.15 9.329 18.037 9.127L19.16 6.456L17.544 4.84L14.873 5.963C14.671 5.873 14.446 5.761 14.244 5.671L13.122 3L10.878 3ZM12 8.611C13.863 8.611 15.367 10.115 15.367 11.978C15.367 13.84 13.863 15.344 12 15.344C10.137 15.344 8.633 13.84 8.633 11.978C8.633 10.115 10.137 8.611 12 8.611Z" fill={SeugiColor.Gray600} fillRule="evenodd" />
+                  <Path
+                    d="M10.878 3L9.756 5.671C9.531 5.738 9.329 5.85 9.127 5.963L6.456 4.84L4.84 6.456L5.963 9.127C5.85 9.352 5.761 9.531 5.671 9.756L3 10.878V13.122L5.671 14.244C5.761 14.469 5.85 14.648 5.963 14.873L4.84 17.544L6.456 19.16L9.127 18.037C9.329 18.127 9.531 18.239 9.756 18.329L10.878 21H13.122L14.244 18.329C14.446 18.239 14.671 18.15 14.873 18.037L17.544 19.16L19.16 17.544L18.037 14.873C18.127 14.671 18.239 14.446 18.329 14.244L21 13.122V10.878L18.329 9.756C18.262 9.554 18.15 9.329 18.037 9.127L19.16 6.456L17.544 4.84L14.873 5.963C14.671 5.873 14.446 5.761 14.244 5.671L13.122 3L10.878 3ZM12 8.611C13.863 8.611 15.367 10.115 15.367 11.978C15.367 13.84 13.863 15.344 12 15.344C10.137 15.344 8.633 13.84 8.633 11.978C8.633 10.115 10.137 8.611 12 8.611Z"
+                    fill={SeugiColor.Gray600}
+                    fillRule="evenodd"
+                  />
                 </Svg>
               </View>
             </>
           ) : null}
         </View>
       </View>
-      <Modal visible={!!profile} transparent animationType="slide" onRequestClose={() => setProfile(undefined)}>
+      <Modal
+        visible={!!profile}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setProfile(undefined)}
+      >
         <View style={styles.profileBackdrop}>
-          <TouchableOpacity style={styles.profileDismiss} activeOpacity={1} onPress={() => setProfile(undefined)} />
+          <TouchableOpacity
+            style={styles.profileDismiss}
+            activeOpacity={1}
+            onPress={() => setProfile(undefined)}
+          />
           <View style={styles.profileSheet}>
             <View style={styles.profileHeader}>
               <SeugiAvatar
@@ -282,14 +326,36 @@ export function ChatRoomManagement({
                 fallbackStyle={styles.avatarFallback}
               />
               <View style={styles.profileIdentity}>
-                <Text style={styles.profileName}>{profile?.member.name}{profile?.nick ? ` (${profile.nick})` : ""}</Text>
-                <Text style={styles.profileRole}>{profile?.permission === "ADMIN" ? "관리자" : profile?.permission === "MIDDLE_ADMIN" ? "중간관리자" : profile?.permission === "TEACHER" ? "선생님" : "학생"}</Text>
+                <Text style={styles.profileName}>
+                  {profile?.member.name}
+                  {profile?.nick ? ` (${profile.nick})` : ""}
+                </Text>
+                <Text style={styles.profileRole}>
+                  {profile?.permission === "ADMIN"
+                    ? "관리자"
+                    : profile?.permission === "MIDDLE_ADMIN"
+                      ? "중간관리자"
+                      : profile?.permission === "TEACHER"
+                        ? "선생님"
+                        : "학생"}
+                </Text>
               </View>
               <TouchableOpacity accessibilityRole="button" onPress={() => setProfile(undefined)}>
                 <Text style={styles.profileClose}>닫기</Text>
               </TouchableOpacity>
             </View>
-            {[ ["상태 메시지", profile?.status], ["학년·반·번호", [profile?.grade, profile?.class, profile?.number].filter(Boolean).join(" · ")], ["직위", profile?.spot], ["소속", profile?.belong], ["휴대전화", profile?.phone], ["유선전화", profile?.wire], ["근무 위치", profile?.location] ]
+            {[
+              ["상태 메시지", profile?.status],
+              [
+                "학년·반·번호",
+                [profile?.grade, profile?.class, profile?.number].filter(Boolean).join(" · "),
+              ],
+              ["직위", profile?.spot],
+              ["소속", profile?.belong],
+              ["휴대전화", profile?.phone],
+              ["유선전화", profile?.wire],
+              ["근무 위치", profile?.location],
+            ]
               .filter((row) => row[1])
               .map(([label, value]) => (
                 <View key={String(label)} style={styles.profileField}>
@@ -297,7 +363,15 @@ export function ChatRoomManagement({
                   <Text style={styles.memberName}>{value}</Text>
                 </View>
               ))}
-            <SeugiButton label="개인 채팅 시작" onPress={() => void startPersonalChat()} variant="black" disabled={busy} loading={busy} {...authPrimaryButtonProps(Platform.OS === "ios" ? "ios" : "android")} style={styles.startChatButton} />
+            <SeugiButton
+              label="개인 채팅 시작"
+              onPress={() => void startPersonalChat()}
+              variant="black"
+              disabled={busy}
+              loading={busy}
+              {...authPrimaryButtonProps(nativePlatform())}
+              style={styles.startChatButton}
+            />
           </View>
         </View>
       </Modal>
@@ -309,16 +383,46 @@ const styles = StyleSheet.create({
   fullscreen: { ...StyleSheet.absoluteFillObject, backgroundColor: SeugiColor.White },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.3)" },
   drawer: { position: "absolute", top: 0, bottom: 0, backgroundColor: SeugiColor.White },
-  title: { height: 40, paddingHorizontal: 16, textAlignVertical: "center", color: SeugiColor.Gray800, fontSize: 14, fontWeight: "600" },
+  title: {
+    height: 40,
+    paddingHorizontal: 16,
+    textAlignVertical: "center",
+    color: SeugiColor.Gray800,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: SeugiColor.Gray200 },
-  inviteRow: { height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 16 },
+  inviteRow: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 16,
+  },
   plus: { width: 28, color: SeugiColor.Primary400, fontSize: 27, textAlign: "center" },
   inviteText: { color: SeugiColor.Primary400, fontSize: 14, fontWeight: "600" },
-  memberRow: { height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 16 },
+  memberRow: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 16,
+  },
   avatar: { width: 36, height: 36, borderRadius: 18 },
-  avatarFallback: { width: 36, height: 36, borderRadius: 18, backgroundColor: SeugiColor.Primary200, alignItems: "center", justifyContent: "center" },
+  avatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: SeugiColor.Primary200,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   memberName: { flex: 1, color: SeugiColor.Gray800, fontSize: 14, fontWeight: "500" },
-  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: SeugiColor.Gray100, marginLeft: 68 },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: SeugiColor.Gray100,
+    marginLeft: 68,
+  },
   error: { color: SeugiColor.Red500, marginHorizontal: 16, marginVertical: 8, fontSize: 13 },
   footerDivider: { height: StyleSheet.hairlineWidth, backgroundColor: SeugiColor.Gray200 },
   footer: { height: 40, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 8 },
@@ -327,7 +431,14 @@ const styles = StyleSheet.create({
   settingsButton: { marginLeft: 8 },
   profileBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.32)" },
   profileDismiss: { flex: 1 },
-  profileSheet: { backgroundColor: SeugiColor.White, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32, gap: 10 },
+  profileSheet: {
+    backgroundColor: SeugiColor.White,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 32,
+    gap: 10,
+  },
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 12 },
   profileAvatar: { width: 32, height: 32, borderRadius: 16 },
   profileIdentity: { flex: 1 },

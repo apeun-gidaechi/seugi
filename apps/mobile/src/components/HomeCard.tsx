@@ -17,7 +17,12 @@ export function HomeCard({
 }) {
   const heading = (
     <>
-      <View style={[styles.homeCardIcon, icon === "cat" && Platform.OS === "ios" && styles.homeCardIconCat]}>
+      <View
+        style={[
+          styles.homeCardIcon,
+          icon === "cat" && Platform.OS === "ios" && styles.homeCardIconCat,
+        ]}
+      >
         <SeugiHomeCardIcon name={icon} size={icon === "cat" && Platform.OS === "ios" ? 16 : 24} />
       </View>
       <Text style={styles.homeCardTitle}>{title}</Text>

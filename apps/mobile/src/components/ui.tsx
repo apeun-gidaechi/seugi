@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import { SeugiButton } from "../design-system/Button";
 import { SeugiSegmentedControl } from "../design-system/SegmentedControl";
@@ -21,11 +28,7 @@ export function Card({
   return (
     <View style={styles.card}>
       {onPress ? (
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={onPress}
-          style={styles.cardHeader}
-        >
+        <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{title}</Text>
           <SeugiChevronRight />
         </TouchableOpacity>
@@ -57,7 +60,18 @@ export function Button({
   style?: StyleProp<ViewStyle>;
 }) {
   const variant = kind === "danger" ? "red" : kind === "secondary" ? "gray" : "primary";
-  return <SeugiButton label={label} onPress={onPress} variant={variant} size={size} fullWidth={fullWidth} disabled={disabled} loading={loading} style={[styles.buttonSpacing, style]} />;
+  return (
+    <SeugiButton
+      label={label}
+      onPress={onPress}
+      variant={variant}
+      size={size}
+      fullWidth={fullWidth}
+      disabled={disabled}
+      loading={loading}
+      style={[styles.buttonSpacing, style]}
+    />
+  );
 }
 
 export function WorkspaceRolePicker({
@@ -74,7 +88,11 @@ export function WorkspaceRolePicker({
   return (
     <View>
       <Text style={styles.muted}>가입 유형</Text>
-      <SeugiSegmentedControl value={value} options={roles.map(([role, label]) => ({ value: role, label }))} onChange={onChange} />
+      <SeugiSegmentedControl
+        value={value}
+        options={roles.map(([role, label]) => ({ value: role, label }))}
+        onChange={onChange}
+      />
     </View>
   );
 }

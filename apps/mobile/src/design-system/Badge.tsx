@@ -1,6 +1,7 @@
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import { formatBadgeCount } from "../utils/badge";
+import { nativePlatform } from "../utils/platform";
 
 type SeugiBadgeProps = { count?: number | null };
 
@@ -10,7 +11,9 @@ export function SeugiBadge({ count }: SeugiBadgeProps) {
 
   return (
     <View accessible accessibilityLabel={`읽지 않은 메시지 ${count}개`} style={styles.countBadge}>
-      <Text numberOfLines={1} style={styles.countText}>{formatBadgeCount(count, Platform.OS === "ios" ? "ios" : "android")}</Text>
+      <Text numberOfLines={1} style={styles.countText}>
+        {formatBadgeCount(count, nativePlatform())}
+      </Text>
     </View>
   );
 }

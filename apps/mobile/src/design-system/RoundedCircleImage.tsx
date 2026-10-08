@@ -1,7 +1,11 @@
 import { Image, Platform, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
-import { roundedCircleImageMetrics, type RoundedCircleImageSize } from "../utils/roundedCircleImage";
+import {
+  roundedCircleImageMetrics,
+  type RoundedCircleImageSize,
+} from "../utils/roundedCircleImage";
+import { nativePlatform } from "../utils/platform";
 
 export function SeugiRoundedCircleImage({
   uri,
@@ -10,7 +14,7 @@ export function SeugiRoundedCircleImage({
   uri?: string;
   size?: RoundedCircleImageSize;
 }) {
-  const metrics = roundedCircleImageMetrics(Platform.OS === "ios" ? "ios" : "android", size);
+  const metrics = roundedCircleImageMetrics(nativePlatform(), size);
   const imageStyle = {
     width: metrics.dimension,
     height: metrics.dimension,

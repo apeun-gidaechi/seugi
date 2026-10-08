@@ -37,14 +37,8 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRouteDeps) {
   app.post(API_SPEC.confirmVerification.path, async (request, reply) => {
     const input = body(emailVerificationSchema, request);
     const verification = store.emailCodes.get(input.email);
-    if (
-      !verification ||
-      verification.expiresAt < Date.now() ||
-      verification.code !== input.code
-    ) {
-      return reply
-        .code(409)
-        .send({ message: "코드가 일치하지 않거나 만료되었습니다" });
+    if (!verification || verification.expiresAt < Date.now() || verification.code !== input.code) {
+      return reply.code(409).send({ message: "코드가 일치하지 않거나 만료되었습니다" });
     }
     return ok("이메일 인증 성공");
   });

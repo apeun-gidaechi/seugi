@@ -8,7 +8,11 @@ import type { FastifyRequest } from "fastify";
 export function registerLateRoutes(
   app: FastifyInstance,
   aiDeps: AiRouteDeps,
-  fileDeps: { store: Store; storage: FileStorage; auth: (request: FastifyRequest) => Promise<void> },
+  fileDeps: {
+    store: Store;
+    storage: FileStorage;
+    auth: (request: FastifyRequest) => Promise<void>;
+  },
 ) {
   registerAiRoutes(app, aiDeps);
   registerFileRoutes(app, fileDeps);

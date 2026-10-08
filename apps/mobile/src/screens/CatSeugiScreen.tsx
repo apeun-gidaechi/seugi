@@ -17,9 +17,10 @@ import { catseugiVisibleText } from "../utils/catseugi";
 
 type ChatMessage = { id: string; role: "assistant" | "user"; content: string };
 
-const suggestions = Platform.OS === "ios"
-  ? ["오늘 급식 뭐야?", "8월 행사 알려줘"]
-  : ["오늘 급식 뭐야?", "오늘의 시간표 알려줘"];
+const suggestions =
+  Platform.OS === "ios"
+    ? ["오늘 급식 뭐야?", "8월 행사 알려줘"]
+    : ["오늘 급식 뭐야?", "오늘의 시간표 알려줘"];
 
 export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -36,10 +37,15 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
   const list = useRef<FlatList<ChatMessage>>(null);
   useEffect(() => {
     let active = true;
-    api.workspaceMembers(workspace.id).then((result) => {
-      if (active) setParticipants((result.data ?? []).map(({ id, name }) => ({ id, name })));
-    }).catch(() => undefined);
-    return () => { active = false; };
+    api
+      .workspaceMembers(workspace.id)
+      .then((result) => {
+        if (active) setParticipants((result.data ?? []).map(({ id, name }) => ({ id, name })));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, [workspace.id]);
 
   const send = async (content = draft) => {
@@ -63,27 +69,25 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
             answerParticipants = (members.data ?? []).map(({ id, name }) => ({ id, name }));
             setParticipants(answerParticipants);
           }
-        } catch { /* Non-envelope answers are rendered as ordinary text. */ }
+        } catch {
+          /* Non-envelope answers are rendered as ordinary text. */
+        }
       }
       setMessages((current) => [
         ...current,
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: result.data ? catseugiVisibleText(result.data, answerParticipants) : "답변을 받지 못했습니다.",
+          content: result.data
+            ? catseugiVisibleText(result.data, answerParticipants)
+            : "답변을 받지 못했습니다.",
         },
       ]);
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "전송 실패 · 다시 시도해 주세요",
-      );
+      setError(reason instanceof Error ? reason.message : "전송 실패 · 다시 시도해 주세요");
     } finally {
       setBusy(false);
-      requestAnimationFrame(() =>
-        list.current?.scrollToEnd({ animated: true }),
-      );
+      requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
     }
   };
 
@@ -98,19 +102,13 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
         contentContainerStyle={styles.messageList}
         data={messages}
         keyExtractor={(item) => item.id}
-        onContentSizeChange={() =>
-          list.current?.scrollToEnd({ animated: true })
-        }
+        onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => (
-          <View
-            style={[styles.messageRow, item.role === "user" && styles.userRow]}
-          >
+          <View style={[styles.messageRow, item.role === "user" && styles.userRow]}>
             <Text
               style={[
                 styles.bubble,
-                item.role === "user"
-                  ? styles.userBubble
-                  : styles.assistantBubble,
+                item.role === "user" ? styles.userBubble : styles.assistantBubble,
               ]}
             >
               {item.content}
@@ -127,7 +125,9 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
           ) : null
         }
       />
-      {Platform.OS === "ios" ? messages.length === 1 : messages.length === 1 || !!draft.trim() ? (
+      {Platform.OS === "ios" ? (
+        messages.length === 1
+      ) : messages.length === 1 || !!draft.trim() ? (
         <View style={styles.suggestions}>
           {suggestions.map((suggestion) => (
             <TouchableOpacity
@@ -141,7 +141,14 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
           ))}
         </View>
       ) : null}
-      <SeugiChatTextField value={draft} onChangeText={setDraft} onSendClick={() => void send()} placeholder="메세지 보내기" editable={!busy} sendEnabled={!busy && !!draft.trim()} />
+      <SeugiChatTextField
+        value={draft}
+        onChangeText={setDraft}
+        onSendClick={() => void send()}
+        placeholder="메세지 보내기"
+        editable={!busy}
+        sendEnabled={!busy && !!draft.trim()}
+      />
     </KeyboardAvoidingView>
   );
 }

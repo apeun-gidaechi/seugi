@@ -16,7 +16,12 @@ export function WorkspaceGeneralScreen() {
 
   return (
     <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-      <SeugiListItem title="학교 나가기" titleColor={SeugiColor.Red500} onPress={leaveWorkspace} showChevron />
+      <SeugiListItem
+        title="학교 나가기"
+        titleColor={SeugiColor.Red500}
+        onPress={leaveWorkspace}
+        showChevron
+      />
     </ScrollView>
   );
 }

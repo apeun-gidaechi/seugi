@@ -1,4 +1,12 @@
-import { Modal, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Modal,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { SeugiButton } from "../../design-system/Button";
@@ -6,17 +14,137 @@ import { GoogleAuthButton } from "../../components/GoogleAuthButton";
 import { GOOGLE_WEB_CLIENT_ID } from "../../config";
 import { authStyles as styles } from "../authStyles";
 
-export function AuthStartScreen({ error, appleAvailable, loading, showOptions, onShowOptions, onDismissOptions, onLogin, onGoogleCode, onAppleSignIn, onError }: {
-  error: string; appleAvailable: boolean; loading: boolean; showOptions: boolean;
-  onShowOptions: () => void; onDismissOptions: () => void; onLogin: () => void;
-  onGoogleCode: (code: string) => Promise<void>; onAppleSignIn: () => Promise<void>; onError: (message: string) => void;
+export function AuthStartScreen({
+  error,
+  appleAvailable,
+  loading,
+  showOptions,
+  onShowOptions,
+  onDismissOptions,
+  onLogin,
+  onGoogleCode,
+  onAppleSignIn,
+  onError,
+}: {
+  error: string;
+  appleAvailable: boolean;
+  loading: boolean;
+  showOptions: boolean;
+  onShowOptions: () => void;
+  onDismissOptions: () => void;
+  onLogin: () => void;
+  onGoogleCode: (code: string) => Promise<void>;
+  onAppleSignIn: () => Promise<void>;
+  onError: (message: string) => void;
 }) {
-  return <SafeAreaView style={styles.startScreen}>
-    <Svg pointerEvents="none" style={StyleSheet.absoluteFill} viewBox="0 0 100 100" preserveAspectRatio="none"><Defs><LinearGradient id="startBackground" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor="#1C8DF4" /><Stop offset="1" stopColor="#21B6E5" /></LinearGradient></Defs><Path d="M0 0H100V100H0z" fill="url(#startBackground)" /></Svg>
-    <View style={styles.startCloudTop}><Svg width={214} height={216} viewBox="0 0 214 216"><Path d="M175.59 143.79C170.04 145.15 164.23 145.87 158.26 145.87C117.98 145.87 85.33 113.21 85.33 72.93C85.33 32.65 117.98 0 158.26 0C191.4 0 219.38 22.11 228.26 52.38C233.81 51.03 239.62 50.31 245.59 50.31C285.87 50.31 318.52 82.96 318.52 123.24C318.52 163.52 285.87 196.18 245.59 196.18C212.45 196.18 184.46 174.07 175.59 143.79Z" fill="#DAE8FF" /><Path d="M175.59 143.79C170.04 145.15 164.23 145.87 158.26 145.87C117.98 145.87 85.33 113.21 85.33 72.93C85.33 32.65 117.98 0 158.26 0C191.4 0 219.38 22.11 228.26 52.38C233.81 51.03 239.62 50.31 245.59 50.31C285.87 50.31 318.52 82.96 318.52 123.24C318.52 163.52 285.87 196.18 245.59 196.18C212.45 196.18 184.46 174.07 175.59 143.79Z" fill="#00C2FF" opacity={0.2} /><Circle cx={130.5} cy={97.5} r={55.5} fill="#FFC700" /><Path d="M128.82 194.69C141.54 194.69 153.24 190.28 162.45 182.89C170.28 193.85 183.1 200.98 197.58 200.98C207.78 200.98 217.15 197.45 224.54 191.53C232.62 197.47 242.6 200.98 253.41 200.98C280.36 200.98 302.22 179.13 302.22 152.17C302.22 125.21 280.36 103.36 253.41 103.36C239.06 103.36 226.16 109.55 217.23 119.41C211.33 116.39 204.66 114.69 197.58 114.69C190.6 114.69 184.01 116.35 178.17 119.29C169.86 100.28 150.89 87 128.82 87C108.39 87 90.62 98.37 81.5 115.13C73.41 110.28 63.96 107.5 53.85 107.5C24.11 107.5 0 131.6 0 161.34C0 191.08 24.11 215.19 53.85 215.19C74.27 215.19 92.04 203.82 101.16 187.06C109.25 191.9 118.71 194.69 128.82 194.69Z" fill="#F2F7FF" /></Svg></View>
-    <View style={styles.startCopy}><Text style={styles.startLogo}>스기</Text><Text style={styles.startSubtitle}>학생, 선생님 모두 함께하는{"\n"}스마트 스쿨 플랫폼</Text></View>
-    <View style={styles.startCloudBottom}><Svg width={315} height={192} viewBox="0 0 315 192"><Path d="M43.57 126.37C30.55 138.47 13.11 145.87 -6.07 145.87C-46.35 145.87 -79 113.21 -79 72.93C-79 32.65 -46.35 0 -6.07 0C20.58 0 43.9 14.29 56.62 35.64C69.64 23.54 87.09 16.14 106.26 16.14C146.54 16.14 179.19 48.79 179.19 89.07C179.19 129.35 146.54 162 106.26 162C79.61 162 56.3 147.71 43.57 126.37Z" fill="#DAE8FF" /><Path d="M140.82 170.69C153.54 170.69 165.24 166.28 174.45 158.89C182.28 169.85 195.1 176.98 209.58 176.98C219.78 176.98 229.15 173.45 236.54 167.53C244.62 173.47 254.6 176.98 265.41 176.98C292.36 176.98 314.22 155.13 314.22 128.17C314.22 101.21 292.36 79.36 265.41 79.36C251.06 79.36 238.16 85.55 229.23 95.41C223.33 92.39 216.66 90.69 209.58 90.69C202.6 90.69 196.01 92.35 190.17 95.29C181.86 76.28 162.89 63 140.82 63C120.39 63 102.62 74.37 93.5 91.13C85.41 86.28 75.96 83.5 65.85 83.5C36.11 83.5 12 107.6 12 137.34C12 167.08 36.11 191.19 65.85 191.19C86.27 191.19 104.04 179.82 113.16 163.06C121.25 167.9 130.71 170.69 140.82 170.69Z" fill="#F2F7FF" /></Svg></View>
-    <SeugiButton label="시작하기" variant="shadow" size="large" fullWidth onPress={onShowOptions} style={styles.startButton} />{error ? <Text style={styles.startError}>{error}</Text> : null}
-    <Modal visible={showOptions} transparent animationType="slide" onRequestClose={onDismissOptions}><View style={styles.sheetBackdrop}><TouchableOpacity accessibilityRole="button" accessibilityLabel="닫기" style={styles.sheetDismiss} onPress={onDismissOptions} /><View style={styles.signInSheet}><SeugiButton label="이메일로 계속하기" variant="black" size="large" fullWidth onPress={onLogin} />{appleAvailable ? <AppleAuthentication.AppleAuthenticationButton buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN} buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK} cornerRadius={10} style={styles.oauthButton} onPress={() => { onDismissOptions(); void onAppleSignIn(); }} /> : null}{Platform.OS !== "web" ? <GoogleAuthButton label="Google로 계속하기" onCode={onGoogleCode} onStart={onDismissOptions} onError={(message) => { onDismissOptions(); onError(message); }} configured={!!GOOGLE_WEB_CLIENT_ID} disabled={loading} /> : null}</View></View></Modal>
-  </SafeAreaView>;
+  return (
+    <SafeAreaView style={styles.startScreen}>
+      <Svg
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        <Defs>
+          <LinearGradient id="startBackground" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#1C8DF4" />
+            <Stop offset="1" stopColor="#21B6E5" />
+          </LinearGradient>
+        </Defs>
+        <Path d="M0 0H100V100H0z" fill="url(#startBackground)" />
+      </Svg>
+      <View style={styles.startCloudTop}>
+        <Svg width={214} height={216} viewBox="0 0 214 216">
+          <Path
+            d="M175.59 143.79C170.04 145.15 164.23 145.87 158.26 145.87C117.98 145.87 85.33 113.21 85.33 72.93C85.33 32.65 117.98 0 158.26 0C191.4 0 219.38 22.11 228.26 52.38C233.81 51.03 239.62 50.31 245.59 50.31C285.87 50.31 318.52 82.96 318.52 123.24C318.52 163.52 285.87 196.18 245.59 196.18C212.45 196.18 184.46 174.07 175.59 143.79Z"
+            fill="#DAE8FF"
+          />
+          <Path
+            d="M175.59 143.79C170.04 145.15 164.23 145.87 158.26 145.87C117.98 145.87 85.33 113.21 85.33 72.93C85.33 32.65 117.98 0 158.26 0C191.4 0 219.38 22.11 228.26 52.38C233.81 51.03 239.62 50.31 245.59 50.31C285.87 50.31 318.52 82.96 318.52 123.24C318.52 163.52 285.87 196.18 245.59 196.18C212.45 196.18 184.46 174.07 175.59 143.79Z"
+            fill="#00C2FF"
+            opacity={0.2}
+          />
+          <Circle cx={130.5} cy={97.5} r={55.5} fill="#FFC700" />
+          <Path
+            d="M128.82 194.69C141.54 194.69 153.24 190.28 162.45 182.89C170.28 193.85 183.1 200.98 197.58 200.98C207.78 200.98 217.15 197.45 224.54 191.53C232.62 197.47 242.6 200.98 253.41 200.98C280.36 200.98 302.22 179.13 302.22 152.17C302.22 125.21 280.36 103.36 253.41 103.36C239.06 103.36 226.16 109.55 217.23 119.41C211.33 116.39 204.66 114.69 197.58 114.69C190.6 114.69 184.01 116.35 178.17 119.29C169.86 100.28 150.89 87 128.82 87C108.39 87 90.62 98.37 81.5 115.13C73.41 110.28 63.96 107.5 53.85 107.5C24.11 107.5 0 131.6 0 161.34C0 191.08 24.11 215.19 53.85 215.19C74.27 215.19 92.04 203.82 101.16 187.06C109.25 191.9 118.71 194.69 128.82 194.69Z"
+            fill="#F2F7FF"
+          />
+        </Svg>
+      </View>
+      <View style={styles.startCopy}>
+        <Text style={styles.startLogo}>스기</Text>
+        <Text style={styles.startSubtitle}>학생, 선생님 모두 함께하는{"\n"}스마트 스쿨 플랫폼</Text>
+      </View>
+      <View style={styles.startCloudBottom}>
+        <Svg width={315} height={192} viewBox="0 0 315 192">
+          <Path
+            d="M43.57 126.37C30.55 138.47 13.11 145.87 -6.07 145.87C-46.35 145.87 -79 113.21 -79 72.93C-79 32.65 -46.35 0 -6.07 0C20.58 0 43.9 14.29 56.62 35.64C69.64 23.54 87.09 16.14 106.26 16.14C146.54 16.14 179.19 48.79 179.19 89.07C179.19 129.35 146.54 162 106.26 162C79.61 162 56.3 147.71 43.57 126.37Z"
+            fill="#DAE8FF"
+          />
+          <Path
+            d="M140.82 170.69C153.54 170.69 165.24 166.28 174.45 158.89C182.28 169.85 195.1 176.98 209.58 176.98C219.78 176.98 229.15 173.45 236.54 167.53C244.62 173.47 254.6 176.98 265.41 176.98C292.36 176.98 314.22 155.13 314.22 128.17C314.22 101.21 292.36 79.36 265.41 79.36C251.06 79.36 238.16 85.55 229.23 95.41C223.33 92.39 216.66 90.69 209.58 90.69C202.6 90.69 196.01 92.35 190.17 95.29C181.86 76.28 162.89 63 140.82 63C120.39 63 102.62 74.37 93.5 91.13C85.41 86.28 75.96 83.5 65.85 83.5C36.11 83.5 12 107.6 12 137.34C12 167.08 36.11 191.19 65.85 191.19C86.27 191.19 104.04 179.82 113.16 163.06C121.25 167.9 130.71 170.69 140.82 170.69Z"
+            fill="#F2F7FF"
+          />
+        </Svg>
+      </View>
+      <SeugiButton
+        label="시작하기"
+        variant="shadow"
+        size="large"
+        fullWidth
+        onPress={onShowOptions}
+        style={styles.startButton}
+      />
+      {error ? <Text style={styles.startError}>{error}</Text> : null}
+      <Modal
+        visible={showOptions}
+        transparent
+        animationType="slide"
+        onRequestClose={onDismissOptions}
+      >
+        <View style={styles.sheetBackdrop}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+            style={styles.sheetDismiss}
+            onPress={onDismissOptions}
+          />
+          <View style={styles.signInSheet}>
+            <SeugiButton
+              label="이메일로 계속하기"
+              variant="black"
+              size="large"
+              fullWidth
+              onPress={onLogin}
+            />
+            {appleAvailable ? (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={10}
+                style={styles.oauthButton}
+                onPress={() => {
+                  onDismissOptions();
+                  void onAppleSignIn();
+                }}
+              />
+            ) : null}
+            {Platform.OS !== "web" ? (
+              <GoogleAuthButton
+                label="Google로 계속하기"
+                onCode={onGoogleCode}
+                onStart={onDismissOptions}
+                onError={(message) => {
+                  onDismissOptions();
+                  onError(message);
+                }}
+                configured={!!GOOGLE_WEB_CLIENT_ID}
+                disabled={loading}
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
 }
