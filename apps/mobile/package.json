@@ -7,11 +7,6 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "ios:device": "expo run:ios --device",
-    "start:playground": "sh scripts/start-playground-metro.sh",
-    "start:playground:tunnel": "EXPO_PUBLIC_APP_VARIANT=playground expo start --dev-client --scheme seugi-playground --tunnel",
-    "ios:playground": "sh -c '. scripts/playground-device-env.sh && exec pnpm exec expo run:ios --no-bundler'",
-    "ios:playground:device": "sh scripts/ios-playground-device.sh",
     "build": "tsc --noEmit && expo export --platform android --platform ios",
     "check": "tsc --noEmit",
     "test": "tsc --noEmit && node --experimental-strip-types --test test/*.test.ts"
