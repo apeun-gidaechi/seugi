@@ -14,7 +14,8 @@ import { CreateRoomScreen } from "./CreateRoomScreen";
 import { NoWorkspaceHome } from "./HomeScreen";
 import { ProfileScreen } from "./ProfileScreen";
 import { ChatScreen, type ChatImagePreview } from "./ChatScreen";
-import { ChatConversationScreen } from "./ChatConversationScreen";
+import { shellTabTitles } from "../navigation/shellNavigation";
+import { ChatRoomMessages } from "./shell/ChatRoomMessages";
 import { ImagePreviewScreen } from "./ImagePreviewScreen";
 import { NoticesScreen } from "./NoticesScreen";
 import { WorkspaceMembersScreen } from "./WorkspaceMembersScreen";
@@ -24,14 +25,6 @@ import { markTabVisited, updateTabConversation } from "../utils/tabNavigation";
 
 const emptyWorkspace: Workspace = { id: "", code: "", name: "", members: [], waitlist: [], ownerId: "" };
 type NoWorkspaceDetail = "workspaceMembers" | "createRoom" | "createGroupRoomName";
-
-const titles: Record<SeugiTab, string> = {
-  home: "홈",
-  chat: "채팅",
-  group: "단체",
-  notice: "공지",
-  profile: "내 프로필",
-};
 
 export function NoWorkspaceShell({
   tab,
@@ -126,7 +119,7 @@ export function NoWorkspaceShell({
       leading={roomSearchActive ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="검색 닫기" onPress={() => { setRoomSearchActive(false); setRoomSearch(""); }}><SeugiBackIcon color={SeugiColor.Gray600} /></TouchableOpacity> : null}
       title={roomSearchActive
         ? <SeugiTextField autoFocus value={roomSearch} onChangeText={setRoomSearch} placeholder="채팅방 검색" returnKeyType="search" fieldStyle={styles.searchField} style={styles.searchInput} />
-        : <Text style={styles.title}>{titles[tab]}</Text>}
+        : <Text style={styles.title}>{shellTabTitles[tab]}</Text>}
       trailing={tab === "home"
         ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="학교 등록" onPress={showRegistrationPrompt}><SeugiAddFillIcon /></TouchableOpacity>
         : tab === "profile"
@@ -144,10 +137,10 @@ export function NoWorkspaceShell({
       </View>
     </View> : null}
     {visitedTabs.has("chat") ? <View style={tab === "chat" ? styles.tabRoot : styles.hiddenTabRoot} pointerEvents={tab === "chat" ? "auto" : "none"}>
-      <ChatScreen workspace={emptyWorkspace} roomType="personal" RoomMessagesComponent={NoWorkspaceRoomMessages} isFocused={tab === "chat"} roomSearch={roomSearch} onConversationChange={updatePersonalConversation} onPreviewImage={setActiveImagePreview} />
+      <ChatScreen workspace={emptyWorkspace} roomType="personal" RoomMessagesComponent={ChatRoomMessages} isFocused={tab === "chat"} roomSearch={roomSearch} onConversationChange={updatePersonalConversation} onPreviewImage={setActiveImagePreview} />
     </View> : null}
     {visitedTabs.has("group") ? <View style={tab === "group" ? styles.tabRoot : styles.hiddenTabRoot} pointerEvents={tab === "group" ? "auto" : "none"}>
-      <ChatScreen workspace={emptyWorkspace} roomType="group" RoomMessagesComponent={NoWorkspaceRoomMessages} isFocused={tab === "group"} roomSearch={roomSearch} onConversationChange={updateGroupConversation} onPreviewImage={setActiveImagePreview} />
+      <ChatScreen workspace={emptyWorkspace} roomType="group" RoomMessagesComponent={ChatRoomMessages} isFocused={tab === "group"} roomSearch={roomSearch} onConversationChange={updateGroupConversation} onPreviewImage={setActiveImagePreview} />
     </View> : null}
     {visitedTabs.has("notice") ? <View style={tab === "notice" ? styles.tabRoot : styles.hiddenTabRoot} pointerEvents={tab === "notice" ? "auto" : "none"}>
       <NoticesScreen workspace={emptyWorkspace} onCreate={() => undefined} onEdit={() => undefined} />
@@ -209,10 +202,6 @@ export function NoWorkspaceShell({
       </SafeAreaView>
     </View> : null}
   </View>;
-}
-
-function NoWorkspaceRoomMessages({ room, onBack, onOpenRoom, onPreviewImage }: { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void; onPreviewImage: (image: ChatImagePreview) => void }) {
-  return <ChatConversationScreen room={room} onBack={onBack} onOpenRoom={onOpenRoom} onPreviewImage={onPreviewImage} />;
 }
 
 const styles = StyleSheet.create({

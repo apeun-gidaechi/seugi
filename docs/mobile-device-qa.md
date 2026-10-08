@@ -13,12 +13,12 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | Command | Scope |
 | --- | --- |
 | `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (75+), mobile unit tests (97+), web tests |
+| `pnpm -r test` | API contract/integration (75+), mobile unit tests (100+), web tests |
 | `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
 
 | Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
 | --- | --- |
-| H-01 meal carousel / Classroom | `home.test.ts` |
+| H-01 meal carousel / Classroom / card data rules | `home.test.ts`, `home-screen-data.test.ts` |
 | WG-01 Android meal widget period | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`) |
 | WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
 | C-01 / C-02 room search | `chat.test.ts` |
