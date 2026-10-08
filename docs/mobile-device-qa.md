@@ -13,7 +13,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | Command | Scope |
 | --- | --- |
 | `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (79+), mobile unit tests (112+), web tests |
+| `pnpm -r test` | API contract/integration (79+), mobile unit tests (113+), web tests |
 | `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
 
 | Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
@@ -84,6 +84,7 @@ Record device QA sessions here before updating `mobile-screen-parity.md` rows. K
 | 2026-10-08 | `aed2a66` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 103) | Terminal output; maps to checklist IDs in **Automated verification** above |
 | 2026-10-08 | `6ddda32` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 105, web 2); API `app.ts` route modules split | Terminal output; device rows still pending |
 | 2026-10-08 | `9761312` | Automated gate | local macOS | `pnpm -r test` green (API 79, mobile 112, web 2); shell/no-workspace platform rules extracted | Terminal output; device rows still pending |
+| 2026-10-08 | `25bf367` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 113, web 2); home assignment load error rules | Terminal output; device rows still pending |
 | | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
 
 ## Sign-off
