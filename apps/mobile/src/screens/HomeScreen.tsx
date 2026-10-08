@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Alert,
-  ActivityIndicator,
-  FlatList,
-  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -13,8 +9,11 @@ import {
   View,
   StyleSheet,
 } from "react-native";
-import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
+import { SeugiSearchIcon } from "../design-system/SearchIcon";
+import { SeugiChevronRight } from "../design-system/NativeIndicators";
+import { SeugiEmptyState } from "../design-system/EmptyState";
+import { SeugiLoadingIndicator } from "../design-system/LoadingIndicator";
 import type {
   ClassroomTask,
   Meal,
@@ -26,8 +25,11 @@ import type {
 import { Button, Card } from "../components/ui";
 import { HomeAssignmentsCard } from "../components/HomeAssignmentsCard";
 import { SeugiTextField } from "../design-system/TextField";
+import { SeugiHomeCardIcon, type HomeCardIconName } from "../design-system/HomeCardIcon";
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
+import { initialHomeMealPage, shouldLoadClassroomTasks } from "../utils/home";
+import { refreshHomeWidgets } from "../widgets/refresh";
 
 export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspace";
 const MEAL_PRIORITY: Record<string, number> = { 조식: 0, 중식: 1, 석식: 2 };
@@ -52,13 +54,17 @@ export function HomeScreen({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [classroomTasks, setClassroomTasks] = useState<ClassroomTask[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
+  const [timetableLoading, setTimetableLoading] = useState(true);
+  const [timetableError, setTimetableError] = useState(false);
   const [meals, setMeals] = useState<Meal[]>();
   const [mealError, setMealError] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [scheduleError, setScheduleError] = useState(false);
-  const [mealPage, setMealPage] = useState(0);
+  const [initialMealPage] = useState(() => initialHomeMealPage(new Date(), Platform.OS === "ios" ? "ios" : "android"));
+  const [mealPage, setMealPage] = useState(initialMealPage);
   const [mealPageWidth, setMealPageWidth] = useState(0);
+  const mealPagerRef = useRef<ScrollView>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [assignmentError, setAssignmentError] = useState(false);
@@ -68,9 +74,13 @@ export function HomeScreen({
     setRefreshing(true);
     setAssignmentsLoading(true);
     setScheduleLoading(true);
+    setTimetableLoading(true);
+    const classroomTasksRequest = shouldLoadClassroomTasks(Platform.OS)
+      ? api.classroomTasks()
+      : Promise.resolve({ data: [] as ClassroomTask[] });
     const results = await Promise.allSettled([
       api.tasks(workspace.id),
-      api.classroomTasks(),
+      classroomTasksRequest,
       api.weeklyTimetable(workspace.id),
       api.mealForDate(workspace.id, localDateKey(new Date())),
       api.schedulesForMonth(workspace.id, new Date().getMonth() + 1),
@@ -78,6 +88,9 @@ export function HomeScreen({
     if (results[0].status === "fulfilled") setTasks(results[0].value.data ?? []);
     if (results[1].status === "fulfilled") setClassroomTasks(results[1].value.data ?? []);
     if (results[2].status === "fulfilled") setTimetable(results[2].value.data ?? []);
+    else setTimetable([]);
+    setTimetableError(results[2].status === "rejected");
+    setTimetableLoading(false);
     if (results[3].status === "fulfilled") setMeals(results[3].value.data ?? []);
     else setMeals(undefined);
     setMealError(results[3].status === "rejected");
@@ -90,6 +103,7 @@ export function HomeScreen({
       : results[0].status === "rejected" && results[1].status === "rejected");
     setAssignmentsLoading(false);
     setRefreshing(false);
+    void refreshHomeWidgets().catch(() => undefined);
   }, [workspace.id]);
   useEffect(() => {
     void refreshHome();
@@ -101,6 +115,10 @@ export function HomeScreen({
   const mealPages = Platform.OS === "android"
     ? ["조식", "중식", "석식"].map((type) => ({ type, meal: todaysMeals.find((item) => item.type === type) }))
     : todaysMeals.map((meal) => ({ type: meal.type, meal }));
+  useEffect(() => {
+    if (Platform.OS !== "android" || mealPageWidth <= 0 || mealPages.length === 0) return;
+    requestAnimationFrame(() => mealPagerRef.current?.scrollTo({ x: initialMealPage * mealPageWidth, y: 0, animated: false }));
+  }, [initialMealPage, mealPageWidth, mealPages.length]);
   const todaysTimetable = timetable
     .filter((item) => item.date.slice(0, 10) === today)
     .sort((a, b) => Number(a.time) - Number(b.time));
@@ -132,7 +150,9 @@ export function HomeScreen({
         </View>}
       </HomeCard>
       <HomeCard title="오늘의 시간표" icon="timetable" onPress={onOpenTimetable}>
-        {todaysTimetable.length ? (
+        {timetableLoading || (Platform.OS === "android" && timetableError) ? <SeugiLoadingIndicator /> : timetableError ? (
+          <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
+        ) : todaysTimetable.length ? (
           Platform.OS === "ios" ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iosPeriods}>
               {todaysTimetable.map((item, index) => {
@@ -161,17 +181,17 @@ export function HomeScreen({
             </View>
           )
         ) : (
-          <Text style={styles.muted}>학교를 등록하고 시간표를 확인하세요</Text>
+          <Text style={styles.muted}>{Platform.OS === "ios" ? "시간표가 없어요" : "학교를 등록하고 시간표를 확인하세요"}</Text>
         )}
       </HomeCard>
       <HomeCard title="오늘의 급식" icon="meal" onPress={onOpenMeals}>
-        {meals === undefined && Platform.OS === "ios" && mealError ? <Text style={styles.muted}>학교를 등록하고 급식을 확인하세요</Text> : meals === undefined ? <ActivityIndicator color={SeugiColor.Primary500} /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
-          {mealPageWidth > 0 ? <ScrollView horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
+        {meals === undefined && Platform.OS === "ios" && mealError ? <Text style={styles.muted}>학교를 등록하고 급식을 확인하세요</Text> : meals === undefined ? <SeugiLoadingIndicator /> : mealPages.length ? <View onLayout={(event) => setMealPageWidth(event.nativeEvent.layout.width)}>
+          {mealPageWidth > 0 ? <ScrollView ref={mealPagerRef} horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
             {mealPages.map(({ type, meal }, index) => <View key={`${today}-${type}`} style={[styles.mealPage, { width: mealPageWidth }]}>
               {meal ? <>
                 <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{Platform.OS === "android" ? type === "조식" ? "아침" : type === "중식" ? "점심" : type === "석식" ? "저녁" : type : type}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
                 {Platform.OS === "android" ? Array.from({ length: Math.ceil(meal.menu.length / 2) }, (_, row) => <View key={row} style={styles.mealMenuRow}><Text style={styles.mealMenuColumn}>{meal.menu[row * 2]}</Text><Text style={styles.mealMenuColumn}>{meal.menu[row * 2 + 1] ?? ""}</Text></View>) : meal.menu.map((dish, dishIndex) => <Text key={`${dishIndex}-${dish}`} style={styles.mealMenuLine}>{dish}</Text>)}
-              </> : <View style={styles.mealEmpty}><Text style={styles.mealSad}>☹</Text><Text style={styles.rowTitle}>급식이 없어요</Text></View>}
+              </> : <SeugiEmptyState title="급식이 없어요" style={styles.mealEmpty} />}
             </View>)}
           </ScrollView> : null}
           <View style={styles.mealPageTrack}><View style={[styles.mealPageIndicator, { width: Platform.OS === "android" ? 16 : 36 / mealPages.length, transform: [{ translateX: mealPage * (Platform.OS === "android" ? 10 : 36 / mealPages.length) }] }]} /></View>
@@ -184,11 +204,11 @@ export function HomeScreen({
           style={styles.catPrompt}
         >
           <Text style={styles.muted}>2학년 4반에서 아무나 한명 뽑아줘...</Text>
-          <Text style={styles.link}>⌕</Text>
+          <SeugiSearchIcon size={28} color={SeugiColor.Primary500} />
         </TouchableOpacity>
       </HomeCard>
       <HomeCard title="다가오는 일정" icon="schedule">
-        {scheduleLoading ? <ActivityIndicator color={SeugiColor.Primary500} /> : upcoming.length ? (
+        {scheduleLoading ? <SeugiLoadingIndicator /> : upcoming.length ? (
           <View style={styles.homeList}>{upcoming.map((item) => {
             const days = daysUntil(today, item.date);
             return <View key={`${item.date}-${item.name}`} style={styles.homeCalendarRow}>
@@ -210,6 +230,31 @@ export function HomeScreen({
   );
 }
 
+export function NoWorkspaceHome({ onRegister, onRequests }: { onRegister: () => void; onRequests: () => void }) {
+  return <ScrollView style={styles.homeContent} contentContainerStyle={styles.noWorkspaceHome}>
+    <HomeCard title="내 학교" icon="school" onPress={Platform.OS === "ios" ? onRegister : undefined}>
+      {Platform.OS === "android" ? <SeugiLoadingIndicator /> : <Text style={styles.muted}>내 학교를 등록해주세요</Text>}
+      <TouchableOpacity accessibilityRole="button" onPress={onRegister} style={styles.noWorkspaceRegister}><Text style={styles.link}>학교 등록하기</Text></TouchableOpacity>
+    </HomeCard>
+    <TouchableOpacity accessibilityRole="button" onPress={onRequests} style={styles.noWorkspaceRequest}><Text style={styles.link}>가입 신청 내역 확인</Text></TouchableOpacity>
+    <HomeCard title="오늘의 시간표" icon="timetable" onPress={onRegister}>
+      {Platform.OS === "android" ? <Text style={styles.noWorkspaceMessage}>학교를 등록하고 시간표를 확인하세요</Text> : <SeugiLoadingIndicator />}
+    </HomeCard>
+    <HomeCard title="오늘의 급식" icon="meal" onPress={onRegister}>
+      {Platform.OS === "android" ? <Text style={styles.noWorkspaceMessage}>학교를 등록하고 급식을 확인하세요</Text> : <SeugiLoadingIndicator />}
+    </HomeCard>
+    <HomeCard title="캣스기" icon="cat">
+      <Text style={styles.noWorkspaceMessage}>학교를 등록하고 캣스기와 대화해 보세요</Text>
+    </HomeCard>
+    <HomeCard title="다가오는 일정" icon="schedule">
+      {Platform.OS === "android" ? <Text style={styles.noWorkspaceMessage}>일정이 없어요</Text> : <SeugiLoadingIndicator />}
+    </HomeCard>
+    <HomeCard title={Platform.OS === "ios" ? "다가오는 과제" : "과제"} icon="task" onPress={onRegister}>
+      <SeugiLoadingIndicator />
+    </HomeCard>
+  </ScrollView>;
+}
+
 export { HomeScreen as Home };
 
 function daysUntil(from: string, to: string) {
@@ -223,22 +268,13 @@ function monthDay(value: string) {
   return `${Number(month)}/${day}`;
 }
 
-type HomeCardIcon = "school" | "timetable" | "meal" | "cat" | "schedule" | "task";
-const homeCardPaths: Record<HomeCardIcon, string> = {
-  school: "M3 10 12 4l9 6v10h-6v-6H9v6H3z M7 10h2v2H7zm8 0h2v2h-2z",
-  timetable: "M4 4h16v16H4z M8 2v4m8-4v4M4 9h16M8 13h3m2 0h3m-8 3h3",
-  meal: "M4 3v7m3-7v7m-3-4h3m3-3v7m0-4h3M16 3v18m0-18c3 2 4 5 4 8h-4",
-  cat: "M4 10 3 5l5 2a11 11 0 0 1 8 0l5-2-1 5a8 8 0 1 1-16 0zm4 3h.01M16 13h.01M9 17q3 2 6 0",
-  schedule: "M4 5h16v16H4z M8 3v4m8-4v4M4 10h16M8 14h3m2 0h3m-8 3h3",
-  task: "M5 4h14v17H5z M8 9l1.5 1.5L12 8m1 2h3m-8 5 1.5 1.5L12 14m1 2h3",
-};
-
-function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIcon; children: ReactNode; onPress?: () => void }) {
+function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIconName; children: ReactNode; onPress?: () => void }) {
+  const heading = <>
+    <View style={[styles.homeCardIcon, icon === "cat" && Platform.OS === "ios" && styles.homeCardIconCat]}><SeugiHomeCardIcon name={icon} size={icon === "cat" && Platform.OS === "ios" ? 16 : 24} /></View>
+    <Text style={styles.homeCardTitle}>{title}</Text>
+  </>;
   return <View style={styles.homeCard}>
-    <View style={styles.homeCardHeader}>
-      <View style={styles.homeCardIcon}><Svg width={24} height={24} viewBox="0 0 24 24"><Path d={homeCardPaths[icon]} fill="none" stroke={SeugiColor.Gray600} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></Svg></View>
-      {onPress ? <TouchableOpacity accessibilityRole="button" onPress={onPress} style={styles.homeCardTitleButton}><Text style={styles.homeCardTitle}>{title}</Text><Text style={styles.homeCardArrow}>›</Text></TouchableOpacity> : <Text style={styles.homeCardTitle}>{title}</Text>}
-    </View>
+    {onPress ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${title} 상세 보기`} onPress={onPress} style={[styles.homeCardHeader, styles.homeCardHeaderTouchable]}>{heading}<SeugiChevronRight /></TouchableOpacity> : <View style={styles.homeCardHeader}>{heading}</View>}
     <View style={styles.homeCardBody}>{children}</View>
   </View>;
 }
@@ -253,340 +289,19 @@ function getCurrentTimetablePeriod(entries: Timetable[], now = new Date()) {
   };
 }
 
-export function TimetableWeek({ entries, onSelectCell, onSelectEntry }: { entries: Timetable[]; onSelectCell?: (date: string, time: string) => void; onSelectEntry?: (entry: Timetable) => void }) {
-  const today = new Date();
-  const monday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() - ((today.getDay() + 6) % 7),
-  );
-  const days = Array.from({ length: 5 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return localDateKey(date);
-  });
-  const periods = [...new Set(entries.map((entry) => entry.time))].sort(
-    (a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10),
-  );
-  const weekLabel = `${days[0].slice(5).replace("-", "/")}–${days[4].slice(5).replace("-", "/")}`;
-  const subjectAt = (date: string, period: string) =>
-    entries.find(
-      (entry) => entry.date.slice(0, 10) === date && entry.time === period,
-    )?.subject ?? "";
-  const rowStyle = { flexDirection: "row" as const };
-  const periodStyle = {
-    width: 32,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: SeugiColor.Gray300,
-    fontSize: 11,
-    textAlign: "center" as const,
-  };
-  const cellStyle = {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: 8,
-    paddingHorizontal: 1,
-    borderWidth: 1,
-    borderColor: SeugiColor.Gray300,
-    fontSize: 10,
-    textAlign: "center" as const,
-  };
-  const headStyle = {
-    fontWeight: "700" as const,
-    backgroundColor: SeugiColor.Primary050,
-  };
-  return (
-    <View>
-      <Text style={styles.muted}>{weekLabel} · 월–금</Text>
-      <View style={rowStyle}>
-        <Text style={[periodStyle, headStyle]}>교시</Text>
-        {days.map((date, index) => (
-          <Text key={date} style={[cellStyle, headStyle]}>
-            {["월", "화", "수", "목", "금"][index]}
-          </Text>
-        ))}
-      </View>
-      {(periods.length ? periods : ["1", "2", "3", "4", "5", "6", "7"]).map((period) => (
-          <View key={period} style={rowStyle}>
-            <Text style={periodStyle}>{period}</Text>
-            {days.map((date) => (
-              <TouchableOpacity
-                key={`${date}-${period}`}
-                style={cellStyle}
-                onPress={() => {
-                  const entry = entries.find((item) => item.date.slice(0, 10) === date && item.time === period);
-                  if (entry) onSelectEntry?.(entry);
-                  else onSelectCell?.(date, period);
-                }}
-              >
-                <Text numberOfLines={2}>{subjectAt(date, period) || (onSelectCell ? "+" : "")}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
-    </View>
-  );
-}
-
-export function TimetablePage({ workspace }: { workspace: Workspace }) {
-  const [entries, setEntries] = useState<Timetable[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [canEdit, setCanEdit] = useState(false);
-  const [grade, setGrade] = useState("1");
-  const [classNum, setClassNum] = useState("1");
-  const [editing, setEditing] = useState<Timetable>();
-  const [draft, setDraft] = useState("");
-  const [slot, setSlot] = useState<{ date: string; time: string }>();
-  const refresh = useCallback(async () => {
-    setBusy(true);
-    setError("");
-    try {
-      const result = await api.weeklyTimetable(workspace.id, canEdit ? grade : undefined, canEdit ? classNum : undefined);
-      setEntries(result.data ?? []);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "시간표를 불러오지 못했습니다",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [workspace.id, canEdit, grade, classNum]);
-  useEffect(() => {
-    const timer = setTimeout(() => void refresh(), 250);
-    return () => clearTimeout(timer);
-  }, [refresh]);
-  useEffect(() => {
-    let active = true;
-    Promise.all([api.memberInfo(), api.myProfile(workspace.id)]).then(([member, profile]) => {
-      if (!active) return;
-      setCanEdit(workspace.ownerId === member.data?.id || ["ADMIN", "MIDDLE_ADMIN", "TEACHER"].includes(profile.data?.role ?? ""));
-      if (profile.data?.grade && profile.data.grade > 0) setGrade(String(profile.data.grade));
-      if (profile.data?.class && profile.data.class > 0) setClassNum(String(profile.data.class));
-    }).catch(() => undefined);
-    return () => { active = false; };
-  }, [workspace.id, workspace.ownerId]);
-  const saveSubject = async () => {
-    if (!draft.trim() || busy) return;
-    if (slot && (![grade, classNum].every((value) => /^\d+$/.test(value)) || Number(grade) < 1 || Number(classNum) < 1)) {
-      setError("학년과 반을 1 이상의 숫자로 입력해 주세요.");
-      return;
-    }
-    setBusy(true); setError("");
-    try {
-      if (editing) await api.updateTimetable(editing.id, draft.trim());
-      else if (slot) await api.createTimetable({ workspaceId: workspace.id, grade, classNum, time: slot.time, subject: draft.trim(), date: slot.date });
-      setEditing(undefined); setSlot(undefined); setDraft(""); await refresh();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "시간표를 저장하지 못했습니다"); }
-    finally { setBusy(false); }
-  };
-  const removeEntry = (entry: Timetable) => Alert.alert("시간표 삭제", `${entry.date} ${entry.time}교시 ${entry.subject}을(를) 삭제할까요?`, [
-    { text: "취소", style: "cancel" },
-    { text: "삭제", style: "destructive", onPress: () => { void api.deleteTimetable(entry.id).then(refresh).catch((reason) => setError(reason instanceof Error ? reason.message : "시간표를 삭제하지 못했습니다")); } },
-  ]);
-  return (
-    <ScrollView style={styles.content}>
-      <Card title="주간 시간표">
-        <Text style={styles.muted}>월요일부터 금요일까지</Text>
-        {busy ? <Text style={styles.muted}>시간표를 불러오는 중…</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {canEdit ? <View style={styles.manageRow}><SeugiTextField value={grade} onChangeText={(value) => setGrade(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" fieldStyle={styles.classField} style={styles.classInputText} accessibilityLabel="학년" /><Text style={styles.muted}>학년</Text><SeugiTextField value={classNum} onChangeText={(value) => setClassNum(value.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" fieldStyle={styles.classField} style={styles.classInputText} accessibilityLabel="반" /><Text style={styles.muted}>반 · 빈 칸을 눌러 추가, 과목을 눌러 수정/삭제</Text></View> : null}
-        <TimetableWeek entries={entries.filter((entry) => !canEdit || (entry.grade === grade && entry.classNum === classNum))} onSelectCell={canEdit ? (date, time) => { setSlot({ date, time }); setDraft(""); } : undefined} onSelectEntry={canEdit ? (entry) => { Alert.alert(entry.subject, `${entry.date} · ${entry.time}교시`, [{ text: "취소", style: "cancel" }, { text: "삭제", style: "destructive", onPress: () => removeEntry(entry) }, { text: "수정", onPress: () => { setEditing(entry); setDraft(entry.subject); } }]); } : undefined} />
-        <Button
-          label={busy ? "불러오는 중…" : "시간표 새로고침"}
-          kind="secondary"
-          onPress={() => void refresh()}
-          disabled={busy}
-        />
-      </Card>
-      <Modal visible={!!slot || !!editing} transparent animationType="fade" onRequestClose={() => { setSlot(undefined); setEditing(undefined); }}><View style={styles.timetableModal}><View style={styles.timetableDialog}><Text style={styles.dialogTitle}>{editing ? "시간표 수정" : "시간표 만들기"}</Text><Text style={styles.muted}>{editing ? `${editing.date} · ${editing.time}교시` : slot ? `${slot.date} · ${slot.time}교시 · ${grade}학년 ${classNum}반` : ""}</Text><SeugiTextField value={draft} onChangeText={setDraft} fieldStyle={styles.subjectField} placeholder="과목 이름" maxLength={120} /><View style={styles.modalActions}><Button label="취소" kind="secondary" onPress={() => { setSlot(undefined); setEditing(undefined); }} /><Button label={busy ? "저장 중…" : "완료"} onPress={() => void saveSubject()} disabled={busy || !draft.trim()} />{editing ? <Button label="삭제" kind="secondary" onPress={() => { removeEntry(editing); setEditing(undefined); }} /> : null}</View></View></View></Modal>
-    </ScrollView>
-  );
-}
-
-export function MealCalendar({ workspace }: { workspace: Workspace }) {
-  const [month, setMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
-  const [selectedDate, setSelectedDate] = useState(() =>
-    localDateKey(new Date()),
-  );
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const year = month.getFullYear();
-  const monthNumber = month.getMonth() + 1;
-  useEffect(() => {
-    let active = true;
-    setBusy(true);
-    setError("");
-    api
-      .meals(workspace.id, year, monthNumber)
-      .then((result) => {
-        if (active) setMeals(result.data ?? []);
-      })
-      .catch((e) => {
-        if (active)
-          setError(
-            e instanceof Error ? e.message : "급식을 불러오지 못했습니다",
-          );
-      })
-      .finally(() => {
-        if (active) setBusy(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [workspace.id, year, monthNumber]);
-  const daysInMonth = new Date(year, monthNumber, 0).getDate();
-  // The native iOS and Android date pickers use a Sunday-first calendar.
-  const leadingBlanks = new Date(year, monthNumber - 1, 1).getDay();
-  const slots: Array<string | undefined> = [
-    ...Array(leadingBlanks).fill(undefined),
-    ...Array.from(
-      { length: daysInMonth },
-      (_, index) =>
-        `${year}-${String(monthNumber).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`,
-    ),
-  ];
-  const selectedMeals = meals
-    .filter((meal) => meal.date.slice(0, 10) === selectedDate)
-    .sort((a, b) => (MEAL_PRIORITY[a.type] ?? Number.MAX_SAFE_INTEGER) - (MEAL_PRIORITY[b.type] ?? Number.MAX_SAFE_INTEGER));
-  const shiftMonth = (amount: number) => {
-    const next = new Date(year, monthNumber - 1 + amount, 1);
-    setMonth(next);
-    setSelectedDate(localDateKey(next));
-  };
-  return (
-    <FlatList
-      style={styles.content}
-      data={selectedMeals.length ? [selectedMeals] : []}
-      keyExtractor={() => selectedDate}
-      ListHeaderComponent={
-        <>
-          <Card title="급식 달력">
-            <View style={styles.row}>
-              <TouchableOpacity onPress={() => shiftMonth(-1)}>
-                <Text style={styles.link}>‹ 이전</Text>
-              </TouchableOpacity>
-              <Text style={styles.rowTitle}>
-                {year}년 {monthNumber}월
-              </Text>
-              <TouchableOpacity onPress={() => shiftMonth(1)}>
-                <Text style={styles.link}>다음 ›</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: "row" }}>
-              {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-                <Text
-                  key={day}
-                  style={{
-                    width: "14.28%",
-                    textAlign: "center",
-                    color: SeugiColor.Gray600,
-                    paddingVertical: 8,
-                  }}
-                >
-                  {day}
-                </Text>
-              ))}
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-              {slots.map((date, index) =>
-                date ? (
-                  <TouchableOpacity
-                    key={date}
-                    onPress={() => setSelectedDate(date)}
-                    style={{
-                      width: "14.28%",
-                      aspectRatio: 1,
-                      padding: 2,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 20,
-                      backgroundColor:
-                        selectedDate === date
-                          ? SeugiColor.Primary500
-                          : "transparent",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color:
-                          selectedDate === date
-                            ? SeugiColor.White
-                            : SeugiColor.Gray800,
-                        fontWeight: selectedDate === date ? "700" : "400",
-                      }}
-                    >
-                      {Number(date.slice(-2))}
-                    </Text>
-                    {meals.some((meal) => meal.date.slice(0, 10) === date) ? (
-                      <View
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 2,
-                          backgroundColor:
-                            selectedDate === date
-                              ? SeugiColor.White
-                              : SeugiColor.Primary500,
-                        }}
-                      />
-                    ) : null}
-                  </TouchableOpacity>
-                ) : (
-                  <View
-                    key={`empty-${index}`}
-                    style={{ width: "14.28%", aspectRatio: 1 }}
-                  />
-                ),
-              )}
-            </View>
-            <Button
-              label="오늘로 이동"
-              kind="secondary"
-              onPress={() => {
-                const now = new Date();
-                setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
-                setSelectedDate(localDateKey(now));
-              }}
-            />
-          </Card>
-        </>
-      }
-      ListEmptyComponent={busy ? <Text style={styles.muted}>급식 정보를 불러오는 중…</Text> : error ? <Text style={styles.error}>{error}</Text> : <Text style={styles.muted}>급식이 없어요</Text>}
-      renderItem={({ item: dayMeals }) => (
-        <View style={styles.mealPanel}>
-          {dayMeals.map((meal, mealIndex) => (
-            <View key={`${meal.date}-${meal.type}`} style={mealIndex ? styles.mealSection : undefined}>
-              <View style={styles.mealHeading}>
-                <Text style={styles.mealType}>{Platform.OS === "android" ? ({ 조식: "아침", 중식: "점심", 석식: "저녁" }[meal.type] ?? meal.type) : meal.type}</Text>
-                {meal.calorie ? <Text style={styles.muted}>{meal.calorie}</Text> : null}
-              </View>
-              {meal.menu.map((dish, index) => <Text key={`${index}-${dish}`}>{dish}</Text>)}
-            </View>
-          ))}
-        </View>
-      )}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: 16 },
-  homeContent: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
-  homeCard: { backgroundColor: SeugiColor.White, borderRadius: 12, paddingTop: 12, paddingBottom: 16, marginBottom: 12 },
-  homeCardHeader: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16 },
+  homeContent: { flex: 1, paddingHorizontal: 20, paddingTop: Platform.OS === "ios" ? 8 : 0 },
+  noWorkspaceHome: { paddingBottom: 32 },
+  noWorkspaceMessage: { color: SeugiColor.Gray600, fontSize: 14, textAlign: "center", paddingVertical: 12 },
+  noWorkspaceRegister: { alignSelf: "flex-end", paddingTop: 4 },
+  noWorkspaceRequest: { alignSelf: "flex-end", paddingHorizontal: 8, paddingBottom: 8 },
+  homeCard: { backgroundColor: SeugiColor.White, borderRadius: 12, paddingTop: 12, paddingBottom: 16, marginBottom: 8, marginHorizontal: Platform.OS === "ios" ? 12 : 0 },
+  homeCardHeader: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: Platform.OS === "ios" ? 4 : 16 },
+  homeCardHeaderTouchable: { paddingRight: Platform.OS === "ios" ? 4 : 16 },
   homeCardIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: SeugiColor.Gray100, alignItems: "center", justifyContent: "center" },
-  homeCardTitle: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
-  homeCardTitleButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  homeCardArrow: { color: SeugiColor.Gray500, fontSize: 24, lineHeight: 26 },
-  homeCardBody: { paddingHorizontal: 12, paddingTop: 12 },
+  homeCardIconCat: { width: 16, height: 16, borderRadius: 0, backgroundColor: "transparent" },
+  homeCardTitle: { flex: 1, color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
+  homeCardBody: { paddingHorizontal: Platform.OS === "ios" ? 0 : 12, paddingTop: 12 },
   mealPage: { paddingHorizontal: 4, minHeight: 72 },
   mealCardHeading: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   mealTypeBadge: { color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, fontSize: 12 },
@@ -594,7 +309,6 @@ const styles = StyleSheet.create({
   mealMenuColumn: { flex: 1, color: SeugiColor.Gray700, fontSize: 14, paddingVertical: 2 },
   mealMenuLine: { color: SeugiColor.Gray700, fontSize: 14 },
   mealEmpty: { minHeight: 72, alignItems: "center", justifyContent: "center", gap: 8 },
-  mealSad: { color: SeugiColor.Gray500, fontSize: 28 },
   mealPageTrack: { width: 36, height: 6, borderRadius: 3, backgroundColor: SeugiColor.Gray300, alignSelf: "center", marginTop: 12, overflow: "hidden" },
   mealPageIndicator: { height: 6, borderRadius: 3, backgroundColor: SeugiColor.Primary500 },
   schoolRow: {
@@ -644,27 +358,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontWeight: "600" },
   muted: { color: SeugiColor.Gray500, fontSize: 12 },
-  manageRow: { flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 10 },
-  classField: { width: 42, minHeight: 40, height: 40, paddingHorizontal: 0, borderRadius: 8 },
-  classInputText: { minHeight: 36, height: 36, paddingHorizontal: 4, paddingVertical: 4, textAlign: "center" },
-  timetableModal: { flex: 1, justifyContent: "center", padding: 22, backgroundColor: "rgba(0,0,0,0.38)" },
-  timetableDialog: { backgroundColor: SeugiColor.White, padding: 20, borderRadius: 16, gap: 12 },
-  dialogTitle: { color: SeugiColor.Gray800, fontWeight: "700", fontSize: 18 },
-  subjectField: { borderColor: SeugiColor.Gray300, borderRadius: 10 },
-  modalActions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 8 },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
-  mealPanel: { backgroundColor: SeugiColor.White, borderRadius: 18, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, marginTop: 8 },
-  mealSection: { borderTopWidth: 1, borderTopColor: SeugiColor.Gray100, marginTop: 12, paddingTop: 12 },
-  mealHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
-  mealType: { color: SeugiColor.Gray800, fontSize: 16, fontWeight: "600" },
-  row: {
-    backgroundColor: SeugiColor.White,
-    padding: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
   link: { color: SeugiColor.Primary500 },
   input: {
     backgroundColor: SeugiColor.White,

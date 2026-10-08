@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -12,6 +12,8 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Workspace } from "@seugi/contracts";
 import { api } from "../services/api";
 import { SeugiChatTextField } from "../design-system/TextField";
+import { SeugiLoadingIndicator } from "../design-system/LoadingIndicator";
+import { catseugiVisibleText } from "../utils/catseugi";
 
 type ChatMessage = { id: string; role: "assistant" | "user"; content: string };
 
@@ -30,7 +32,15 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [participants, setParticipants] = useState<Array<{ id: string; name: string }>>([]);
   const list = useRef<FlatList<ChatMessage>>(null);
+  useEffect(() => {
+    let active = true;
+    api.workspaceMembers(workspace.id).then((result) => {
+      if (active) setParticipants((result.data ?? []).map(({ id, name }) => ({ id, name })));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [workspace.id]);
 
   const send = async (content = draft) => {
     const text = content.trim();
@@ -44,12 +54,23 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
     setBusy(true);
     try {
       const result = await api.askCatSeugi(text, workspace.id);
+      let answerParticipants = participants;
+      if (result.data) {
+        try {
+          const keyword = (JSON.parse(result.data) as { keyword?: string }).keyword;
+          if ((keyword === "사람 뽑기" || keyword === "팀짜기") && !answerParticipants.length) {
+            const members = await api.workspaceMembers(workspace.id);
+            answerParticipants = (members.data ?? []).map(({ id, name }) => ({ id, name }));
+            setParticipants(answerParticipants);
+          }
+        } catch { /* Non-envelope answers are rendered as ordinary text. */ }
+      }
       setMessages((current) => [
         ...current,
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: result.data ?? "답변을 받지 못했습니다.",
+          content: result.data ? catseugiVisibleText(result.data, answerParticipants) : "답변을 받지 못했습니다.",
         },
       ]);
     } catch (reason) {
@@ -97,8 +118,10 @@ export function CatSeugiScreen({ workspace }: { workspace: Workspace }) {
           </View>
         )}
         ListFooterComponent={
-          busy ? (
-            <Text style={styles.loading}>캣스기가 답변 중이에요…</Text>
+          busy && Platform.OS === "android" ? (
+            <View style={[styles.bubble, styles.assistantBubble, styles.loadingBubble]}>
+              <SeugiLoadingIndicator />
+            </View>
           ) : error ? (
             <Text style={styles.error}>{error}</Text>
           ) : null
@@ -144,7 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: SeugiColor.Primary100,
     borderTopRightRadius: 4,
   },
-  loading: { padding: 12, color: SeugiColor.Gray500, fontSize: 12 },
+  loadingBubble: { minWidth: 60, minHeight: 40, justifyContent: "center", alignItems: "center" },
   error: { padding: 12, color: SeugiColor.Red500 },
   suggestions: {
     flexDirection: "row",
