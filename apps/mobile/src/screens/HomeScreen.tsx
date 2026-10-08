@@ -39,6 +39,7 @@ import {
   homeAssignmentsLoadFailed,
 } from "../utils/homeScreenData";
 import { refreshHomeWidgets } from "../widgets/refresh";
+import { nativePlatform } from "../utils/platform";
 
 export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspace";
 
@@ -69,7 +70,7 @@ export function HomeScreen({
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [scheduleError, setScheduleError] = useState(false);
-  const [initialMealPage] = useState(() => initialHomeMealPage(new Date(), Platform.OS === "ios" ? "ios" : "android"));
+  const [initialMealPage] = useState(() => initialHomeMealPage(new Date(), nativePlatform()));
   const [mealPage, setMealPage] = useState(initialMealPage);
   const [mealPageWidth, setMealPageWidth] = useState(0);
   const mealPagerRef = useRef<ScrollView>(null);
@@ -108,7 +109,7 @@ export function HomeScreen({
     setScheduleLoading(false);
     setAssignmentError(
       homeAssignmentsLoadFailed(
-        Platform.OS === "ios" ? "ios" : "android",
+        nativePlatform(),
         results[0].status === "rejected",
         results[1].status === "rejected",
       ),
@@ -122,13 +123,13 @@ export function HomeScreen({
   }, [refreshHome, refreshToken]);
   const today = localDateKey(new Date());
   const todaysMeals = homeTodaysMeals(meals, today);
-  const mealPages = homeMealPages(todaysMeals, Platform.OS === "ios" ? "ios" : "android");
+  const mealPages = homeMealPages(todaysMeals, nativePlatform());
   useEffect(() => {
     if (Platform.OS !== "android" || mealPageWidth <= 0 || mealPages.length === 0) return;
     requestAnimationFrame(() => mealPagerRef.current?.scrollTo({ x: initialMealPage * mealPageWidth, y: 0, animated: false }));
   }, [initialMealPage, mealPageWidth, mealPages.length]);
   const todaysTimetable = homeTodaysTimetable(timetable, today);
-  const upcoming = homeUpcomingSchedules(schedules, today, Platform.OS === "ios" ? "ios" : "android");
+  const upcoming = homeUpcomingSchedules(schedules, today, nativePlatform());
 
   useEffect(() => {
     const updatePeriod = () => {
@@ -190,7 +191,7 @@ export function HomeScreen({
           {mealPageWidth > 0 ? <ScrollView ref={mealPagerRef} horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
             {mealPages.map(({ type, meal }, index) => <View key={`${today}-${type}`} style={[styles.mealPage, { width: mealPageWidth }]}>
               {meal ? <>
-                <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{homeMealTypeLabel(type, Platform.OS === "ios" ? "ios" : "android")}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
+                <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{homeMealTypeLabel(type, nativePlatform())}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
                 {Platform.OS === "android" ? Array.from({ length: Math.ceil(meal.menu.length / 2) }, (_, row) => <View key={row} style={styles.mealMenuRow}><Text style={styles.mealMenuColumn}>{meal.menu[row * 2]}</Text><Text style={styles.mealMenuColumn}>{meal.menu[row * 2 + 1] ?? ""}</Text></View>) : meal.menu.map((dish, dishIndex) => <Text key={`${dishIndex}-${dish}`} style={styles.mealMenuLine}>{dish}</Text>)}
               </> : <SeugiEmptyState title="급식이 없어요" style={styles.mealEmpty} />}
             </View>)}

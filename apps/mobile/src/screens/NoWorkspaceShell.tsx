@@ -27,6 +27,7 @@ import {
   noWorkspaceInitialCreateRoomDetail,
   noWorkspaceRegistrationActionOrder,
 } from "../utils/noWorkspaceShell";
+import { nativePlatform } from "../utils/platform";
 
 const emptyWorkspace: Workspace = { id: "", code: "", name: "", members: [], waitlist: [], ownerId: "" };
 type NoWorkspaceDetail = "workspaceMembers" | "createRoom" | "createGroupRoomName";
@@ -72,7 +73,7 @@ export function NoWorkspaceShell({
       create: "새 학교 만들기",
     };
     const buttons = noWorkspaceRegistrationActionOrder(
-      Platform.OS === "ios" ? "ios" : "android",
+      nativePlatform(),
     ).map((action) => ({ text: labels[action], onPress: handlers[action] }));
     Alert.alert("학교 등록하기", "학교를 등록한 뒤 스기를 사용할 수 있어요", buttons, {
       cancelable: Platform.OS === "ios",
@@ -143,7 +144,7 @@ export function NoWorkspaceShell({
           : tab === "chat" || tab === "group"
           ? roomSearchActive
             ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="검색 완료" onPress={() => { setRoomSearchActive(false); setRoomSearch(""); }}><Text style={styles.link}>완료</Text></TouchableOpacity>
-            : <View style={styles.headerActions}><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => setDetail(noWorkspaceInitialCreateRoomDetail(Platform.OS === "ios" ? "ios" : "android", tab))}><SeugiAddFillIcon /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => setRoomSearchActive(true)}><SeugiSearchIcon size={24} color={SeugiColor.Primary500} /></TouchableOpacity></View>
+            : <View style={styles.headerActions}><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 만들기" onPress={() => setDetail(noWorkspaceInitialCreateRoomDetail(nativePlatform(), tab))}><SeugiAddFillIcon /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="채팅방 검색" onPress={() => setRoomSearchActive(true)}><SeugiSearchIcon size={24} color={SeugiColor.Primary500} /></TouchableOpacity></View>
           : null}
     /> : null}
     {visitedTabs.has("home") ? <View style={tab === "home" ? styles.tabRoot : styles.hiddenTabRoot} pointerEvents={tab === "home" ? "auto" : "none"}>
