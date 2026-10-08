@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.data
+data
+.expo
+.upstream
+pnpm-lock.yaml
+apps/mobile/ios
+apps/mobile/android
+apps/web/build
+apps/web/dist
+**/*.podspec
+**/*.gradle

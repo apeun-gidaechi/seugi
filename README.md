@@ -2,14 +2,14 @@
 
 This repository is the TypeScript migration of Seugi's web, server, Android, and iOS products.
 
-| Package | Purpose |
-| --- | --- |
-| `apps/web` | Existing React/Vite desktop web client, retained and migrated into the workspace |
-| `apps/api` | TypeScript Fastify API and Socket.IO real-time service (`src/routes/` handlers, `src/registerRoutes.ts` wiring, `src/app.ts` bootstrap) |
-| `packages/contracts` | Shared API route registry, domain schemas, and DTO types |
-| `packages/api-client` | Shared typed HTTP client, token refresh, and domain operations |
-| `packages/design-tokens` | Shared canonical Seugi colors and typography values |
-| `apps/mobile` | React Native/Expo client (migration target for Android and iOS) |
+| Package                  | Purpose                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`               | Existing React/Vite desktop web client, retained and migrated into the workspace                                                        |
+| `apps/api`               | TypeScript Fastify API and Socket.IO real-time service (`src/routes/` handlers, `src/registerRoutes.ts` wiring, `src/app.ts` bootstrap) |
+| `packages/contracts`     | Shared API route registry, domain schemas, and DTO types                                                                                |
+| `packages/api-client`    | Shared typed HTTP client, token refresh, and domain operations                                                                          |
+| `packages/design-tokens` | Shared canonical Seugi colors and typography values                                                                                     |
+| `apps/mobile`            | React Native/Expo client (migration target for Android and iOS)                                                                         |
 
 ## Shared API modules
 
@@ -17,7 +17,7 @@ This repository is the TypeScript migration of Seugi's web, server, Android, and
 
 `@seugi/api-client` consumes those routes and contracts. Web and mobile code should call its domain methods instead of assembling endpoint URLs or request payloads locally. The client owns JSON/multipart handling, bearer tokens, one-time refresh-and-retry behavior, and typed HTTP errors (`SeugiApiError`). Keep response-envelope unwrapping in app adapters where a screen still relies on a legacy view model.
 
-Run `pnpm check` for TypeScript checks across every workspace, `pnpm --filter @seugi/api test` for API and client integration tests, and `pnpm build` for all workspace production builds.
+Run `pnpm verify` before opening a PR (`check`, ESLint, Prettier, and tests). See `docs/tooling.md` for stack notes and conventions. Use `pnpm --filter @seugi/api test` for API-only runs and `pnpm build` for production builds.
 
 ### Mobile (Expo)
 

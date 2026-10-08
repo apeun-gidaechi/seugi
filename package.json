@@ -7,7 +7,23 @@
     "build": "pnpm -r build",
     "check": "pnpm -r check",
     "dev": "pnpm --parallel --filter @seugi/api --filter @seugi/web dev",
-    "test": "pnpm -r test"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint apps/api apps/mobile packages",
+    "lint:web": "eslint apps/web",
+    "lint:fix": "eslint apps/api apps/mobile packages --fix",
+    "test": "pnpm -r test",
+    "verify": "pnpm check && pnpm lint && pnpm format:check && pnpm test"
   },
-  "devDependencies": { "typescript": "^5.7.3" }
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.71.1"
+  }
 }
