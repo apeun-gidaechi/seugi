@@ -82,7 +82,13 @@ After launch, the playground home lists:
 
 The playground variant wires `PlaygroundSeugiApi` (in-memory fixtures) so Home, Chat, Notices, Assignments, and most workspace screens render with sample data. Real-time chat sockets are not simulated.
 
-`pnpm --filter @seugi/mobile test` runs `scripts/check-playground-screen-coverage.mjs` so every `src/screens/**/*Screen.tsx` stays listed in `screenDemos`.
+`pnpm --filter @seugi/mobile test` runs coverage scripts so playground stays complete:
+
+- `check-playground-screen-coverage.mjs` — every `src/screens/**/*Screen.tsx` in `screenDemos`
+- `check-playground-design-system-coverage.mjs` — every `src/design-system/*.tsx` imported in `DesignSystemCatalogScreen`
+- `check-playground-component-coverage.mjs` — every `src/components/*.tsx` in `componentDemos`
+
+`pnpm --filter @seugi/storybook check` also verifies auto stories exist for each web `Components` default export.
 
 ## Production app on a physical iPhone
 
