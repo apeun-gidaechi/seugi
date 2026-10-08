@@ -79,7 +79,7 @@ Record device QA sessions here before updating `mobile-screen-parity.md` rows. K
 
 | Date | Commit | Scope | Environment | Result | Artifacts |
 | --- | --- | --- | --- | --- | --- |
-| 2026-10-08 | `5573229` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (mobile 95 tests) | Terminal output; maps to checklist IDs in **Automated verification** above |
+| 2026-10-08 | `aed2a66` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 103) | Terminal output; maps to checklist IDs in **Automated verification** above |
 | | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
 
 ## Sign-off

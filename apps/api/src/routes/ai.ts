@@ -4,7 +4,7 @@ import type { Store } from "../store.js";
 import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "../ai.js";
 import { body, ok } from "../http/helpers.js";
 
-type AiRouteDeps = {
+export type AiRouteDeps = {
   store: Store;
   auth: (request: FastifyRequest) => Promise<void>;
   localDateString: (date: Date) => string;

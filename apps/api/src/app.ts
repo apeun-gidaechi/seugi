@@ -60,8 +60,7 @@ import { body, ok, query } from "./http/helpers.js";
 import { registerCoreRoutes } from "./routes/core.js";
 import { registerMemberRoutes } from "./routes/member.js";
 import { registerAuthRoutes } from "./routes/auth.js";
-import { registerFileRoutes } from "./routes/files.js";
-import { registerAiRoutes } from "./routes/ai.js";
+import { registerLateRoutes } from "./routes/late.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
 import { localDateString, schoolWeekRange } from "./school/dates.js";
 import { createWorkspaceInviteCode } from "./workspace/codes.js";
@@ -1549,14 +1548,10 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
       );
     },
   );
-  registerAiRoutes(app, {
-    store,
-    auth,
-    localDateString,
-    resetMeals,
-    timetableForMember,
-    roleIn,
-  });
-  registerFileRoutes(app, { store, storage, auth });
+  registerLateRoutes(
+    app,
+    { store, auth, localDateString, resetMeals, timetableForMember, roleIn },
+    { store, storage, auth },
+  );
   return app;
 }
