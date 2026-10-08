@@ -64,6 +64,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFileRoutes } from "./routes/files.js";
 import { registerAiRoutes } from "./routes/ai.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
+import { localDateString, schoolWeekRange } from "./school/dates.js";
 
 const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const createWorkspaceCode = () =>
@@ -1233,19 +1234,9 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     },
   );
 
-  const localDateString = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  const weekRange = () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return [localDateString(start), localDateString(end)] as const;
-  };
   const resetTimetable = async (workspaceId: string) => {
     const workspace = store.requireWorkspace(workspaceId);
-    const [fromDate, toDate] = weekRange();
+    const [fromDate, toDate] = schoolWeekRange();
     const from = fromDate.replaceAll("-", "");
     const to = toDate.replaceAll("-", "");
     const rows = await neis.timetables(workspace, from, to);
@@ -1289,7 +1280,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         .filter((entry) => entry.date === today)
         .sort((a, b) => Number(a.time) - Number(b.time));
     }
-    const [from, to] = weekRange();
+    const [from, to] = schoolWeekRange();
     return rows
       .filter((entry) => entry.date >= from && entry.date <= to)
       .sort(
