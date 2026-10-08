@@ -54,7 +54,7 @@ import { registerSchoolRoutes } from "./routes/school.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerTimetableRoutes } from "./routes/timetable.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
-import { localDateString, schoolWeekRange } from "./school/dates.js";
+import { localDateString } from "./school/dates.js";
 import { createWorkspaceInviteCode } from "./workspace/codes.js";
 
 type Claims = { sub: string };
