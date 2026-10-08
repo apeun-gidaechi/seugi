@@ -8,10 +8,8 @@ import { type Workspace } from "@seugi/contracts";
 import { NoWorkspaceShell } from "./src/screens/NoWorkspaceShell";
 import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "./src/config";
 import { AuthScreen } from "./src/screens/AuthScreen";
-import {
-  AuthenticatedAppShell,
-  type Tab,
-} from "./src/screens/AuthenticatedAppShell";
+import { AuthenticatedAppShell } from "./src/screens/AuthenticatedAppShell";
+import type { SeugiTab } from "./src/design-system/BottomNavigation";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
 import { androidRegistrationFailureMessage, emailRegistrationAutoSignIn } from "./src/utils/authFeedback";
@@ -43,7 +41,7 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<SeugiTab>("home");
   const [authenticated, setAuthenticated] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace>();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
