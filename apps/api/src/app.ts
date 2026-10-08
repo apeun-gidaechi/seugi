@@ -7,7 +7,6 @@ import { z } from "zod";
 import {
   API_SPEC,
   CHAT_EMOJIS,
-  aiPromptSchema,
   chatEmojiSchema,
   chatMemberEventSchema,
   chatRoomSearchSchema,
@@ -55,7 +54,6 @@ import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { chatRoomName } from "./chatRoomName.js";
 import { fetchClassroomTasks } from "./classroom.js";
-import { answerSchoolQuestion, answerWithCatseugi, schoolQuestionIntent } from "./ai.js";
 import { notificationRecipientIds, PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
@@ -64,6 +62,7 @@ import { registerCoreRoutes } from "./routes/core.js";
 import { registerMemberRoutes } from "./routes/member.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerFileRoutes } from "./routes/files.js";
+import { registerAiRoutes } from "./routes/ai.js";
 
 const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const createWorkspaceCode = () =>
@@ -1656,48 +1655,13 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     },
   );
   registerAuthRoutes(app, { store, oauth, auth, issueTokens, rememberDeviceToken });
-  app.post(API_SPEC.askCatseugi.path, { preHandler: auth }, async (request) => {
-    const input = body(aiPromptSchema, request);
-    if (!input.workspaceId) return ok("캣스기답변", JSON.stringify({ keyword: "기타", data: await answerWithCatseugi(input.message) }));
-    if (!store.canAccess(input.workspaceId, request.user.sub))
-      throw new Error("권한이 없습니다");
-    const intent = schoolQuestionIntent(input.message);
-    const needsMeals = intent === "MEAL";
-    const needsTimetable = intent === "TIMETABLE";
-    const needsMembers = intent === "PICK_MEMBER" || intent === "MAKE_TEAMS";
-    const today = localDateString(new Date());
-    let meals = store.meals.get(input.workspaceId) ?? [];
-    if (needsMeals && !store.meals.has(input.workspaceId)) {
-      try { meals = await resetMeals(input.workspaceId); } catch { meals = []; }
-    }
-    const timetable = needsTimetable ? await timetableForMember(input.workspaceId, request.user.sub, false) : [];
-    const notifications = [...store.notifications.values()]
-      .filter((item) => item.workspaceId === input.workspaceId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map((item) => ({ ...item, userName: store.members.get(item.authorId)?.name }));
-    let members: ReturnType<typeof store.requireMember>[] = [];
-    if (needsMembers) {
-      const workspace = store.requireWorkspace(input.workspaceId);
-      const profile = store.profiles.get(`${workspace.id}:${request.user.sub}`);
-      const requestedClass = input.message.match(/(\d+)\s*학년\s*(\d+)\s*반/);
-      const grade = requestedClass?.[1] ?? (profile?.grade ? String(profile.grade) : undefined);
-      const classNum = requestedClass?.[2] ?? (profile?.class ? String(profile.class) : undefined);
-      members = workspace.members
-        .filter((memberId) => roleIn(workspace, memberId) === "STUDENT")
-        .filter((memberId) => {
-          const studentProfile = store.profiles.get(`${workspace.id}:${memberId}`);
-          return (!grade || studentProfile?.grade === Number(grade)) && (!classNum || studentProfile?.class === Number(classNum));
-        })
-        .map((memberId) => store.requireMember(memberId));
-    }
-    const schoolAnswer = answerSchoolQuestion(input.message, {
-      meals: meals.filter((item) => item.date.slice(0, 10) === today),
-      timetable,
-      notifications,
-      members,
-    });
-    const answer = schoolAnswer ?? { keyword: "기타", data: await answerWithCatseugi(input.message) };
-    return ok("캣스기답변", JSON.stringify(answer));
+  registerAiRoutes(app, {
+    store,
+    auth,
+    localDateString,
+    resetMeals,
+    timetableForMember,
+    roleIn,
   });
   registerFileRoutes(app, { store, storage, auth });
   return app;
