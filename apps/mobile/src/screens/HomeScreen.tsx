@@ -29,10 +29,19 @@ import { SeugiHomeCardIcon, type HomeCardIconName } from "../design-system/HomeC
 import { api } from "../services/api";
 import { localDateKey } from "../utils/date";
 import { initialHomeMealPage, shouldLoadClassroomTasks } from "../utils/home";
+import {
+  getCurrentTimetablePeriod,
+  homeMealPages,
+  homeMealTypeLabel,
+  homeScheduleDaysUntil,
+  homeScheduleMonthDay,
+  homeTodaysMeals,
+  homeTodaysTimetable,
+  homeUpcomingSchedules,
+} from "../utils/homeScreenData";
 import { refreshHomeWidgets } from "../widgets/refresh";
 
 export type HomeDetail = "meals" | "timetable" | "tasks" | "catSeugi" | "workspace";
-const MEAL_PRIORITY: Record<string, number> = { 조식: 0, 중식: 1, 석식: 2 };
 
 export function HomeScreen({
   workspace,
@@ -109,25 +118,14 @@ export function HomeScreen({
     void refreshHome();
   }, [refreshHome, refreshToken]);
   const today = localDateKey(new Date());
-  const todaysMeals = (meals ?? [])
-    .filter((item) => item.date.slice(0, 10) === today)
-    .sort((a, b) => (MEAL_PRIORITY[a.type] ?? Number.MAX_SAFE_INTEGER) - (MEAL_PRIORITY[b.type] ?? Number.MAX_SAFE_INTEGER));
-  const mealPages = Platform.OS === "android"
-    ? ["조식", "중식", "석식"].map((type) => ({ type, meal: todaysMeals.find((item) => item.type === type) }))
-    : todaysMeals.map((meal) => ({ type: meal.type, meal }));
+  const todaysMeals = homeTodaysMeals(meals, today);
+  const mealPages = homeMealPages(todaysMeals, Platform.OS === "ios" ? "ios" : "android");
   useEffect(() => {
     if (Platform.OS !== "android" || mealPageWidth <= 0 || mealPages.length === 0) return;
     requestAnimationFrame(() => mealPagerRef.current?.scrollTo({ x: initialMealPage * mealPageWidth, y: 0, animated: false }));
   }, [initialMealPage, mealPageWidth, mealPages.length]);
-  const todaysTimetable = timetable
-    .filter((item) => item.date.slice(0, 10) === today)
-    .sort((a, b) => Number(a.time) - Number(b.time));
-  const upcoming = schedules
-    .filter((item) => Platform.OS === "ios"
-      ? item.date.slice(0, 10) > today
-      : Number(item.date.slice(8, 10)) >= new Date().getDate())
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, Platform.OS === "android" ? 3 : undefined);
+  const todaysTimetable = homeTodaysTimetable(timetable, today);
+  const upcoming = homeUpcomingSchedules(schedules, today, Platform.OS === "ios" ? "ios" : "android");
 
   useEffect(() => {
     const updatePeriod = () => {
@@ -189,7 +187,7 @@ export function HomeScreen({
           {mealPageWidth > 0 ? <ScrollView ref={mealPagerRef} horizontal pagingEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setMealPage(Math.round(event.nativeEvent.contentOffset.x / mealPageWidth))}>
             {mealPages.map(({ type, meal }, index) => <View key={`${today}-${type}`} style={[styles.mealPage, { width: mealPageWidth }]}>
               {meal ? <>
-                <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{Platform.OS === "android" ? type === "조식" ? "아침" : type === "중식" ? "점심" : type === "석식" ? "저녁" : type : type}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
+                <View style={styles.mealCardHeading}><Text style={styles.mealTypeBadge}>{homeMealTypeLabel(type, Platform.OS === "ios" ? "ios" : "android")}</Text><Text style={styles.muted}>{meal.calorie}</Text></View>
                 {Platform.OS === "android" ? Array.from({ length: Math.ceil(meal.menu.length / 2) }, (_, row) => <View key={row} style={styles.mealMenuRow}><Text style={styles.mealMenuColumn}>{meal.menu[row * 2]}</Text><Text style={styles.mealMenuColumn}>{meal.menu[row * 2 + 1] ?? ""}</Text></View>) : meal.menu.map((dish, dishIndex) => <Text key={`${dishIndex}-${dish}`} style={styles.mealMenuLine}>{dish}</Text>)}
               </> : <SeugiEmptyState title="급식이 없어요" style={styles.mealEmpty} />}
             </View>)}
@@ -210,9 +208,9 @@ export function HomeScreen({
       <HomeCard title="다가오는 일정" icon="schedule">
         {scheduleLoading ? <SeugiLoadingIndicator /> : upcoming.length ? (
           <View style={styles.homeList}>{upcoming.map((item) => {
-            const days = daysUntil(today, item.date);
+            const days = homeScheduleDaysUntil(today, item.date);
             return <View key={`${item.date}-${item.name}`} style={styles.homeCalendarRow}>
-              <Text style={styles.homeCalendarDate}>{monthDay(item.date)}</Text>
+              <Text style={styles.homeCalendarDate}>{homeScheduleMonthDay(item.date)}</Text>
               <Text numberOfLines={1} style={styles.homeCalendarTitle}>{item.name}</Text>
               <Text style={styles.homeCalendarDDay}>{days === 0 ? "D-Day" : `D-${days}`}</Text>
             </View>;
@@ -257,17 +255,6 @@ export function NoWorkspaceHome({ onRegister, onRequests }: { onRegister: () => 
 
 export { HomeScreen as Home };
 
-function daysUntil(from: string, to: string) {
-  const fromDate = new Date(`${from.slice(0, 10)}T00:00:00`);
-  const toDate = new Date(`${to.slice(0, 10)}T00:00:00`);
-  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000);
-}
-
-function monthDay(value: string) {
-  const [, month = "", day = ""] = value.slice(0, 10).split("-");
-  return `${Number(month)}/${day}`;
-}
-
 function HomeCard({ title, icon, children, onPress }: { title: string; icon: HomeCardIconName; children: ReactNode; onPress?: () => void }) {
   const heading = <>
     <View style={[styles.homeCardIcon, icon === "cat" && Platform.OS === "ios" && styles.homeCardIconCat]}><SeugiHomeCardIcon name={icon} size={icon === "cat" && Platform.OS === "ios" ? 16 : 24} /></View>
@@ -277,16 +264,6 @@ function HomeCard({ title, icon, children, onPress }: { title: string; icon: Hom
     {onPress ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${title} 상세 보기`} onPress={onPress} style={[styles.homeCardHeader, styles.homeCardHeaderTouchable]}>{heading}<SeugiChevronRight /></TouchableOpacity> : <View style={styles.homeCardHeader}>{heading}</View>}
     <View style={styles.homeCardBody}>{children}</View>
   </View>;
-}
-
-function getCurrentTimetablePeriod(entries: Timetable[], now = new Date()) {
-  const startTime = new Date(now);
-  startTime.setHours(8, 50, 0, 0);
-  const selectedIndex = Math.trunc((now.getTime() - startTime.getTime()) / (60 * 60 * 1000));
-  return {
-    period: selectedIndex + 1,
-    allPeriodsOver: selectedIndex >= entries.length,
-  };
 }
 
 const styles = StyleSheet.create({
