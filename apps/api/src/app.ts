@@ -11,7 +11,6 @@ import {
   chatRoomSearchSchema,
   createChatRoomSchema,
   createNotificationSchema,
-  createTaskSchema,
   createTimetableSchema,
   createWorkspaceSchema,
   deleteMessageSchema,
@@ -20,10 +19,7 @@ import {
   idParamSchema,
   joinWorkspaceSchema,
   kickWorkspaceMembersSchema,
-  mealDateQuerySchema,
-  mealRangeQuerySchema,
   messageHistoryQuerySchema,
-  monthScheduleQuerySchema,
   timetableQuerySchema,
   notificationEmojiSchema,
   notificationPageQuerySchema,
@@ -52,7 +48,6 @@ import { Store, type WaitlistRole } from "./store.js";
 import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { chatRoomName } from "./chatRoomName.js";
-import { fetchClassroomTasks } from "./classroom.js";
 import { notificationRecipientIds, PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
@@ -60,6 +55,7 @@ import { body, ok, query } from "./http/helpers.js";
 import { registerEarlyRoutes } from "./routes/early.js";
 import { registerLateRoutes } from "./routes/late.js";
 import { registerSchoolRoutes } from "./routes/school.js";
+import { registerTaskRoutes } from "./routes/tasks.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
 import { localDateString, schoolWeekRange } from "./school/dates.js";
 import { createWorkspaceInviteCode } from "./workspace/codes.js";
@@ -1377,67 +1373,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
     },
   );
 
-  app.post(API_SPEC.createTask.path, { preHandler: auth }, async (request) => {
-    const input = body(createTaskSchema, request);
-    if (!store.canAccess(input.workspaceId, request.user.sub))
-      throw new Error("권한이 없습니다");
-    const id = store.id();
-    const description = input.description ?? input.content;
-    store.tasks.set(id, {
-      id,
-      workspaceId: input.workspaceId,
-      title: input.title,
-      description,
-      content: description,
-      dueDate: input.dueDate,
-      createdAt: new Date().toISOString(),
-    });
-    return ok("과제 만들기 성공 !");
-  });
-  app.get(API_SPEC.listTasks.path, { preHandler: auth }, async (request) => {
-    const workspaceId = workspaceParam.parse(request.params).workspaceId;
-    if (!store.canAccess(workspaceId, request.user.sub))
-      throw new Error("권한이 없습니다");
-    return ok(
-      "과제 불러오기 성공 !",
-      [...store.tasks.values()]
-        .filter((item) => item.workspaceId === workspaceId)
-        .map((item) => ({
-          ...item,
-          description: item.description ?? item.content,
-          content: item.content ?? item.description,
-        })),
-    );
-  });
-  app.get(
-    API_SPEC.classroomTasks.path,
-    { preHandler: auth },
-    async (request) => {
-      const connection = store.oauth.get(`${request.user.sub}:google`);
-      if (!connection || connection.provider !== "google")
-        throw new Error("GOOGLE_CONNECTION_NOT_FOUND");
-      try {
-        return ok(
-          "클래스룸 과제 불러오기 성공 !",
-          await fetchClassroomTasks(connection),
-        );
-      } catch (error) {
-        if (
-          !(error instanceof Error) ||
-          error.message !== "GOOGLE_CLASSROOM_401" ||
-          !connection.refreshToken
-        )
-          throw error;
-        connection.accessToken = await oauth.refreshGoogle(
-          connection.refreshToken,
-        );
-        return ok(
-          "클래스룸 과제 불러오기 성공 !",
-          await fetchClassroomTasks(connection),
-        );
-      }
-    },
-  );
+  registerTaskRoutes(app, { store, oauth, auth });
   const { resetMeals } = registerSchoolRoutes(app, { store, neis, auth });
   registerLateRoutes(
     app,
