@@ -2,7 +2,6 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
-import { randomInt } from "node:crypto";
 import { z } from "zod";
 import {
   API_SPEC,
@@ -65,10 +64,7 @@ import { registerFileRoutes } from "./routes/files.js";
 import { registerAiRoutes } from "./routes/ai.js";
 import { createWorkspacePresentation } from "./workspace/presentation.js";
 import { localDateString, schoolWeekRange } from "./school/dates.js";
-
-const workspaceCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const createWorkspaceCode = () =>
-  Array.from({ length: 6 }, () => workspaceCodeAlphabet[randomInt(workspaceCodeAlphabet.length)]).join("");
+import { createWorkspaceInviteCode } from "./workspace/codes.js";
 
 type Claims = { sub: string };
 declare module "@fastify/jwt" {
@@ -202,9 +198,9 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
         body(createWorkspaceSchema, request),
       );
       const schoolInfo = await neis.schoolInfo(input.name);
-      let code = createWorkspaceCode();
+      let code = createWorkspaceInviteCode();
       while ([...store.workspaces.values()].some((workspace) => workspace.code === code)) {
-        code = createWorkspaceCode();
+        code = createWorkspaceInviteCode();
       }
       const workspace = {
         id: store.id(),
