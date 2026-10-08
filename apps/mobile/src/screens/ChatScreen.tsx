@@ -16,6 +16,7 @@ import { absoluteApiUrl } from "../utils/url";
 import { SeugiAvatar } from "../design-system/Avatar";
 import { SeugiBadge } from "../design-system/Badge";
 import { matchesChatRoomSearch } from "../utils/chat";
+import { formatChatRoomTimestamp, sortChatRooms } from "../utils/chatRoomList";
 
 export type ChatImagePreview = { url: string; name: string; onSend?: () => void; onClose?: () => void };
 type RoomMessagesProps = { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void; onPreviewImage: (image: ChatImagePreview) => void };
@@ -47,7 +48,7 @@ export function ChatScreen({
     setRefreshing(true);
     try {
       const result = await api.rooms(workspace.id, roomType);
-      setRooms(sortRooms(result.data));
+      setRooms(sortChatRooms(result.data));
     } finally {
       setRefreshing(false);
     }
@@ -114,7 +115,7 @@ export function ChatScreen({
             {(Platform.OS !== "ios" || item.lastMessage != null) ? <Text style={styles.muted} numberOfLines={1}>{item.lastMessage ?? ""}</Text> : null}
           </View>
           <View style={styles.roomMeta}>
-            <Text style={styles.timestamp}>{formatChatTime(item.lastMessageTimestamp)}</Text>
+            <Text style={styles.timestamp}>{formatChatRoomTimestamp(item.lastMessageTimestamp, Platform.OS === "ios" ? "ios" : "android")}</Text>
             {(item.notReadCnt ?? 0) > 0 ? <SeugiBadge count={item.notReadCnt} /> : null}
           </View>
         </TouchableOpacity>
@@ -141,27 +142,3 @@ const styles = StyleSheet.create({
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
 });
 
-function sortRooms(items?: Room[]) {
-  return [...(items ?? [])].sort((left, right) =>
-    (right.lastMessageTimestamp ?? "").localeCompare(left.lastMessageTimestamp ?? ""),
-  );
-}
-
-function formatChatTime(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  if (Platform.OS === "ios") {
-    const now = new Date();
-    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startYesterday = new Date(startToday);
-    startYesterday.setDate(startYesterday.getDate() - 1);
-    const startLastYear = new Date(now.getFullYear() - 1, 0, 1);
-    if (date >= startToday) return `${date.getHours() < 12 ? "오전" : "오후"} ${String(date.getHours() % 12 || 12).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-    if (date >= startYesterday || date >= startLastYear) return `${date.getMonth() + 1}월 ${date.getDate()}일`;
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-  }
-  const hour = date.getHours();
-  const displayHour = hour >= 12 && hour !== 12 ? hour - 12 : hour;
-  return `${hour < 12 ? "오전" : "오후"} ${String(displayHour).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-}

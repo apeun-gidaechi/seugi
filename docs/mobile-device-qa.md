@@ -21,7 +21,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | H-01 meal carousel / Classroom / card data rules | `home.test.ts`, `home-screen-data.test.ts` |
 | WG-01 Android meal widget period | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`) |
 | WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
-| C-01 / C-02 room search | `chat.test.ts` |
+| C-01 / C-02 room search / ordering / timestamps | `chat.test.ts`, `chat-room-list.test.ts` |
 | C-03 message search / list merge / unread | `chat.test.ts`, `chat-conversation.test.ts` |
 | M-01 future-date dimming | `meal-calendar.test.ts` |
 | T-01 week label | `date.test.ts` |
