@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Platform } from "react-native";
+import { Alert, AppState, Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { type Workspace } from "@seugi/contracts";
-import { WorkspaceSetupScreen as WorkspaceSetup } from "./src/screens/WorkspaceSetupScreen";
+import { NoWorkspaceShell } from "./src/screens/NoWorkspaceShell";
 import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "./src/config";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./src/screens/AuthenticatedAppShell";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
+import { androidRegistrationFailureMessage, emailRegistrationAutoSignIn } from "./src/utils/authFeedback";
 import { refreshHomeWidgets } from "./src/widgets/refresh";
 
 const accessTokenKey = "seugi.access-token";
@@ -77,12 +78,18 @@ export default function App() {
       throw reason;
     }
   }, [load]);
-  const selectWorkspace = useCallback((selected: Workspace) => {
+  const selectWorkspace = useCallback(async (selected: Workspace) => {
+    await SecureStore.setItemAsync(workspaceIdKey, selected.id);
     setWorkspace(selected);
-    void SecureStore.setItemAsync(workspaceIdKey, selected.id)
-      .then(() => refreshHomeWidgets())
-      .catch(() => undefined);
   }, []);
+  useEffect(() => {
+    if (!signedIn) return;
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void refreshHomeWidgets().catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [signedIn]);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -163,9 +170,15 @@ export default function App() {
   useEffect(() => {
     if (!authenticated || !notificationPermissionChecked || Platform.OS === "web") return;
     let active = true;
-    if (signedIn) void refreshHomeWidgets().catch(() => undefined);
     (async () => {
-      if (Platform.OS === "ios" && await SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY) === "false") return;
+      if (Platform.OS === "ios" && await SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY) === "false") {
+        const token = await SecureStore.getItemAsync(IOS_DEVICE_TOKEN_KEY);
+        if (token) {
+          await api.removeDeviceToken(token);
+          if (active) setDeviceToken(undefined);
+        }
+        return;
+      }
       if (!EAS_PROJECT_ID) {
         console.warn(
           "[notifications] EXPO_PUBLIC_EAS_PROJECT_ID is not configured; push registration was skipped.",
@@ -203,21 +216,35 @@ export default function App() {
     [load],
   );
   const authenticate = useCallback(
-    async (register = false) => {
+    async (register = false): Promise<boolean> => {
       setLoading(true);
       setError("");
       try {
         const response = register
           ? await api.register({ email, password, name, code })
           : await api.login({ email, password });
+        if (register && !emailRegistrationAutoSignIn(Platform.OS)) {
+          setEmail("");
+          setPassword("");
+          setConfirmPassword("");
+          setName("");
+          setCode("");
+          return true;
+        }
         await persistSession(
           response.data?.accessToken,
           response.data?.refreshToken,
         );
+        return true;
       } catch (reason) {
-        setError(
-          reason instanceof Error ? reason.message : "로그인에 실패했습니다",
-        );
+        const fallback = reason instanceof Error ? reason.message : "로그인에 실패했습니다";
+        const status = reason instanceof Error && "status" in reason && typeof reason.status === "number"
+          ? reason.status
+          : undefined;
+        setError(register && Platform.OS === "android"
+          ? androidRegistrationFailureMessage(status, fallback)
+          : fallback);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -331,15 +358,17 @@ export default function App() {
           void authenticate(false);
         }}
         onRegister={() => {
-          void authenticate(true);
+          return authenticate(true);
         }}
       />
     );
   if (!workspace)
     return (
-      <WorkspaceSetup
+      <NoWorkspaceShell
+        tab={tab}
+        onTabChange={setTab}
+        onReload={load}
         error={error}
-        onCreated={load}
         onLogout={async () => {
           await api.logout(deviceToken).catch(() => undefined);
           api.setToken();
@@ -357,10 +386,12 @@ export default function App() {
       tab={tab}
       workspace={workspace}
       workspaces={workspaces}
+      deviceToken={deviceToken}
       error={error}
       onTabChange={setTab}
       onReload={reload}
       onSelectWorkspace={selectWorkspace}
+      onDeviceTokenChange={setDeviceToken}
       onLogout={async () => {
         if (deviceToken)
           await api.removeDeviceToken(deviceToken).catch(() => undefined);
