@@ -1,12 +1,13 @@
 import { withSeugiApi } from "./client";
+import { homeNotificationRequest } from "../utils/homeNotifications";
 
 export const getTimeTable = async (workspaceId: string) => {
   return withSeugiApi((api) => api.timetable(workspaceId));
 };
 
 export const getNotification = async (workspaceId: string, page: number) => {
-  void page;
-  return withSeugiApi((api) => api.notifications(workspaceId));
+  const request = homeNotificationRequest(page);
+  return withSeugiApi((api) => api.notifications(workspaceId, request.page, request.size));
 };
 
 export const fetchingNotice = async (workspaceId: string) => {

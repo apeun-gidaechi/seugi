@@ -5,11 +5,11 @@
   "main": "./public/electron.js",
   "homepage": "/",
   "scripts": {
-    "dev": "node src/swEnvBuild.js && vite",
-    "build": "node src/swEnvBuild.js && vite build",
+    "dev": "tsx src/swEnvBuild.ts && vite",
+    "build": "tsx src/swEnvBuild.ts && vite build",
     "preview": "vite preview",
     "electron-test": "electron .",
-    "test": "vite build",
+    "test": "node --import tsx --test test/**/*.test.ts && vite build",
     "check": "tsc --noEmit",
     "electron": "tsc ./public/electron.ts && concurrently 'cross-env BROWSER=none npm run dev' 'echo 'Starting Waiton App' && wait-on tcp:127.0.0.1:5173 && echo 'Starting Electron App' && electron .'",
     "electron-build": "tsc && vite build && electron-builder"
@@ -50,6 +50,7 @@
     "electron-builder": "^24.13.3",
     "eslint": "^8.36.0",
     "eslint-plugin-react": "^7.32.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^4.1.0",
     "vite-tsconfig-paths": "^4.3.2",
