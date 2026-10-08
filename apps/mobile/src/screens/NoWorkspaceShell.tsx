@@ -14,7 +14,7 @@ import { CreateRoomScreen } from "./CreateRoomScreen";
 import { NoWorkspaceHome } from "./HomeScreen";
 import { ProfileScreen } from "./ProfileScreen";
 import { ChatScreen, type ChatImagePreview } from "./ChatScreen";
-import { shellTabTitles } from "../navigation/shellNavigation";
+import { previousCreateRoomDetail, shellTabTitles } from "../navigation/shellNavigation";
 import { ChatRoomMessages } from "./shell/ChatRoomMessages";
 import { ImagePreviewScreen } from "./ImagePreviewScreen";
 import { NoticesScreen } from "./NoticesScreen";
@@ -95,8 +95,8 @@ export function NoWorkspaceShell({
       if (memberSearchActive) {
         setMemberSearchActive(false);
         setMemberSearch("");
-      } else if (detail === "createGroupRoomName") {
-        setDetail("createRoom");
+      } else if (detail === "createRoom" || detail === "createGroupRoomName") {
+        setDetail(previousCreateRoomDetail(detail));
       } else {
         setDetail(undefined);
       }
@@ -120,8 +120,8 @@ export function NoWorkspaceShell({
     if (memberSearchActive) {
       setMemberSearchActive(false);
       setMemberSearch("");
-    } else if (detail === "createGroupRoomName") {
-      setDetail("createRoom");
+    } else if (detail === "createRoom" || detail === "createGroupRoomName") {
+      setDetail(previousCreateRoomDetail(detail));
     } else {
       setDetail(undefined);
     }

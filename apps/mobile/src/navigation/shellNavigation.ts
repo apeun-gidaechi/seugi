@@ -63,6 +63,14 @@ const shellFullscreenDetails: AppDetail[] = [
   "createTask",
 ];
 
+export type CreateRoomFlowDetail = "createRoom" | "createGroupRoomName";
+
+export function previousCreateRoomDetail(
+  detail: CreateRoomFlowDetail,
+): CreateRoomFlowDetail | undefined {
+  return detail === "createGroupRoomName" ? "createRoom" : undefined;
+}
+
 export function shellShowsMainTopBar(
   detail: AppDetail | undefined,
   hasActiveConversation: boolean,
