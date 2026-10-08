@@ -10,7 +10,7 @@ export const SideBarContainer = styled.div`
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  background: #FFF;
+  background: #fff;
   box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
   z-index: 989;
 
@@ -48,12 +48,12 @@ export const SideBarButton = styled.button<{ $isSelected: boolean }>`
   }
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     width: 4px;
     height: 100%;
-    background: ${props => props.$isSelected ? `url(${SelectBar}) no-repeat center` : 'none'};
+    background: ${(props) => (props.$isSelected ? `url(${SelectBar}) no-repeat center` : "none")};
   }
 
   @media (max-width: 768px) {
@@ -107,16 +107,15 @@ export const SideAvatarImg = styled.img`
 `;
 
 export const SideAvatarButton = styled.button`
-    background:none;
-    border:none;
+  background: none;
+  border: none;
 
-    cursor: pointer;
+  cursor: pointer;
 
-    z-index:999;
-`
+  z-index: 999;
+`;
 
 export const SettingButton = styled.button`
-   background: none;
-   border: none;
-
-`
+  background: none;
+  border: none;
+`;

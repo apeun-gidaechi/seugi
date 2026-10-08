@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { androidRegistrationFailureMessage, emailRegistrationAutoSignIn, emailVerificationFeedback, emailVerificationTimerStartsOnAttempt } from "../src/utils/authFeedback.ts";
+import {
+  androidRegistrationFailureMessage,
+  emailRegistrationAutoSignIn,
+  emailVerificationFeedback,
+  emailVerificationTimerStartsOnAttempt,
+} from "../src/utils/authFeedback.ts";
 
 test("email registration auto-signs-in on iOS but returns Android to the start route", () => {
   assert.equal(emailRegistrationAutoSignIn("ios"), true);
@@ -14,7 +19,10 @@ test("iOS starts the email resend timer on attempt while Android starts it after
 
 test("Android registration maps native 400, 404, and 409 outcomes to invalid-code feedback", () => {
   for (const status of [400, 404, 409])
-    assert.equal(androidRegistrationFailureMessage(status, "서버 메시지"), "인증 코드가 올바르지 않습니다");
+    assert.equal(
+      androidRegistrationFailureMessage(status, "서버 메시지"),
+      "인증 코드가 올바르지 않습니다",
+    );
   assert.equal(androidRegistrationFailureMessage(500, "서버 오류"), "서버 오류");
   assert.equal(androidRegistrationFailureMessage(undefined, "오프라인"), "오프라인");
 });

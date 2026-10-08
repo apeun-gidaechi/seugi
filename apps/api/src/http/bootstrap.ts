@@ -17,9 +17,7 @@ export function registerApiErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((error, _request, reply) => {
     const message = error instanceof Error ? error.message : "INTERNAL_ERROR";
     const code =
-      typeof error === "object" && error !== null && "code" in error
-        ? String(error.code)
-        : "";
+      typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
     const explicitStatus =
       typeof error === "object" &&
       error !== null &&

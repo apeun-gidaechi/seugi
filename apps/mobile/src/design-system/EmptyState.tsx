@@ -37,10 +37,12 @@ const faceWithDiagonalMouth = String.raw`<svg width="152" height="152" viewBox="
 </defs></svg>`;
 
 export function SeugiEmptyState({ title, style }: { title: string; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.container, style]}>
-    <SvgXml xml={faceWithDiagonalMouth} width={64} height={64} accessibilityLabel={title} />
-    <Text style={styles.title}>{title}</Text>
-  </View>;
+  return (
+    <View style={[styles.container, style]}>
+      <SvgXml xml={faceWithDiagonalMouth} width={64} height={64} accessibilityLabel={title} />
+      <Text style={styles.title}>{title}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

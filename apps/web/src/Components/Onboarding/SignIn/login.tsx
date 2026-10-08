@@ -13,7 +13,7 @@ import Cloud2 from "@/Assets/image/onbording/Start/LoginCloud2.svg";
 import Sun from "@/Assets/image/onbording/Start/LoginSun.svg";
 import Divider from "@/Assets/image/onbording/Start/Divider.svg";
 
-import useLogin from '@/Hooks/OnBording/LoginHook/index';
+import useLogin from "@/Hooks/OnBording/LoginHook/index";
 
 const Login = () => {
   const { ...Login } = useLogin();
@@ -74,9 +74,7 @@ const Login = () => {
             <LoginButton text="로그인" onClick={Login.handleLogin} />
             <S.Body1>
               계정이 없으시다면?{" "}
-              <S.Gosignup href="https://www.seugi.com/emailsignup">
-                가입하기
-              </S.Gosignup>{" "}
+              <S.Gosignup href="https://www.seugi.com/emailsignup">가입하기</S.Gosignup>{" "}
             </S.Body1>
           </S.Buttonpart>
           <S.Orpart>

@@ -1,10 +1,19 @@
 import { Platform, Pressable, StyleSheet, Switch, View, type SwitchProps } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 
-type SeugiToggleProps = Pick<SwitchProps, "value" | "onValueChange" | "disabled" | "accessibilityLabel" | "testID">;
+type SeugiToggleProps = Pick<
+  SwitchProps,
+  "value" | "onValueChange" | "disabled" | "accessibilityLabel" | "testID"
+>;
 
 /** Native Seugi switch: 51×31dp with a white thumb and primary/gray track. */
-export function SeugiToggle({ value, onValueChange, disabled, accessibilityLabel, testID }: SeugiToggleProps) {
+export function SeugiToggle({
+  value,
+  onValueChange,
+  disabled,
+  accessibilityLabel,
+  testID,
+}: SeugiToggleProps) {
   if (Platform.OS === "ios") {
     return (
       <Switch
@@ -31,7 +40,12 @@ export function SeugiToggle({ value, onValueChange, disabled, accessibilityLabel
       disabled={disabled}
       style={styles.androidSwitch}
     >
-      <View style={[styles.track, { backgroundColor: value ? SeugiColor.Primary500 : SeugiColor.Gray200 }]}>
+      <View
+        style={[
+          styles.track,
+          { backgroundColor: value ? SeugiColor.Primary500 : SeugiColor.Gray200 },
+        ]}
+      >
         <View style={[styles.thumb, value && styles.thumbChecked]} />
       </View>
     </Pressable>

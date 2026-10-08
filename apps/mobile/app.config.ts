@@ -63,9 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     extra: {
       ...config.extra,
-      ...(easProjectId
-        ? { eas: { ...config.extra?.eas, projectId: easProjectId } }
-        : {}),
+      ...(easProjectId ? { eas: { ...config.extra?.eas, projectId: easProjectId } } : {}),
     },
     plugins: [
       ["expo-secure-store", { configureAndroidBackup: false }],
@@ -74,7 +72,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       withWidgetPodfileFix,
       ["react-native-android-widget", androidWidgetConfig],
       ...(config.plugins ?? []),
-      ...(iosUrlScheme ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as const] : []),
+      ...(iosUrlScheme
+        ? [["@react-native-google-signin/google-signin", { iosUrlScheme }] as const]
+        : []),
       withAndroidBackupDisabled,
     ],
   };

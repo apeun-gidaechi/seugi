@@ -1,9 +1,8 @@
-import React from 'react'
+import React from "react";
 
-import * as S from './index.style'
+import * as S from "./index.style";
 
-import SelectChatRoom from '@/Assets/image/chat/sadErrorImg.svg';
-
+import SelectChatRoom from "@/Assets/image/chat/sadErrorImg.svg";
 
 const index = () => {
   return (
@@ -17,7 +16,7 @@ const index = () => {
         </S.Container>
       </S.ContainerWrapper>
     </S.AllWrapContainer>
-  )
-}
+  );
+};
 
-export default index
+export default index;

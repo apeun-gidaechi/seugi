@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-import * as S from '@/Components/Button/chatButton/index.style';
-import SearchIcon from '@/Assets/image/chat/blackSearchIcon.svg';
-import HamburgerIcon from '@/Assets/image/chat/hamburgerLine.svg';
+import * as S from "@/Components/Button/chatButton/index.style";
+import SearchIcon from "@/Assets/image/chat/blackSearchIcon.svg";
+import HamburgerIcon from "@/Assets/image/chat/hamburgerLine.svg";
 
-import Drawer from '../Drawer/index';
+import Drawer from "../Drawer/index";
 
 const Index = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

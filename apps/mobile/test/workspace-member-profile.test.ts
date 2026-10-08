@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { workspaceMemberProfileHeader, workspaceMemberProfileRows } from "../src/utils/workspaceMemberProfile.ts";
+import {
+  workspaceMemberProfileHeader,
+  workspaceMemberProfileRows,
+} from "../src/utils/workspaceMemberProfile.ts";
 
-const profile = { name: "민지", nick: "민", status: "", spot: "교사", belong: "", phone: "010", wire: "", location: "2층" };
+const profile = {
+  name: "민지",
+  nick: "민",
+  status: "",
+  spot: "교사",
+  belong: "",
+  phone: "010",
+  wire: "",
+  location: "2층",
+};
 
 test("iOS member profile sheet includes nickname and uses dashes for blank native profile cells", () => {
   assert.equal(workspaceMemberProfileHeader("ios", profile), "민지 (민)");

@@ -1,20 +1,16 @@
-import React, {useEffect} from "react";
+import React, { useEffect } from "react";
 import * as S from "./index.style";
-import UnChatRoom from '@/Components/Chat/chatRoom/unSelect/index';
-import SelectedChatRoom from '@/Components/Chat/chatRoom/Select/index';
-import Sidebar from '@/Components/common/sidebar/sidebar';
-import TopButton from '@/Components/Button/chatButton/index';
+import UnChatRoom from "@/Components/Chat/chatRoom/unSelect/index";
+import SelectedChatRoom from "@/Components/Chat/chatRoom/Select/index";
+import Sidebar from "@/Components/common/sidebar/sidebar";
+import TopButton from "@/Components/Button/chatButton/index";
 import useChat from "@/Hooks/Common/Sidebar/useChat";
-import {socketService} from "@/Hooks/Common/SendMessage/socketService";
+import { socketService } from "@/Hooks/Common/SendMessage/socketService";
 import Spacer from "@/Components/common/Spacer/spacer";
 import TitleText from "@/Components/common/TitleText";
 
 const GroupChat = () => {
-  const {  
-    selectedRoom,
-    selectedChatRooms,
-    handleChatRoomClick
-  } = useChat();
+  const { selectedRoom, selectedChatRooms, handleChatRoomClick } = useChat();
 
   useEffect(() => {
     socketService.connect();
@@ -23,17 +19,13 @@ const GroupChat = () => {
   return (
     <S.Container>
       <S.TitleWrapper>
-        <TitleText/>
-        <Spacer/>
-        <TopButton/>
+        <TitleText />
+        <Spacer />
+        <TopButton />
       </S.TitleWrapper>
       <S.ChatWrapper>
-        <Sidebar chatRooms={selectedChatRooms} handleChatRoomClick={handleChatRoomClick}/>
-        {selectedRoom ? (
-          <SelectedChatRoom room={selectedRoom}/>
-        ) : (
-          <UnChatRoom/>
-        )}
+        <Sidebar chatRooms={selectedChatRooms} handleChatRoomClick={handleChatRoomClick} />
+        {selectedRoom ? <SelectedChatRoom room={selectedRoom} /> : <UnChatRoom />}
       </S.ChatWrapper>
     </S.Container>
   );

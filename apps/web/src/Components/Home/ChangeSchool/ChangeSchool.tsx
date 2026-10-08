@@ -5,14 +5,14 @@ import * as S from "./ChangeSchool.style";
 import Arrow from "@/Assets/image/home/arrow.svg";
 import { paths } from "@/Constants/paths";
 import Cookies from "js-cookie";
-import type { PendingWorkspaceCard, WorkspaceCard } from '@/Api/workspace';
+import type { PendingWorkspaceCard, WorkspaceCard } from "@/Api/workspace";
 interface Props {
   onClose: () => void;
   workspaces: WorkspaceCard[];
   pendingWorkspaces: PendingWorkspaceCard[];
 }
 
-const Changeschool = ({ onClose, workspaces = [], pendingWorkspaces= [] }: Props) => {
+const Changeschool = ({ onClose, workspaces = [], pendingWorkspaces = [] }: Props) => {
   const navigate = useNavigate();
 
   const goCreateSchool = () => {

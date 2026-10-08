@@ -9,13 +9,17 @@ export type WorkspaceMemberProfileFields = {
   location?: string;
 };
 
-export function workspaceMemberProfileHeader(platform: "android" | "ios", profile: WorkspaceMemberProfileFields) {
-  return platform === "ios" && profile.nick
-    ? `${profile.name} (${profile.nick})`
-    : profile.name;
+export function workspaceMemberProfileHeader(
+  platform: "android" | "ios",
+  profile: WorkspaceMemberProfileFields,
+) {
+  return platform === "ios" && profile.nick ? `${profile.name} (${profile.nick})` : profile.name;
 }
 
-export function workspaceMemberProfileRows(platform: "android" | "ios", profile: WorkspaceMemberProfileFields) {
+export function workspaceMemberProfileRows(
+  platform: "android" | "ios",
+  profile: WorkspaceMemberProfileFields,
+) {
   const fields: Array<[string, string | undefined]> = [
     ["상태메세지", profile.status],
     ...(platform === "ios" ? [["닉네임", profile.nick] as [string, string | undefined]] : []),

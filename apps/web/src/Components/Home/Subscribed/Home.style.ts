@@ -30,7 +30,7 @@ export const HomeMain = styled.div`
 
 export const ComponentsBox = styled.div`
   display: flex;
-  flex-wrap:wrap;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px;
   align-self: stretch;
@@ -68,7 +68,7 @@ export const HomeWrapper2 = styled.div`
 
 export const HomeWrapper1DownContainer = styled.div`
   display: flex;
-  flex-wrap:wrap;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 20px;
   align-self: stretch;
@@ -82,4 +82,3 @@ export const RightContainer = styled.div`
   flex: 1 0 0;
   width: 100px;
 `;
-

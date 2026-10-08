@@ -1,10 +1,8 @@
-import React from 'react'
-import JoinSuccess from '@/Components/WorkSpace/JoinSuccess/JoinSuccess'
+import React from "react";
+import JoinSuccess from "@/Components/WorkSpace/JoinSuccess/JoinSuccess";
 
 const JoinSuccessPage = () => {
-  return (
-    <JoinSuccess />
-  )
-}
+  return <JoinSuccess />;
+};
 
-export default JoinSuccessPage 
+export default JoinSuccessPage;

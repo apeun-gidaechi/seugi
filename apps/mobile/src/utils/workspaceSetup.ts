@@ -4,6 +4,8 @@ export function workspaceNameValidationMessage() {
 
 export type WorkspaceRequestRole = "STUDENT" | "TEACHER";
 
-export function workspaceRequestRoles(requestedRoles?: WorkspaceRequestRole[]): WorkspaceRequestRole[] {
+export function workspaceRequestRoles(
+  requestedRoles?: WorkspaceRequestRole[],
+): WorkspaceRequestRole[] {
   return requestedRoles?.length ? requestedRoles : ["STUDENT"];
 }

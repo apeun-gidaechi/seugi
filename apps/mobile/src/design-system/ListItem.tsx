@@ -20,13 +20,17 @@ export function SeugiListItem({
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
-  const content = <>
-    <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
-    <View style={styles.trailing}>
-      {trailing}
-      {showChevron ? <SeugiChevronRight size={Platform.OS === "ios" ? 28 : 24} color={SeugiColor.Gray400} /> : null}
-    </View>
-  </>;
+  const content = (
+    <>
+      <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
+      <View style={styles.trailing}>
+        {trailing}
+        {showChevron ? (
+          <SeugiChevronRight size={Platform.OS === "ios" ? 28 : 24} color={SeugiColor.Gray400} />
+        ) : null}
+      </View>
+    </>
+  );
 
   if (!onPress) return <View style={styles.row}>{content}</View>;
   return (
@@ -44,7 +48,13 @@ export function SeugiListItem({
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 56, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  row: {
+    minHeight: 56,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: { fontSize: 15, fontWeight: "600" },
   trailing: { flexDirection: "row", alignItems: "center", gap: 8 },
   pressed: { opacity: 0.72 },

@@ -1,32 +1,36 @@
-import React, { useEffect } from 'react';
-import Navbar from '../common/Navbar/Navbar';
-import { Outlet } from 'react-router-dom';
-import * as S from './Shell.style';
-import useSWR from 'swr';
-import { useUserDispatchContext } from '@/Contexts/userContext';
-import { getMyInfos } from '@/Api/profile';
+import React, { useEffect } from "react";
+import Navbar from "../common/Navbar/Navbar";
+import { Outlet } from "react-router-dom";
+import * as S from "./Shell.style";
+import useSWR from "swr";
+import { useUserDispatchContext } from "@/Contexts/userContext";
+import { getMyInfos } from "@/Api/profile";
 
 const Shell = () => {
-    const setCurrentUser = useUserDispatchContext();
+  const setCurrentUser = useUserDispatchContext();
 
-    const { data: user } = useSWR('user', getMyInfos);
+  const { data: user } = useSWR("user", getMyInfos);
 
-    useEffect(() => {
-        setCurrentUser(user ? {
+  useEffect(() => {
+    setCurrentUser(
+      user
+        ? {
             id: user.id,
             email: user.email,
-            birth: user.birth ?? '',
+            birth: user.birth ?? "",
             name: user.name,
-            picture: user.picture ?? '',
-        } : null);
-    }, [user]);
-
-    return (
-        <S.HomeContainer>
-            <Navbar />
-            <Outlet />
-        </S.HomeContainer>
+            picture: user.picture ?? "",
+          }
+        : null,
     );
+  }, [user]);
+
+  return (
+    <S.HomeContainer>
+      <Navbar />
+      <Outlet />
+    </S.HomeContainer>
+  );
 };
 
 export default Shell;

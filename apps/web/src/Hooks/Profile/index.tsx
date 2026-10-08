@@ -1,134 +1,134 @@
-import { useState, useEffect, useRef } from 'react';
-import Cookies from 'js-cookie';
-import { fetchingProfile, getMyInfos, updateProfile } from '@/Api/profile';
+import { useState, useEffect, useRef } from "react";
+import Cookies from "js-cookie";
+import { fetchingProfile, getMyInfos, updateProfile } from "@/Api/profile";
 
-export type ProfileField = 'status' | 'spot' | 'belong' | 'phone' | 'wire' | 'location';
+export type ProfileField = "status" | "spot" | "belong" | "phone" | "wire" | "location";
 
 export interface ProfileData {
-    status: string;
-    spot: string;
-    belong: string;
-    phone: string;
-    wire: string;
-    location: string;
-    nick?: string;
+  status: string;
+  spot: string;
+  belong: string;
+  phone: string;
+  wire: string;
+  location: string;
+  nick?: string;
 }
 
 const useProfile = () => {
-    const workspaceId = typeof window !== 'undefined' ? Cookies.get('workspaceId') : null;
-    const [isEditing, setIsEditing] = useState<ProfileField | null>(null);
-    const [isSettingOpen, setIsSettingOpen] = useState<boolean>(false);
-    const [name, setName] = useState<string>('');
-    const [profileData, setProfileData] = useState<ProfileData>({
-        status: "",
-        spot: "",
-        belong: "",
-        phone: "",
-        wire: "",
-        location: ""
-    });
-    const dialogRef = useRef<HTMLDivElement>(null);
+  const workspaceId = typeof window !== "undefined" ? Cookies.get("workspaceId") : null;
+  const [isEditing, setIsEditing] = useState<ProfileField | null>(null);
+  const [isSettingOpen, setIsSettingOpen] = useState<boolean>(false);
+  const [name, setName] = useState<string>("");
+  const [profileData, setProfileData] = useState<ProfileData>({
+    status: "",
+    spot: "",
+    belong: "",
+    phone: "",
+    wire: "",
+    location: "",
+  });
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const fetchProfileData = async () => {
-            try {
-                if (workspaceId) {
-                    const profiles = await fetchingProfile(workspaceId);
-                    const MyInfos = await getMyInfos();
-                    setProfileData({
-                        status: profiles.status ?? "",
-                        spot: profiles.spot ?? "",
-                        belong: profiles.belong ?? "",
-                        phone: profiles.phone ?? "",
-                        wire: profiles.wire ?? "",
-                        location: profiles.location ?? "",
-                        nick: profiles.nick,
-                    });
-                    setName(profiles.nick || MyInfos.name); // 닉이 없으면 이름으로 둘다 있으면 이름(닉)으로 
-                }
-            } catch (error) {
-                console.error('Failed to fetch profile data.', error);
-            }
-        };
-        fetchProfileData();
-    }, [workspaceId]);
-
-    const startEditing = (field: ProfileField) => {
-        setIsEditing(field);
-    };
-
-    const saveProfileData = async (field: any, value: string) => {
-        try {
-            if (!workspaceId) return;
-
-            const updatedData = {
-                ...profileData,
-                [field]: value
-            };
-
-            await updateProfile(workspaceId, updatedData);
-
-            setProfileData(updatedData);
-            setIsEditing(null);
-        } catch (error) {
-            console.error('프로필 저장 실패', error);
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        if (workspaceId) {
+          const profiles = await fetchingProfile(workspaceId);
+          const MyInfos = await getMyInfos();
+          setProfileData({
+            status: profiles.status ?? "",
+            spot: profiles.spot ?? "",
+            belong: profiles.belong ?? "",
+            phone: profiles.phone ?? "",
+            wire: profiles.wire ?? "",
+            location: profiles.location ?? "",
+            nick: profiles.nick,
+          });
+          setName(profiles.nick || MyInfos.name); // 닉이 없으면 이름으로 둘다 있으면 이름(닉)으로
         }
+      } catch (error) {
+        console.error("Failed to fetch profile data.", error);
+      }
+    };
+    fetchProfileData();
+  }, [workspaceId]);
+
+  const startEditing = (field: ProfileField) => {
+    setIsEditing(field);
+  };
+
+  const saveProfileData = async (field: any, value: string) => {
+    try {
+      if (!workspaceId) return;
+
+      const updatedData = {
+        ...profileData,
+        [field]: value,
+      };
+
+      await updateProfile(workspaceId, updatedData);
+
+      setProfileData(updatedData);
+      setIsEditing(null);
+    } catch (error) {
+      console.error("프로필 저장 실패", error);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(null);
+  };
+
+  const toggleSetting = () => {
+    setIsSettingOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+
+      if (
+        dialogRef.current &&
+        !dialogRef.current.contains(target) &&
+        !(target && (target as Element).closest(".SettingButton"))
+      ) {
+        setIsSettingOpen(false);
+      }
     };
 
-    const cancelEditing = () => {
-        setIsEditing(null);
+    if (isSettingOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, [isSettingOpen]);
 
-    const toggleSetting = () => {
-        setIsSettingOpen(prev => !prev);
-    };
+  const handleNameChange = (newName: string) => {
+    setName(newName);
+  };
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            const target = e.target as Node | null;
+  const handleImageChange = async () => {
+    try {
+      const res = await getMyInfos();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-            if (
-                dialogRef.current &&
-                !dialogRef.current.contains(target) &&
-                !(target && (target as Element).closest('.SettingButton'))
-            ) {
-                setIsSettingOpen(false);
-            }
-        };
-
-        if (isSettingOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isSettingOpen]);
-
-    const handleNameChange = (newName: string) => {
-        setName(newName);
-    };
-
-    const handleImageChange = async () => {
-        try {
-            const res = await getMyInfos();
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    return {
-        name,
-        isEditing,
-        profileData,
-        isSettingOpen,
-        startEditing,
-        saveProfileData,
-        cancelEditing,
-        toggleSetting,
-        handleNameChange,
-        dialogRef
-    };
+  return {
+    name,
+    isEditing,
+    profileData,
+    isSettingOpen,
+    startEditing,
+    saveProfileData,
+    cancelEditing,
+    toggleSetting,
+    handleNameChange,
+    dialogRef,
+  };
 };
 
 export default useProfile;

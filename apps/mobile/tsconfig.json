@@ -1,1 +1,10 @@
-{ "extends": "expo/tsconfig.base", "compilerOptions": { "strict": true, "moduleResolution": "bundler", "allowImportingTsExtensions": true, "types": ["node"] }, "include": ["index.ts", "App.tsx", "src", "test"] }
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["index.ts", "App.tsx", "src", "test"]
+}

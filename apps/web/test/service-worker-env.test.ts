@@ -15,10 +15,10 @@ test("service worker Firebase config safely escapes environment values", () => {
   });
 
   const sandbox: Record<string, unknown> = {};
-  const serviceWorkerEnvironment = vm.runInNewContext(`${source}\nswEnv`, sandbox) as Record<string, string>;
+  const serviceWorkerEnvironment = vm.runInNewContext(`${source}\nswEnv`, sandbox) as Record<
+    string,
+    string
+  >;
   assert.equal(sandbox.pwned, undefined);
-  assert.equal(
-    serviceWorkerEnvironment.VITE_FIREBASE_API_KEY,
-    "key'; globalThis.pwned = true; //",
-  );
+  assert.equal(serviceWorkerEnvironment.VITE_FIREBASE_API_KEY, "key'; globalThis.pwned = true; //");
 });

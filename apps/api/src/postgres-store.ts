@@ -33,11 +33,16 @@ export class PostgresStore extends Store {
     try {
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock($1::bigint)", [advisoryLockId]);
-      const { rows } = await client.query<{ payload: StoreSnapshot }>("SELECT payload FROM seugi_state WHERE id = 1");
+      const { rows } = await client.query<{ payload: StoreSnapshot }>(
+        "SELECT payload FROM seugi_state WHERE id = 1",
+      );
       if (rows[0]) this.restore(rows[0].payload);
       else {
         super.load();
-        await client.query("INSERT INTO seugi_state (id, revision, payload) VALUES (1, 1, $1::jsonb)", [JSON.stringify(this.snapshot())]);
+        await client.query(
+          "INSERT INTO seugi_state (id, revision, payload) VALUES (1, 1, $1::jsonb)",
+          [JSON.stringify(this.snapshot())],
+        );
       }
       await client.query("COMMIT");
     } catch (error) {
@@ -55,7 +60,9 @@ export class PostgresStore extends Store {
       client = await this.pool.connect();
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock($1::bigint)", [advisoryLockId]);
-      const { rows } = await client.query<{ payload: StoreSnapshot }>("SELECT payload FROM seugi_state WHERE id = 1");
+      const { rows } = await client.query<{ payload: StoreSnapshot }>(
+        "SELECT payload FROM seugi_state WHERE id = 1",
+      );
       if (rows[0]) this.restore(rows[0].payload);
       this.activeRequest = client;
       this.activeRelease = releaseLocal;
@@ -73,7 +80,10 @@ export class PostgresStore extends Store {
     const client = this.activeRequest;
     if (!client) return;
     try {
-      await client.query("UPDATE seugi_state SET revision = revision + 1, payload = $1::jsonb, updated_at = NOW() WHERE id = 1", [JSON.stringify(this.snapshot())]);
+      await client.query(
+        "UPDATE seugi_state SET revision = revision + 1, payload = $1::jsonb, updated_at = NOW() WHERE id = 1",
+        [JSON.stringify(this.snapshot())],
+      );
       await client.query("COMMIT");
       this.flushMessageDeletedEvents();
     } catch (error) {
@@ -119,7 +129,9 @@ export class PostgresStore extends Store {
   private async acquireLocalGate() {
     const previous = this.localGate;
     let release!: () => void;
-    this.localGate = new Promise<void>((resolve) => { release = resolve; });
+    this.localGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await previous;
     return release;
   }

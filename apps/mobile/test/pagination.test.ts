@@ -16,11 +16,15 @@ test("loadAllPages collects the full list until the final short page", async () 
 test("loadAllPages stops when its owning screen becomes inactive", async () => {
   let active = true;
   const requestedPages: number[] = [];
-  const items = await loadAllPages(async (page) => {
-    requestedPages.push(page);
-    active = false;
-    return [1, 2];
-  }, 2, () => active);
+  const items = await loadAllPages(
+    async (page) => {
+      requestedPages.push(page);
+      active = false;
+      return [1, 2];
+    },
+    2,
+    () => active,
+  );
 
   assert.deepEqual(items, []);
   assert.deepEqual(requestedPages, [0]);

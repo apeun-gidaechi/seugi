@@ -16,8 +16,9 @@ export function workspaceInviteFeedback(
   }
   return {
     kind: "toast" as const,
-    message: outcome === "success"
-      ? `참가 ${actionLabel}에 성공했습니다!`
-      : `참가 ${actionLabel}에 실패했습니다.`,
+    message:
+      outcome === "success"
+        ? `참가 ${actionLabel}에 성공했습니다!`
+        : `참가 ${actionLabel}에 실패했습니다.`,
   };
 }

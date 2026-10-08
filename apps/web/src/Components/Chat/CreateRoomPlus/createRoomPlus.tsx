@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import useMembers from '@/Hooks/Common/Sidebar/useMembers'; 
-import * as S from './createRoomPlus.style'; 
-import Cookies from 'js-cookie'; 
+import React, { useEffect, useState } from "react";
+import useMembers from "@/Hooks/Common/Sidebar/useMembers";
+import * as S from "./createRoomPlus.style";
+import Cookies from "js-cookie";
 
-import AvatarImg from '@/Assets/image/chat-components/Avatar.svg';
-import NonClicked from '@/Assets/image/chat-components/nonClick.svg';
-import Clicked from '@/Assets/image/chat-components/clicked.svg';
-import SearchIcon from '@/Assets/image/sidebar/Findicon.svg';
-import { SeugiApiError } from '@seugi/api-client';
-import { withSeugiApi } from '@/Api/client';
+import AvatarImg from "@/Assets/image/chat-components/Avatar.svg";
+import NonClicked from "@/Assets/image/chat-components/nonClick.svg";
+import Clicked from "@/Assets/image/chat-components/clicked.svg";
+import SearchIcon from "@/Assets/image/sidebar/Findicon.svg";
+import { SeugiApiError } from "@seugi/api-client";
+import { withSeugiApi } from "@/Api/client";
 
 interface CreateRoomPlusProps {
   onClose: () => void;
@@ -25,13 +25,8 @@ const CreateRoomPlus: React.FC<CreateRoomPlusProps> = ({ onClose, onCreateRoom }
   }, []);
 
   // 나머지 코드는 변경 없이 그대로 유지합니다.
-  const {
-    searchTerm,
-    handleSearchChange,
-    handleMemberClick,
-    combinedResults,
-    selectedMembers,
-  } = useMembers(workspaceId ?? '');
+  const { searchTerm, handleSearchChange, handleMemberClick, combinedResults, selectedMembers } =
+    useMembers(workspaceId ?? "");
 
   const handleContinueClick = async () => {
     if (selectedMembers.length > 1) {
@@ -39,39 +34,41 @@ const CreateRoomPlus: React.FC<CreateRoomPlusProps> = ({ onClose, onCreateRoom }
         const selectedMemberNames = combinedResults
           .filter((member) => selectedMembers.includes(member.id))
           .map((member) => member.name);
-        
-        const roomName = `${selectedMemberNames.join(', ')}`;
-  
+
+        const roomName = `${selectedMemberNames.join(", ")}`;
+
         if (!workspaceId) return;
-        const result = await withSeugiApi((api) => api.createRoom("group", {
-          workspaceId,
-          memberIds: selectedMembers,
-          name: roomName,
-        }));
+        const result = await withSeugiApi((api) =>
+          api.createRoom("group", {
+            workspaceId,
+            memberIds: selectedMembers,
+            name: roomName,
+          }),
+        );
         onCreateRoom({ roomId: result, roomName });
         onClose();
       } catch (error) {
         if (error instanceof SeugiApiError) {
           if (error.status === 401) {
-            alert('Session expired. Please login again.');
+            alert("Session expired. Please login again.");
             Cookies.remove("accessToken"); // 쿠키에서 accessToken 제거
             return;
           }
           console.error(`An error occurred: ${error.message}`);
-          alert('에러가 발생했습니다. 다시 시도해주세요.');
+          alert("에러가 발생했습니다. 다시 시도해주세요.");
         } else {
-          console.error('Unexpected error:', error);
-          alert('An unexpected error occurred.');
+          console.error("Unexpected error:", error);
+          alert("An unexpected error occurred.");
         }
       }
     } else {
-      alert('두 명 이상의 멤버를 선택해주세요.');
+      alert("두 명 이상의 멤버를 선택해주세요.");
     }
   };
 
   return (
     <S.CreateRoomPlusBox>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         <S.ChatRoomName>채팅방 멤버</S.ChatRoomName>
         <S.ChatRoomButton onClick={handleContinueClick}>계속하기</S.ChatRoomButton>
       </div>

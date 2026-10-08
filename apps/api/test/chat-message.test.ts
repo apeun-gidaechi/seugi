@@ -16,9 +16,15 @@ test("chat payload validation rejects empty text without attachments", () => {
 test("shared Socket.IO message contract preserves non-empty whitespace and validates attachments", () => {
   const roomId = "f145a54c-8b50-4cf5-b816-e5442cd4b13f";
   assert.equal(chatMessageInputSchema.safeParse({ roomId, message: "  " }).success, true);
-  assert.equal(chatMessageInputSchema.safeParse({ roomId, files: ["https://example.test/image.png"] }).success, true);
+  assert.equal(
+    chatMessageInputSchema.safeParse({ roomId, files: ["https://example.test/image.png"] }).success,
+    true,
+  );
   assert.equal(chatMessageInputSchema.safeParse({ roomId, message: "", files: [] }).success, false);
-  assert.equal(chatMessageInputSchema.safeParse({ roomId, message: "x", files: [""] }).success, false);
+  assert.equal(
+    chatMessageInputSchema.safeParse({ roomId, message: "x", files: [""] }).success,
+    false,
+  );
 });
 
 test("legacy STOMP contract retains original UUID, event and emoticon fields", () => {

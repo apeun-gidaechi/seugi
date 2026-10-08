@@ -4,10 +4,29 @@ import { formatChatRoomTimestamp, sortChatRooms } from "../src/utils/chatRoomLis
 
 test("chat rooms sort by last message timestamp descending", () => {
   const sorted = sortChatRooms([
-    { id: "a", workspaceId: "w", type: "PERSONAL", name: "a", memberIds: [], adminId: "m", lastMessageTimestamp: "2026-10-08T10:00:00.000Z" },
-    { id: "b", workspaceId: "w", type: "PERSONAL", name: "b", memberIds: [], adminId: "m", lastMessageTimestamp: "2026-10-08T12:00:00.000Z" },
+    {
+      id: "a",
+      workspaceId: "w",
+      type: "PERSONAL",
+      name: "a",
+      memberIds: [],
+      adminId: "m",
+      lastMessageTimestamp: "2026-10-08T10:00:00.000Z",
+    },
+    {
+      id: "b",
+      workspaceId: "w",
+      type: "PERSONAL",
+      name: "b",
+      memberIds: [],
+      adminId: "m",
+      lastMessageTimestamp: "2026-10-08T12:00:00.000Z",
+    },
   ]);
-  assert.deepEqual(sorted.map((room) => room.id), ["b", "a"]);
+  assert.deepEqual(
+    sorted.map((room) => room.id),
+    ["b", "a"],
+  );
 });
 
 test("iOS chat timestamps use today-time labels for same-day messages", () => {

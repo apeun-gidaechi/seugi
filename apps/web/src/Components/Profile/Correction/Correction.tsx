@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import * as S from '@/Components/Profile/Correction/Correction.style';
-import CancelImg from '@/Assets/image/profile/CancleImg.svg';
+import React, { useState } from "react";
+import * as S from "@/Components/Profile/Correction/Correction.style";
+import CancelImg from "@/Assets/image/profile/CancleImg.svg";
 
 interface CorrectionProps {
   value: string;
@@ -14,13 +14,13 @@ const Correction = ({ value, content, onSave, onCancel }: CorrectionProps) => {
 
   const transformValue = (value: string) => {
     return {
-      status: '상태메세지',
-      spot: '직위',
-      belong: '소속',
-      phone: '휴대전화번호',
-      wire: '유선전화번호',
-      location: '근무 위치',
-      nick: '이름',
+      status: "상태메세지",
+      spot: "직위",
+      belong: "소속",
+      phone: "휴대전화번호",
+      wire: "유선전화번호",
+      location: "근무 위치",
+      nick: "이름",
     }[value];
   };
 
@@ -29,8 +29,8 @@ const Correction = ({ value, content, onSave, onCancel }: CorrectionProps) => {
   };
 
   const handleCancelClick = () => {
-    setInputValue('');
-    onCancel(); 
+    setInputValue("");
+    onCancel();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -44,8 +44,8 @@ const Correction = ({ value, content, onSave, onCancel }: CorrectionProps) => {
   };
 
   return (
-    <S.Modal onClick={onCancel}> 
-      <S.EditProfile onClick={handleModalClick}> 
+    <S.Modal onClick={onCancel}>
+      <S.EditProfile onClick={handleModalClick}>
         <S.CorrectionDiv>
           <S.CorrectionBox>
             <S.CorrectionTitleDiv>

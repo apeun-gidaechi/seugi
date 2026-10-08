@@ -8,7 +8,10 @@ export function emailVerificationTimerStartsOnAttempt(platform: string): boolean
   return platform === "ios";
 }
 
-export function androidRegistrationFailureMessage(status: number | undefined, fallback: string): string {
+export function androidRegistrationFailureMessage(
+  status: number | undefined,
+  fallback: string,
+): string {
   return status === 400 || status === 404 || status === 409
     ? "인증 코드가 올바르지 않습니다"
     : fallback;

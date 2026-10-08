@@ -16,12 +16,12 @@ import { useSelected } from "@/Hooks/Selected/useSelected";
 const Navbar = () => {
   const { selected, setSelected } = useSelected();
   const navigate = useNavigate();
-  const location = useLocation(); 
+  const location = useLocation();
   const profileRef = useRef<HTMLDivElement>(null);
   const [isProfileVisible, setIsProfileVisible] = useState(false);
 
   useEffect(() => {
-    setSelected(location.pathname.replace("/", "")); 
+    setSelected(location.pathname.replace("/", ""));
   }, [location.pathname, setSelected]);
 
   const handleButtonClick = (path: string) => {
@@ -35,10 +35,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(e.target as Node)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setIsProfileVisible(false);
       }
     };
@@ -60,17 +57,11 @@ const Navbar = () => {
 
   return (
     <S.SideBarContainer>
-      <S.SideBarButton
-        onClick={() => handleButtonClick("")}
-        $isSelected={selected === ""}
-      >
+      <S.SideBarButton onClick={() => handleButtonClick("")} $isSelected={selected === ""}>
         <S.SideBarImage src={selected === "" ? SelectHome : Home} />
       </S.SideBarButton>
 
-      <S.SideBarButton
-        onClick={() => handleButtonClick("chat")}
-        $isSelected={selected === "chat"}
-      >
+      <S.SideBarButton onClick={() => handleButtonClick("chat")} $isSelected={selected === "chat"}>
         <S.SideBarImage src={selected === "chat" ? SelectChat : Chat} />
       </S.SideBarButton>
       <S.SideBarButton
@@ -85,10 +76,7 @@ const Navbar = () => {
       </S.SettingButton>
 
       <S.SideAvatarImgWrap>
-        <S.SideAvatarButton
-          onClick={handleAvatarClick}
-          className="avatar-button"
-        >
+        <S.SideAvatarButton onClick={handleAvatarClick} className="avatar-button">
           <Avatar size="medium" />
         </S.SideAvatarButton>
       </S.SideAvatarImgWrap>

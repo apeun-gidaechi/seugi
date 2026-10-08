@@ -25,7 +25,9 @@ export function SeugiCheckbox({
 
   return (
     <Svg accessible={false} width={size} height={size} viewBox="0 0 24 24">
-      {paths.map((d) => <Path key={d} d={d} fill={color} fillRule="evenodd" />)}
+      {paths.map((d) => (
+        <Path key={d} d={d} fill={color} fillRule="evenodd" />
+      ))}
     </Svg>
   );
 }

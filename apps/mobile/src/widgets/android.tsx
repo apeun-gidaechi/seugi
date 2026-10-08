@@ -85,9 +85,19 @@ function WidgetHeader({ title, trailing }: { title: string; trailing?: string })
     >
       <TextWidget
         text={title}
-        style={{ color: SeugiColor.White, backgroundColor: SeugiColor.Primary500, fontSize: 13, fontWeight: "bold", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 }}
+        style={{
+          color: SeugiColor.White,
+          backgroundColor: SeugiColor.Primary500,
+          fontSize: 13,
+          fontWeight: "bold",
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 99,
+        }}
       />
-      {trailing ? <TextWidget text={trailing} style={{ color: SeugiColor.Gray600, fontSize: 11 }} /> : null}
+      {trailing ? (
+        <TextWidget text={trailing} style={{ color: SeugiColor.Gray600, fontSize: 11 }} />
+      ) : null}
     </FlexWidget>
   );
 }
@@ -96,19 +106,81 @@ function MealWidget({ meal, label, status }: { meal?: Meal; label: string; statu
   return (
     <WidgetShell>
       <WidgetHeader title={label} trailing={meal?.calorie} />
-      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: SeugiColor.White, borderRadius: 18, padding: 10, flexGap: 3 }}>
-        {meal?.menu.length ? meal.menu.slice(0, 7).map((item, index) => <TextWidget key={`${index}-${item}`} text={item} maxLines={1} style={{ color: SeugiColor.Gray800, fontSize: 13 }} />) : <TextWidget text={status ?? "급식이 존재하지 않습니다."} maxLines={3} style={{ color: SeugiColor.Gray600, fontSize: 13 }} />}
+      <FlexWidget
+        style={{
+          width: "match_parent",
+          flex: 1,
+          flexDirection: "column",
+          backgroundColor: SeugiColor.White,
+          borderRadius: 18,
+          padding: 10,
+          flexGap: 3,
+        }}
+      >
+        {meal?.menu.length ? (
+          meal.menu
+            .slice(0, 7)
+            .map((item, index) => (
+              <TextWidget
+                key={`${index}-${item}`}
+                text={item}
+                maxLines={1}
+                style={{ color: SeugiColor.Gray800, fontSize: 13 }}
+              />
+            ))
+        ) : (
+          <TextWidget
+            text={status ?? "급식이 존재하지 않습니다."}
+            maxLines={3}
+            style={{ color: SeugiColor.Gray600, fontSize: 13 }}
+          />
+        )}
       </FlexWidget>
     </WidgetShell>
   );
 }
 
-function TimetableWidget({ entries, date, status }: { entries: Timetable[]; date: Date; status?: string }) {
+function TimetableWidget({
+  entries,
+  date,
+  status,
+}: {
+  entries: Timetable[];
+  date: Date;
+  status?: string;
+}) {
   return (
     <WidgetShell>
       <WidgetHeader title="시간표" trailing={`${date.getMonth() + 1}.${date.getDate()}`} />
-      <FlexWidget style={{ width: "match_parent", flex: 1, flexDirection: "column", backgroundColor: SeugiColor.White, borderRadius: 18, padding: 10, flexGap: 3 }}>
-        {entries.length ? entries.slice(0, 8).map((item, index) => <TextWidget key={item.id || `${item.time}-${index}`} text={`${item.time}교시 : ${item.subject}`} maxLines={1} style={{ color: SeugiColor.Gray800, fontSize: 13 }} />) : <TextWidget text={status ?? "시간표가 존재하지 않습니다."} maxLines={3} style={{ color: SeugiColor.Gray600, fontSize: 13 }} />}
+      <FlexWidget
+        style={{
+          width: "match_parent",
+          flex: 1,
+          flexDirection: "column",
+          backgroundColor: SeugiColor.White,
+          borderRadius: 18,
+          padding: 10,
+          flexGap: 3,
+        }}
+      >
+        {entries.length ? (
+          entries
+            .slice(0, 8)
+            .map((item, index) => (
+              <TextWidget
+                key={item.id || `${item.time}-${index}`}
+                text={`${item.time}교시 : ${item.subject}`}
+                maxLines={1}
+                style={{ color: SeugiColor.Gray800, fontSize: 13 }}
+              />
+            ))
+        ) : (
+          <TextWidget
+            text={status ?? "시간표가 존재하지 않습니다."}
+            maxLines={3}
+            style={{ color: SeugiColor.Gray600, fontSize: 13 }}
+          />
+        )}
       </FlexWidget>
     </WidgetShell>
   );
@@ -119,16 +191,21 @@ async function createWidget(widgetName: string): Promise<React.ReactElement> {
   const { api, workspaceId } = await authenticatedApi();
   if (!workspaceId) {
     const status = "스기에 로그인하고 워크스페이스를 설정해 주세요.";
-    return widgetName === "SeugiMealWidget"
-      ? <MealWidget label="오늘 급식" status={status} />
-      : <TimetableWidget entries={[]} date={now} status={status} />;
+    return widgetName === "SeugiMealWidget" ? (
+      <MealWidget label="오늘 급식" status={status} />
+    ) : (
+      <TimetableWidget entries={[]} date={now} status={status} />
+    );
   }
 
   if (widgetName === "SeugiMealWidget") {
     const { label, type } = androidMealWidgetPeriod(now);
     try {
-      const meals = (await api.meals(workspaceId, now.getFullYear(), now.getMonth() + 1)).data ?? [];
-      const meal = meals.find((item) => item.date.slice(0, 10) === dateKey(now) && item.type.includes(type));
+      const meals =
+        (await api.meals(workspaceId, now.getFullYear(), now.getMonth() + 1)).data ?? [];
+      const meal = meals.find(
+        (item) => item.date.slice(0, 10) === dateKey(now) && item.type.includes(type),
+      );
       return <MealWidget meal={meal} label={label} />;
     } catch {
       return <MealWidget label={label} status="급식 정보를 불러오지 못했습니다." />;
@@ -147,7 +224,11 @@ async function createWidget(widgetName: string): Promise<React.ReactElement> {
   return <TimetableWidget entries={[]} date={now} status="시간표를 사용할 수 없습니다." />;
 }
 
-export async function widgetTaskHandler({ widgetInfo, widgetAction, renderWidget }: WidgetTaskHandlerProps) {
+export async function widgetTaskHandler({
+  widgetInfo,
+  widgetAction,
+  renderWidget,
+}: WidgetTaskHandlerProps) {
   if (widgetAction === "WIDGET_DELETED") return;
   renderWidget(await createWidget(widgetInfo.widgetName));
 }
@@ -158,7 +239,13 @@ export function registerSeugiWidgetTask() {
 
 export async function refreshSeugiWidgets() {
   await Promise.all([
-    requestWidgetUpdate({ widgetName: "SeugiMealWidget", renderWidget: () => createWidget("SeugiMealWidget") }),
-    requestWidgetUpdate({ widgetName: "SeugiTimetableWidget", renderWidget: () => createWidget("SeugiTimetableWidget") }),
+    requestWidgetUpdate({
+      widgetName: "SeugiMealWidget",
+      renderWidget: () => createWidget("SeugiMealWidget"),
+    }),
+    requestWidgetUpdate({
+      widgetName: "SeugiTimetableWidget",
+      renderWidget: () => createWidget("SeugiTimetableWidget"),
+    }),
   ]);
 }

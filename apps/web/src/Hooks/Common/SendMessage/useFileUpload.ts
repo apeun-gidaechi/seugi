@@ -9,11 +9,15 @@ const useFileUpload = (completion: FileCompletion) => {
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-  
+
     try {
       const apiType = type === FileType.IMG ? "IMAGE" : type === FileType.FILE ? "FILE" : "EMOJI";
       const uploaded = await withSeugiApi((api) => api.uploadFile(apiType, formData));
-      const result: FileResult = { url: uploaded.url, name: uploaded.name, byte: uploaded.byte ?? uploaded.size };
+      const result: FileResult = {
+        url: uploaded.url,
+        name: uploaded.name,
+        byte: uploaded.byte ?? uploaded.size,
+      };
       completion(result, type);
     } catch (error) {
       console.error("File upload failed:", error);

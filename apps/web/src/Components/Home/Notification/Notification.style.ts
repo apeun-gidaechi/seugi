@@ -5,7 +5,7 @@ import { SeugiFont } from "@/Design/text/SeugiFont";
 export const LeftContainer = styled.div`
   display: flex;
   padding: 12px 12px 16px 12px;
-  justify-content:center;
+  justify-content: center;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
@@ -16,14 +16,14 @@ export const LeftContainer = styled.div`
 
   box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
 
-  position:relative;
+  position: relative;
 `;
 
 export const NoNotification = styled.span`
   color: ${SeugiColor.Black};
 
   ${SeugiFont.subtitle.subtitle2};
-`
+`;
 export const NotificationContainer = styled.div`
   display: flex;
   padding: 4px;
@@ -35,7 +35,7 @@ export const NotificationContainer = styled.div`
 export const NotificationTitleContainer = styled.div`
   display: flex;
   align-items: center;
-`
+`;
 
 export const NotificationLogo = styled.img`
   width: 32px;
@@ -70,12 +70,12 @@ export const NotificationBox = styled.div`
   gap: 8px;
   align-self: stretch;
   max-height: 500px;
-  overflow-y: auto; 
+  overflow-y: auto;
   padding-right: 10px;
 `;
 
 export const NotificationWrapper = styled.div`
-  position:relative;
+  position: relative;
   display: flex;
   padding: 12px;
   flex-direction: column;
@@ -97,10 +97,10 @@ export const NotificationContentAuthor = styled.div`
 `;
 
 export const NotificationContentAuthorSpan = styled.span`
-  color:${SeugiColor.Gray600};
+  color: ${SeugiColor.Gray600};
 
   ${SeugiFont.caption.caption2};
-`
+`;
 
 export const NotificationContentTitle = styled.span`
   position: relative;
@@ -127,11 +127,11 @@ export const NotificationEmojiBox = styled.div`
 `;
 
 export const NotificationAddEmojiButton = styled.button`
-  border:none;
-  background:none;
+  border: none;
+  background: none;
 
   cursor: pointer;
-`
+`;
 
 export const NotificationAddEmoji = styled.img`
   position: relative;
@@ -140,8 +140,6 @@ export const NotificationAddEmoji = styled.img`
   height: 30px;
 
   padding: 4px;
-
-
 `;
 
 export const NotificationEmojiWrapper = styled.div`
@@ -242,23 +240,21 @@ export const Item = styled.div`
 `;
 
 export const NotificationActionButton = styled.button`
-    right:0;
-    cursor: pointer;
+  right: 0;
+  cursor: pointer;
 
-    background:none;
-    border:none;
+  background: none;
+  border: none;
 `;
 
-export const NotificationActionButtonimg = styled.img`
-  
-`
+export const NotificationActionButtonimg = styled.img``;
 
 export const EditedLabel = styled.span`
-    color : ${SeugiColor.Gray500};
-    ${SeugiFont.caption.caption2};
+  color: ${SeugiColor.Gray500};
+  ${SeugiFont.caption.caption2};
 
-    margin-left:4px;
-`
+  margin-left: 4px;
+`;
 
 export const NoNotificationDiv = styled.div`
   position: relative;
@@ -266,10 +262,10 @@ export const NoNotificationDiv = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-`
+`;
 export const NoNotificationImg = styled.img`
-  margin-bottom:4px;
-`
+  margin-bottom: 4px;
+`;
 
 export const PaginationContainer = styled.div`
   position: relative;
@@ -280,19 +276,19 @@ export const PaginationContainer = styled.div`
   /* padding:0 0 0 12vw; */
   /* text-align:center; */
   margin: 0 auto;
-  gap:4px;
-`
+  gap: 4px;
+`;
 
 export const PageButton = styled.button<{ active: boolean }>`
-  width:30px;
-  height:30px;
+  width: 30px;
+  height: 30px;
 
-  border:none;
-  border-radius:4px;
+  border: none;
+  border-radius: 4px;
 
   background-color: ${(props) => (props.active ? `${SeugiColor.Primary200}` : `${SeugiColor.Gray300}`)};
   ${SeugiFont.body.body1};
-  color:${SeugiColor.White};
+  color: ${SeugiColor.White};
 
   cursor: pointer;
-`
+`;

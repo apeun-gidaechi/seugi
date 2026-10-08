@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import * as S from "./mainRoomMemberManger.style";
 
 const MainRoomMemberManager = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
-    alert('확인');
+    alert("확인");
   };
 
   return (

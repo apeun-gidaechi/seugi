@@ -1,186 +1,184 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserDispatchContext } from '@/Contexts/userContext';
+import { useUserDispatchContext } from "@/Contexts/userContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getMyWorkspaces } from "@/Api/workspace";
 import { getMyInfos } from "@/Api/profile";
 import { paths } from "@/Constants/paths";
 import { appleAuthHelpers } from "react-apple-signin-auth";
-import Cookies from 'js-cookie';
-import { authenticateApple, authenticateGoogle, loginMember } from '@/Api/auth';
+import Cookies from "js-cookie";
+import { authenticateApple, authenticateGoogle, loginMember } from "@/Api/auth";
 
 const index = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        document.body.style.overflow = "hidden";
-        return () => {
-            document.body.style.overflow = "auto";
-        };
-    }, []);
-
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    const [showPassword, setShowPassword] = useState<boolean>(false);
-    const [showAlert, setShowAlert] = useState(false);
-    const [alertMessage, setAlertMessage] = useState<string>("");
-    const fcmToken = Cookies.get('fcmToken') || '';
-
-    const manageWorkspace = async () => {
-        try {
-            const checkWorkspaces = await getMyWorkspaces();
-
-            if (!checkWorkspaces || checkWorkspaces.length === 0) {
-                console.error("워크스페이스를 찾을 수 없습니다.");
-                navigate(paths.home);
-                return;
-            }
-
-            Cookies.set("workspaceId", checkWorkspaces[0].workspaceId);
-            navigate(paths.home);
-        } catch (error) {
-            console.error("워크스페이스 정보를 가져오지 못했습니다.");
-            setAlertMessage("워크스페이스 정보를 가져오는 중 오류가 발생했습니다. 새로 고침 후 다시 시도해 주세요.");
-            Cookies.remove('accessToken');
-            Cookies.remove('refreshToken');
-            setShowAlert(true);
-        }
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "auto";
     };
+  }, []);
 
-    const handleLogin = async () => {
-        try {
-            const { accessToken, refreshToken } = await loginMember({ email, password, token: fcmToken });
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const fcmToken = Cookies.get("fcmToken") || "";
 
-            Cookies.set("accessToken", accessToken);
-            Cookies.set("refreshToken", refreshToken);
+  const manageWorkspace = async () => {
+    try {
+      const checkWorkspaces = await getMyWorkspaces();
 
-            // manageWorkspace 호출 전에 getMyInfo로 사용자 정보 가져오기
-            await getMyInfo();
-            await manageWorkspace();
-        } catch (error) {
-            setAlertMessage(
-                "등록되지 않은 아이디이거나 아이디 또는 비밀번호를 잘못 입력했습니다"
-            );
-            setShowAlert(true);
-        }
-    };
+      if (!checkWorkspaces || checkWorkspaces.length === 0) {
+        console.error("워크스페이스를 찾을 수 없습니다.");
+        navigate(paths.home);
+        return;
+      }
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") {
-            handleLogin();
-        }
-    };
-
-    const handleCloseAlert = () => {
-        setShowAlert(false);
-    };
-
-    const setUser = useUserDispatchContext();
-
-    const getMyInfo = async () => {
-        const MyInfos = await getMyInfos();
-        setUser({
-            id: MyInfos.id,
-            email: MyInfos.email,
-            birth: MyInfos.birth ?? "",
-            name: MyInfos.name,
-            picture: MyInfos.picture ?? "",
-        });
+      Cookies.set("workspaceId", checkWorkspaces[0].workspaceId);
+      navigate(paths.home);
+    } catch (error) {
+      console.error("워크스페이스 정보를 가져오지 못했습니다.");
+      setAlertMessage(
+        "워크스페이스 정보를 가져오는 중 오류가 발생했습니다. 새로 고침 후 다시 시도해 주세요.",
+      );
+      Cookies.remove("accessToken");
+      Cookies.remove("refreshToken");
+      setShowAlert(true);
     }
+  };
 
-    const scopes = [
-        "email",
-        "profile",
-        "https://www.googleapis.com/auth/classroom.courses.readonly",
-        "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
-        "https://www.googleapis.com/auth/classroom.coursework.students.readonly",
-    ];
+  const handleLogin = async () => {
+    try {
+      const { accessToken, refreshToken } = await loginMember({ email, password, token: fcmToken });
 
-    const handleGoogleLogin = useGoogleLogin({
-        flow: "auth-code",
-        scope: scopes.join(" "),
-        onSuccess: async ({ code }) => {
-            try {
-                const { accessToken, refreshToken } = await authenticateGoogle(code, fcmToken);
+      Cookies.set("accessToken", accessToken);
+      Cookies.set("refreshToken", refreshToken);
 
-                Cookies.set("accessToken", accessToken);
-                Cookies.set("refreshToken", refreshToken);
+      // manageWorkspace 호출 전에 getMyInfo로 사용자 정보 가져오기
+      await getMyInfo();
+      await manageWorkspace();
+    } catch (error) {
+      setAlertMessage("등록되지 않은 아이디이거나 아이디 또는 비밀번호를 잘못 입력했습니다");
+      setShowAlert(true);
+    }
+  };
 
-                await getMyInfo();
-                await manageWorkspace();
-            } catch (error) {
-                setAlertMessage(
-                    "구글 로그인 중 오류가 발생했습니다. 다시 시도해주세요."
-                );
-                setShowAlert(true);
-            }
-        },
-        onError: () => {
-            console.error("구글 로그인을 완료하지 못했습니다.");
-        },
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleLogin();
+    }
+  };
+
+  const handleCloseAlert = () => {
+    setShowAlert(false);
+  };
+
+  const setUser = useUserDispatchContext();
+
+  const getMyInfo = async () => {
+    const MyInfos = await getMyInfos();
+    setUser({
+      id: MyInfos.id,
+      email: MyInfos.email,
+      birth: MyInfos.birth ?? "",
+      name: MyInfos.name,
+      picture: MyInfos.picture ?? "",
     });
+  };
 
-    const handleAppleLogin = async (e: any) => {
-        e.preventDefault();
+  const scopes = [
+    "email",
+    "profile",
+    "https://www.googleapis.com/auth/classroom.courses.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.students.readonly",
+  ];
 
-        appleAuthHelpers.signIn({
-            authOptions: {
-                clientId: 'com.seugi.services',
-                scope: "email name",
-                redirectURI: 'https://www.seugi.com',
-                usePopup: true
-            },
-        });
+  const handleGoogleLogin = useGoogleLogin({
+    flow: "auth-code",
+    scope: scopes.join(" "),
+    onSuccess: async ({ code }) => {
+      try {
+        const { accessToken, refreshToken } = await authenticateGoogle(code, fcmToken);
+
+        Cookies.set("accessToken", accessToken);
+        Cookies.set("refreshToken", refreshToken);
+
+        await getMyInfo();
+        await manageWorkspace();
+      } catch (error) {
+        setAlertMessage("구글 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        setShowAlert(true);
+      }
+    },
+    onError: () => {
+      console.error("구글 로그인을 완료하지 못했습니다.");
+    },
+  });
+
+  const handleAppleLogin = async (e: any) => {
+    e.preventDefault();
+
+    appleAuthHelpers.signIn({
+      authOptions: {
+        clientId: "com.seugi.services",
+        scope: "email name",
+        redirectURI: "https://www.seugi.com",
+        usePopup: true,
+      },
+    });
+  };
+
+  useEffect(() => {
+    const handleSuccess = async (response: any) => {
+      const code = response.detail.authorization.code;
+      const name = response.user?.name;
+      try {
+        const { accessToken, refreshToken } = await authenticateApple(code, name, fcmToken);
+
+        Cookies.set("accessToken", accessToken);
+        Cookies.set("refreshToken", refreshToken);
+        await getMyInfo();
+        await manageWorkspace();
+      } catch (error) {
+        console.error("애플 로그인 처리를 완료하지 못했습니다.");
+      }
     };
 
-    useEffect(() => {
-        const handleSuccess = async (response: any) => {
-            const code = response.detail.authorization.code;
-            const name = response.user?.name;
-            try {
-                const { accessToken, refreshToken } = await authenticateApple(code, name, fcmToken);
+    const handleFailure = () => {
+      console.error("애플 로그인을 완료하지 못했습니다.");
+      setAlertMessage("애플 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setShowAlert(true);
+    };
 
-                Cookies.set("accessToken", accessToken);
-                Cookies.set("refreshToken", refreshToken);
-                await getMyInfo();
-                await manageWorkspace();
-            } catch (error) {
-                console.error("애플 로그인 처리를 완료하지 못했습니다.");
-            }
-        };
+    document.addEventListener("AppleIDSignInOnSuccess", handleSuccess);
+    document.addEventListener("AppleIDSignInOnFailure", handleFailure);
 
-        const handleFailure = () => {
-            console.error("애플 로그인을 완료하지 못했습니다.");
-            setAlertMessage("애플 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
-            setShowAlert(true);
-        };
+    return () => {
+      document.removeEventListener("AppleIDSignInOnSuccess", handleSuccess);
+      document.removeEventListener("AppleIDSignInOnFailure", handleFailure);
+    };
+  }, [handleAppleLogin]);
 
-        document.addEventListener('AppleIDSignInOnSuccess', handleSuccess);
-        document.addEventListener('AppleIDSignInOnFailure', handleFailure);
-
-        return () => {
-            document.removeEventListener('AppleIDSignInOnSuccess', handleSuccess);
-            document.removeEventListener('AppleIDSignInOnFailure', handleFailure);
-        };
-    }, [handleAppleLogin]);
-
-    return {
-        email,
-        password,
-        showPassword,
-        showAlert,
-        alertMessage,
-        setEmail,
-        handleLogin,
-        setPassword,
-        setShowPassword,
-        manageWorkspace,
-        handleKeyDown,
-        handleCloseAlert,
-        getMyInfo,
-        handleGoogleLogin,
-        handleAppleLogin
-    }
-}
+  return {
+    email,
+    password,
+    showPassword,
+    showAlert,
+    alertMessage,
+    setEmail,
+    handleLogin,
+    setPassword,
+    setShowPassword,
+    manageWorkspace,
+    handleKeyDown,
+    handleCloseAlert,
+    getMyInfo,
+    handleGoogleLogin,
+    handleAppleLogin,
+  };
+};
 
 export default index;

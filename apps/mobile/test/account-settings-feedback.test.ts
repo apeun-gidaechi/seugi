@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { profileEditFeedback, withdrawFailureFeedback } from "../src/utils/accountSettingsFeedback.ts";
+import {
+  profileEditFeedback,
+  withdrawFailureFeedback,
+} from "../src/utils/accountSettingsFeedback.ts";
 
 test("profile edits report native Android success via snackbar feedback", () => {
   assert.deepEqual(profileEditFeedback("android", true), {

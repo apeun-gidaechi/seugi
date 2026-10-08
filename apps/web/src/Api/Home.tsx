@@ -16,12 +16,27 @@ export const fetchingNotice = async (workspaceId: string) => {
 
 export const getMenus = async (workspaceId: string, date: string) => {
   const meals = await withSeugiApi((api) => api.mealForDate(workspaceId, date));
-  return meals.map((meal, index) => ({ id: `${meal.date}-${meal.type}-${index}`, workspaceId, mealType: meal.type as "조식" | "중식" | "석식", menu: meal.menu, calorie: meal.calorie ?? "", mealInfo: meal.menu, mealDate: meal.date }));
+  return meals.map((meal, index) => ({
+    id: `${meal.date}-${meal.type}-${index}`,
+    workspaceId,
+    mealType: meal.type as "조식" | "중식" | "석식",
+    menu: meal.menu,
+    calorie: meal.calorie ?? "",
+    mealInfo: meal.menu,
+    mealDate: meal.date,
+  }));
 };
 
 export const getSchedules = async (workspaceId: string, month: string) => {
   const schedules = await withSeugiApi((api) => api.schedulesForMonth(workspaceId, Number(month)));
-  return schedules.map((schedule) => ({ id: `${schedule.date}-${schedule.name}`, workspaceId: schedule.workspaceId, date: schedule.date, eventName: schedule.name, eventContent: "", grade: [] as number[] }));
+  return schedules.map((schedule) => ({
+    id: `${schedule.date}-${schedule.name}`,
+    workspaceId: schedule.workspaceId,
+    date: schedule.date,
+    eventName: schedule.name,
+    eventContent: "",
+    grade: [] as number[],
+  }));
 };
 
 export const getTasks = async (workspaceId: string) => {

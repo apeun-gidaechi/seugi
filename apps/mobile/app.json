@@ -13,8 +13,6 @@
     "android": {
       "package": "com.seugi.app"
     },
-    "plugins": [
-      "expo-secure-store"
-    ]
+    "plugins": ["expo-secure-store"]
   }
 }

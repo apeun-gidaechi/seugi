@@ -47,9 +47,9 @@ export const Item = styled.div`
 `;
 
 export const HomeWrapper1UpContainer = styled.div`
-  position:relative;
+  position: relative;
   display: flex;
-  flex-wrap:wrap;
+  flex-wrap: wrap;
   padding: 12px 12px 16px 12px;
   flex-direction: column;
   align-items: flex-start;
@@ -74,7 +74,7 @@ export const ScheduleTitleDiv = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`
+`;
 
 export const BookLogo = styled.img`
   position: relative;
@@ -85,7 +85,6 @@ export const DailyScheduleTitle = styled.h2`
 
   ${SeugiFont.subtitle.subtitle2};
 `;
-
 
 export const ArrowLButton = styled.button`
   background: none;
@@ -104,11 +103,11 @@ export const ScheduleDivBox = styled.div`
   align-items: stretch;
   border-radius: 12px;
   flex-direction: column;
-`
+`;
 
 export const NumberTable = styled.div`
   display: flex;
-  flex-direction: row; 
+  flex-direction: row;
   justify-content: space-between;
   padding: 8px 0;
 `;
@@ -138,7 +137,7 @@ export const TimetableRow = styled.div`
 
 export const TimetableItem = styled.div`
   display: flex;
-  
+
   justify-content: center;
   align-items: center;
   align-self: stretch;
@@ -146,15 +145,14 @@ export const TimetableItem = styled.div`
 
   color: ${SeugiColor.Primary300};
   ${SeugiFont.body.body1};
-`
+`;
 
-export const TimetableSubject = styled.div`
-`
+export const TimetableSubject = styled.div``;
 
 export const NoScheduleText = styled.span`
   ${SeugiFont.subtitle.subtitle2};
   color: ${SeugiColor.Black};
-`
+`;
 
 export const NoScheduleDiv = styled.div`
   position: relative;
@@ -162,24 +160,23 @@ export const NoScheduleDiv = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-`
+`;
 
 export const NoScheduleImg = styled.img`
-  margin-bottom:4px;
-`
+  margin-bottom: 4px;
+`;
 
 export const ButtonDiv = styled.div`
-  display:flex;
-  justify-content:center;
-`
+  display: flex;
+  justify-content: center;
+`;
 export const CreateTimeTableButton = styled.button`
-  display:flex;
-  border:none;
-  background:none;
+  display: flex;
+  border: none;
+  background: none;
   cursor: pointer;
 
-  margin-right:4px;
-`
+  margin-right: 4px;
+`;
 
-export const CreateTimeTableButtonImg = styled.img`
-`
+export const CreateTimeTableButtonImg = styled.img``;

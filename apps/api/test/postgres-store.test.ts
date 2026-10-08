@@ -14,7 +14,9 @@ class MemoryDatabase {
   async lock() {
     const previous = this.lockQueue;
     let release!: () => void;
-    this.lockQueue = new Promise<void>((resolve) => { release = resolve; });
+    this.lockQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await previous;
     return release;
   }
@@ -22,8 +24,12 @@ class MemoryDatabase {
 
 class MemoryPool {
   constructor(private readonly database: MemoryDatabase) {}
-  async query() { return { rows: [] }; }
-  async connect() { return new MemoryClient(this.database); }
+  async query() {
+    return { rows: [] };
+  }
+  async connect() {
+    return new MemoryClient(this.database);
+  }
   async end() {}
 }
 
@@ -49,7 +55,10 @@ class MemoryClient {
     }
     if (sql.startsWith("UPDATE seugi_state")) {
       if (!this.database.row) throw new Error("state row missing");
-      this.stagedRow = { revision: this.database.row.revision + 1, payload: JSON.parse(values[0] as string) as StoreSnapshot };
+      this.stagedRow = {
+        revision: this.database.row.revision + 1,
+        payload: JSON.parse(values[0] as string) as StoreSnapshot,
+      };
       return { rows: [] };
     }
     if (sql === "COMMIT") {
@@ -68,17 +77,26 @@ class MemoryClient {
     throw new Error(`Unexpected SQL in memory Postgres test: ${sql}`);
   }
 
-  release() { this.releaseLock?.(); }
+  release() {
+    this.releaseLock?.();
+  }
 }
 
 const createStore = (database: MemoryDatabase) =>
-  new PostgresStore("postgres://memory-test", undefined, new MemoryPool(database) as unknown as Pool);
+  new PostgresStore(
+    "postgres://memory-test",
+    undefined,
+    new MemoryPool(database) as unknown as Pool,
+  );
 
 test("PostgresStore serializes concurrent API writes and restores state after restart", async () => {
   const database = new MemoryDatabase();
   const firstStore = createStore(database);
   const secondStore = createStore(database);
-  firstStore.emailCodes.set("postgres@example.com", { code: "123456", expiresAt: Date.now() + 60_000 });
+  firstStore.emailCodes.set("postgres@example.com", {
+    code: "123456",
+    expiresAt: Date.now() + 60_000,
+  });
   await firstStore.load();
   await secondStore.load();
   const firstApp = await buildApp(firstStore);
@@ -93,14 +111,30 @@ test("PostgresStore serializes concurrent API writes and restores state after re
   const headers = { authorization: `Bearer ${registration.json().data.accessToken}` };
 
   const writes = await Promise.all([
-    firstApp.inject({ method: "POST", url: "/workspace", headers, payload: { name: "첫 번째 학교" } }),
-    secondApp.inject({ method: "POST", url: "/workspace", headers, payload: { name: "두 번째 학교" } }),
+    firstApp.inject({
+      method: "POST",
+      url: "/workspace",
+      headers,
+      payload: { name: "첫 번째 학교" },
+    }),
+    secondApp.inject({
+      method: "POST",
+      url: "/workspace",
+      headers,
+      payload: { name: "두 번째 학교" },
+    }),
   ]);
-  assert.deepEqual(writes.map((response) => response.statusCode), [200, 200]);
+  assert.deepEqual(
+    writes.map((response) => response.statusCode),
+    [200, 200],
+  );
 
   const list = await firstApp.inject({ url: "/workspace", headers });
   assert.equal(list.statusCode, 200);
-  assert.deepEqual(new Set(list.json().data.map((workspace: { name: string }) => workspace.name)), new Set(["첫 번째 학교", "두 번째 학교"]));
+  assert.deepEqual(
+    new Set(list.json().data.map((workspace: { name: string }) => workspace.name)),
+    new Set(["첫 번째 학교", "두 번째 학교"]),
+  );
   await Promise.all([firstApp.close(), secondApp.close()]);
 
   const restartedStore = createStore(database);

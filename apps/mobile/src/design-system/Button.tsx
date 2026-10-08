@@ -1,25 +1,56 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 
-export type SeugiButtonVariant =
-  | "primary"
-  | "black"
-  | "red"
-  | "transparent"
-  | "shadow"
-  | "gray";
+export type SeugiButtonVariant = "primary" | "black" | "red" | "transparent" | "shadow" | "gray";
 export type SeugiButtonSize = "large" | "medium" | "small";
 
 const colors: Record<
   SeugiButtonVariant,
   { background: string; foreground: string; disabledBackground: string; disabledForeground: string }
 > = {
-  primary: { background: SeugiColor.Primary500, foreground: SeugiColor.White, disabledBackground: SeugiColor.Primary200, disabledForeground: SeugiColor.White },
-  black: { background: SeugiColor.Black, foreground: SeugiColor.White, disabledBackground: SeugiColor.Gray600, disabledForeground: SeugiColor.White },
-  red: { background: SeugiColor.Red200, foreground: SeugiColor.Red500, disabledBackground: SeugiColor.Red100, disabledForeground: SeugiColor.Red300 },
-  transparent: { background: "transparent", foreground: SeugiColor.Black, disabledBackground: "transparent", disabledForeground: SeugiColor.Gray500 },
-  shadow: { background: SeugiColor.White, foreground: SeugiColor.Black, disabledBackground: SeugiColor.White, disabledForeground: SeugiColor.Gray500 },
-  gray: { background: SeugiColor.Gray100, foreground: SeugiColor.Gray600, disabledBackground: SeugiColor.Gray100, disabledForeground: SeugiColor.Gray500 },
+  primary: {
+    background: SeugiColor.Primary500,
+    foreground: SeugiColor.White,
+    disabledBackground: SeugiColor.Primary200,
+    disabledForeground: SeugiColor.White,
+  },
+  black: {
+    background: SeugiColor.Black,
+    foreground: SeugiColor.White,
+    disabledBackground: SeugiColor.Gray600,
+    disabledForeground: SeugiColor.White,
+  },
+  red: {
+    background: SeugiColor.Red200,
+    foreground: SeugiColor.Red500,
+    disabledBackground: SeugiColor.Red100,
+    disabledForeground: SeugiColor.Red300,
+  },
+  transparent: {
+    background: "transparent",
+    foreground: SeugiColor.Black,
+    disabledBackground: "transparent",
+    disabledForeground: SeugiColor.Gray500,
+  },
+  shadow: {
+    background: SeugiColor.White,
+    foreground: SeugiColor.Black,
+    disabledBackground: SeugiColor.White,
+    disabledForeground: SeugiColor.Gray500,
+  },
+  gray: {
+    background: SeugiColor.Gray100,
+    foreground: SeugiColor.Gray600,
+    disabledBackground: SeugiColor.Gray100,
+    disabledForeground: SeugiColor.Gray500,
+  },
 };
 
 /** Seugi button primitive based on the Android and iOS button variants. */
@@ -82,12 +113,24 @@ export function SeugiButton({
 }
 
 const styles = StyleSheet.create({
-  button: { minWidth: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, overflow: "hidden" },
+  button: {
+    minWidth: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
   large: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 12 },
   medium: { minHeight: 45, paddingHorizontal: 12, paddingVertical: 10 },
   small: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8 },
   fullWidth: { alignSelf: "stretch" },
-  shadow: { shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
+  shadow: {
+    shadowColor: SeugiColor.Black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   disabled: { opacity: 1 },
   pressed: { opacity: 0.64, transform: [{ scale: 0.96 }] },
   label: { fontFamily: "Pretendard", fontWeight: "600", textAlign: "center" },

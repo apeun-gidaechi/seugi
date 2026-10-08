@@ -15,8 +15,9 @@ export function roundedCircleImageMetrics(
   const dimension = baseSizes[size];
   return {
     dimension,
-    radius: platform === "ios" ? dimension * 16 / 45 : size === "large" ? 64 : dimension * 9 / 32,
+    radius:
+      platform === "ios" ? (dimension * 16) / 45 : size === "large" ? 64 : (dimension * 9) / 32,
     borderWidth: platform === "ios" ? 2 : 1,
-    iconDimension: platform === "ios" ? dimension * 5 / 9 : dimension / 2,
+    iconDimension: platform === "ios" ? (dimension * 5) / 9 : dimension / 2,
   };
 }

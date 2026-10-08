@@ -3,66 +3,65 @@ import { SeugiFont } from "@/Design/text/SeugiFont";
 import styled from "styled-components";
 
 export const AdminGeneralMain = styled.div`
-    width: 100vw;
-    height: 100vh;
-    position: relative;
-`
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+`;
 
 export const SettingMain = styled.div`
-    display: flex;
-    padding: 56px 16px 0px 416px;
-    flex-direction: column;
-    align-items: flex-start;
-    flex: 1 0 0;
-    align-self: stretch;
+  display: flex;
+  padding: 56px 16px 0px 416px;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
 
-    background: ${SeugiColor.White};
-`
+  background: ${SeugiColor.White};
+`;
 
 export const SettingContainer = styled.div`
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    align-self: stretch;
-`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  align-self: stretch;
+`;
 
 export const TitleDiv = styled.div`
-    display: flex;
-    padding: 8px 4px;
-    align-items: flex-start;
-    gap: 24px;
-`
+  display: flex;
+  padding: 8px 4px;
+  align-items: flex-start;
+  gap: 24px;
+`;
 
 export const Title = styled.span`
-    color: ${SeugiColor.Black};
-    ${SeugiFont.subtitle.subtitle1};
-`
+  color: ${SeugiColor.Black};
+  ${SeugiFont.subtitle.subtitle1};
+`;
 
 export const Right = styled.div`
-    width: 180px;
-    flex-shrink: 0;
-    align-self: stretch;
-`
+  width: 180px;
+  flex-shrink: 0;
+  align-self: stretch;
+`;
 
 export const OutSchoolDiv = styled.div`
-    width:52vw;
-    display: flex;
-    height: 56px;
-    padding: 12px 20px;
-    justify-content: space-between;
-    align-items: center;
-    align-self: stretch;
-`
+  width: 52vw;
+  display: flex;
+  height: 56px;
+  padding: 12px 20px;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+`;
 
 export const OutSchool = styled.span`
-    color: ${SeugiColor.Black};
+  color: ${SeugiColor.Black};
 
-    ${SeugiFont.subtitle.subtitle2}
-`
+  ${SeugiFont.subtitle.subtitle2}
+`;
 
-export const RightImg = styled.img`
-`
+export const RightImg = styled.img``;
 
 export const ToggleSwitch = styled.label`
   position: relative;
@@ -79,8 +78,8 @@ export const ToggleSlider = styled.span`
   right: 0;
   bottom: 0;
   background-color: ${SeugiColor.Gray200};
-  -webkit-transition: .5s;
-  transition: .5s;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
   border-radius: 34px;
 
   &:before {
@@ -91,8 +90,8 @@ export const ToggleSlider = styled.span`
     left: 2px;
     bottom: 3px;
     background-color: ${SeugiColor.White};
-    -webkit-transition: .5s;
-    transition: .5s;
+    -webkit-transition: 0.5s;
+    transition: 0.5s;
     border-radius: 50%;
   }
 `;
@@ -107,7 +106,7 @@ export const CheckBox = styled.input`
   }
 
   &:focus + ${ToggleSlider} {
-    box-shadow: 0 0 2px #2196F3;
+    box-shadow: 0 0 2px #2196f3;
   }
 
   &:checked + ${ToggleSlider}:before {

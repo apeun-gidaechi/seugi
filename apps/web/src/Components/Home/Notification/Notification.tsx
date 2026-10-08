@@ -1,333 +1,343 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import * as S from '@/Components/Home/Notification/Notification.style';
-import CustomAlert from '@/Components/Alert/Alert';
-import Point from '@/Assets/image/home/point.svg';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import * as S from "@/Components/Home/Notification/Notification.style";
+import CustomAlert from "@/Components/Alert/Alert";
+import Point from "@/Assets/image/home/point.svg";
 import Emoji from "@/Assets/image/home/emoji.svg";
-import NoNotification from '@/Assets/image/home/NoNotification.svg';
+import NoNotification from "@/Assets/image/home/NoNotification.svg";
 import NotificationImg from "@/Assets/image/home/notification.svg";
-import CorrectionImg from '@/Assets/image/home/Correction.svg';
-import { toggleNotificationEmoji } from '@/Api/notification';
-import type { EmojiClickData } from 'emoji-picker-react';
-import { useUserContext } from '@/Contexts/userContext';
-import Cookies from 'js-cookie';
-import type { KeyedMutator } from 'swr';
-import type { LegacyNotification } from '@seugi/contracts';
+import CorrectionImg from "@/Assets/image/home/Correction.svg";
+import { toggleNotificationEmoji } from "@/Api/notification";
+import type { EmojiClickData } from "emoji-picker-react";
+import { useUserContext } from "@/Contexts/userContext";
+import Cookies from "js-cookie";
+import type { KeyedMutator } from "swr";
+import type { LegacyNotification } from "@seugi/contracts";
 
-const AddEmoji = React.lazy(() => import('@/Components/Home/Notification/Emoji/emojipicker'));
-const CreateNotice = React.lazy(() => import('@/Components/Home/Notification/CreateNotice/CreateNotice'));
-const ChangeNotice = React.lazy(() => import('./ChangeNotice/ChangeNotice'));
+const AddEmoji = React.lazy(() => import("@/Components/Home/Notification/Emoji/emojipicker"));
+const CreateNotice = React.lazy(
+  () => import("@/Components/Home/Notification/CreateNotice/CreateNotice"),
+);
+const ChangeNotice = React.lazy(() => import("./ChangeNotice/ChangeNotice"));
 
 type NotificationItem = LegacyNotification;
 type EmojiItem = LegacyNotification["emoji"][number];
 
 interface Props {
-    notifications?: NotificationItem[];
-    mutateNotifications: KeyedMutator<NotificationItem[]>;
+  notifications?: NotificationItem[];
+  mutateNotifications: KeyedMutator<NotificationItem[]>;
 }
 
 const Notification = ({ notifications = [], mutateNotifications }: Props) => {
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString);
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
 
-        const daysOfWeek = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-        const dayOfWeek = daysOfWeek[date.getDay()];
+    const daysOfWeek = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+    const dayOfWeek = daysOfWeek[date.getDay()];
 
-        return `${month}월 ${day}일 ${dayOfWeek}`;
+    return `${month}월 ${day}일 ${dayOfWeek}`;
+  };
+
+  const user = useUserContext();
+  const [isEmojiPickerVisible, setEmojiPickerVisible] = useState<boolean>(false);
+  const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
+  const [isCreateNoticeVisible, setCreateNoticeVisible] = useState<boolean>(false);
+  const [showAlert, setShowAlert] = useState<boolean>(false);
+  const [changeNoticeId, setChangeNoticeId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(notifications.length / itemsPerPage);
+  const userRole = Cookies.get("userRole");
+  const CreateNoticeRef = useRef<HTMLDivElement>(null);
+  const ChangeNoticeRef = useRef<HTMLDivElement>(null);
+
+  const isStudent = userRole === "STUDENT";
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+
+      if (
+        CreateNoticeRef.current &&
+        !CreateNoticeRef.current.contains(target) &&
+        ChangeNoticeRef.current &&
+        !ChangeNoticeRef.current.contains(target) &&
+        isEmojiPickerVisible
+      ) {
+        setEmojiPickerVisible(false);
+        setActiveNotificationId(null);
+      }
     };
 
-    const user = useUserContext();
-    const [isEmojiPickerVisible, setEmojiPickerVisible] = useState<boolean>(false);
-    const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
-    const [isCreateNoticeVisible, setCreateNoticeVisible] = useState<boolean>(false);
-    const [showAlert, setShowAlert] = useState<boolean>(false);
-    const [changeNoticeId, setChangeNoticeId] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const itemsPerPage = 20;
-    const totalPages = Math.ceil(notifications.length / itemsPerPage);
-    const userRole = Cookies.get('userRole')
-    const CreateNoticeRef = useRef<HTMLDivElement>(null);
-    const ChangeNoticeRef = useRef<HTMLDivElement>(null);
+    document.addEventListener("mousedown", handleClickOutside);
 
-    const isStudent = userRole === 'STUDENT';
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            const target = e.target as Node | null;
-
-            if (
-                (CreateNoticeRef.current && !CreateNoticeRef.current.contains(target)) &&
-                (ChangeNoticeRef.current && !ChangeNoticeRef.current.contains(target)) &&
-                isEmojiPickerVisible
-            ) {
-                setEmojiPickerVisible(false);
-                setActiveNotificationId(null);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isEmojiPickerVisible]);
-
-    const handleAddEmojiClick = (notificationId: string) => {
-        if (activeNotificationId === notificationId && isEmojiPickerVisible) {
-            setEmojiPickerVisible(false);
-            setActiveNotificationId(null);
-        } else {
-            setActiveNotificationId(notificationId);
-            setEmojiPickerVisible(true);
-        }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, [isEmojiPickerVisible]);
 
-    // 이모지 관련
-    const handleEmojiClick = async (parentKey: number, emoji: EmojiItem) => {
-        try {
-            if (!user) {
-                return;
-            }
-
-            const updatedNotifications = notifications.map((notification, index) => {
-                if (index !== parentKey) {
-                    return notification;
-                }
-
-                const isEmojiIncluded = !!notification.emoji.find(it => it.emoji === emoji.emoji);
-
-                if (!isEmojiIncluded) {
-                    return {
-                        ...notification,
-                        emoji: notification.emoji.concat({
-                            emoji: emoji.emoji,
-                            userList: [user.id],
-                        }),
-                    };
-                } else {
-                    const existingEmojiIndex = notification.emoji.findIndex(it => it.emoji === emoji.emoji);
-                    const existingEmoji = notification.emoji[existingEmojiIndex];
-
-                    if (existingEmoji.userList.includes(user.id)) {
-                        existingEmoji.userList = existingEmoji.userList.filter(id => id !== user.id);
-
-                        if (existingEmoji.userList.length === 0) {
-                            return {
-                                ...notification,
-                                emoji: notification.emoji.filter(it => it.emoji !== emoji.emoji),
-                            };
-                        }
-                    } else {
-                        existingEmoji.userList.push(user.id);
-                    }
-
-                    return {
-                        ...notification,
-                        emoji: [
-                            ...notification.emoji.slice(0, existingEmojiIndex),
-                            existingEmoji,
-                            ...notification.emoji.slice(existingEmojiIndex + 1),
-                        ],
-                    };
-                }
-            });
-
-            await toggleNotificationEmoji(String(notifications[parentKey].id), emoji.emoji);
-
-            mutateNotifications(updatedNotifications);
-        } catch (error) {
-            console.error(error);
-            mutateNotifications(notifications);
-        }
+  const handleAddEmojiClick = (notificationId: string) => {
+    if (activeNotificationId === notificationId && isEmojiPickerVisible) {
+      setEmojiPickerVisible(false);
+      setActiveNotificationId(null);
+    } else {
+      setActiveNotificationId(notificationId);
+      setEmojiPickerVisible(true);
     }
+  };
 
-    const handleEmojiSelect = async (emoji: EmojiClickData) => {
-        try {
-            if (activeNotificationId === null) {
-                return;
-            }
+  // 이모지 관련
+  const handleEmojiClick = async (parentKey: number, emoji: EmojiItem) => {
+    try {
+      if (!user) {
+        return;
+      }
 
-            const notification = notifications.find(it => it.id === activeNotificationId) ?? null;
-            if (notification === null) {
-                return;
-            }
-
-            if (user === null) {
-                return;
-            }
-
-            const updatedNotifications = notifications.map((notification) => {
-                if (notification.id !== activeNotificationId) {
-                    return notification;
-                }
-
-                const existingEmojiIndex = notification.emoji.findIndex(emojiItem => emojiItem.emoji === emoji.emoji);
-                const existingEmoji = notification.emoji[existingEmojiIndex];
-
-                if (existingEmoji) {
-                    if (existingEmoji.userList.includes(user?.id)) {
-                        existingEmoji.userList = existingEmoji.userList.filter(id => id !== user?.id);
-
-                        if (existingEmoji.userList.length === 0) {
-                            return {
-                                ...notification,
-                                emoji: notification.emoji.filter(it => it.emoji !== emoji.emoji),
-                            };
-                        }
-                    } else {
-                        existingEmoji.userList.push(user?.id ?? "");
-                    }
-
-                    return {
-                        ...notification,
-                        emoji: [
-                            ...notification.emoji.slice(0, existingEmojiIndex),
-                            existingEmoji,
-                            ...notification.emoji.slice(existingEmojiIndex + 1),
-                        ],
-                    };
-                } else {
-                    return {
-                        ...notification,
-                        emoji: notification.emoji.concat({
-                            emoji: emoji.emoji,
-                            userList: [user?.id ?? ""],
-                        }),
-                    };
-                }
-            });
-
-            await toggleNotificationEmoji(String(notification.id), emoji.emoji);
-            mutateNotifications(updatedNotifications);
-        } catch (error) {
-            console.error(error);
-            mutateNotifications(notifications);
-        } finally {
-            setEmojiPickerVisible(false);
-            setActiveNotificationId(null);
+      const updatedNotifications = notifications.map((notification, index) => {
+        if (index !== parentKey) {
+          return notification;
         }
-    };
 
+        const isEmojiIncluded = !!notification.emoji.find((it) => it.emoji === emoji.emoji);
 
-    const handleActionButtonClick = (notificationId: string) => {
-        setChangeNoticeId(prev => (prev === notificationId ? null : notificationId));
-    };
+        if (!isEmojiIncluded) {
+          return {
+            ...notification,
+            emoji: notification.emoji.concat({
+              emoji: emoji.emoji,
+              userList: [user.id],
+            }),
+          };
+        } else {
+          const existingEmojiIndex = notification.emoji.findIndex((it) => it.emoji === emoji.emoji);
+          const existingEmoji = notification.emoji[existingEmojiIndex];
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-    };
+          if (existingEmoji.userList.includes(user.id)) {
+            existingEmoji.userList = existingEmoji.userList.filter((id) => id !== user.id);
 
-    const currentNotifications = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return notifications.slice(startIndex, startIndex + itemsPerPage);
-    }, [notifications, currentPage]);
+            if (existingEmoji.userList.length === 0) {
+              return {
+                ...notification,
+                emoji: notification.emoji.filter((it) => it.emoji !== emoji.emoji),
+              };
+            }
+          } else {
+            existingEmoji.userList.push(user.id);
+          }
 
-    return (
-        <S.LeftContainer>
-            {isCreateNoticeVisible && (
-                <React.Suspense fallback={null}>
-                    <CreateNotice
-                        onClose={() => setCreateNoticeVisible(false)}
-                        mutateNotifications={mutateNotifications}
-                    />
-                </React.Suspense>
-            )}
-            {showAlert && (
-                <CustomAlert
-                    titletext="권한이 없습니다"
-                    subtext='관리자만 할 수 있는 작업입니다.'
-                    buttontext="닫기"
-                    onClose={() => setShowAlert(false)}
-                    position="top-right"
-                />
-            )}
-            <S.NotificationContainer>
-                <S.NotificationTitleContainer>
-                    <S.NotificationLogo src={NotificationImg} />
-                    <S.NotificationTitle>공지</S.NotificationTitle>
-                </S.NotificationTitleContainer>
-                <S.ArrowLButton onClick={() => setCreateNoticeVisible(true)}>
-                    <S.NArrowLogo src={CorrectionImg} />
-                </S.ArrowLButton>
-            </S.NotificationContainer>
-            <S.NotificationBox>
-                {currentNotifications.length > 0 ? (
-                    currentNotifications.map((item, parentKey) => (
-                        <S.NotificationWrapper key={item.id}>
-                            <S.NotificationContentAuthor>
-                                <S.NotificationContentAuthorSpan> {item.userName} · {formatDate(item.lastModifiedDate)} </S.NotificationContentAuthorSpan>
-                                {!isStudent && ( 
-                                    <S.NotificationActionButton
-                                        onClick={() => handleActionButtonClick(item.id)}
-                                        className='point'>
-                                        <S.NotificationActionButtonimg src={Point} />
-                                    </S.NotificationActionButton>
-                                )}
-                            </S.NotificationContentAuthor>
-                            <S.NotificationContentTitle>
-                                {item.title}
-                            </S.NotificationContentTitle>
-                            <S.NotificationContentDescription>
-                                {item.content}
-                            </S.NotificationContentDescription>
-                            <S.NotificationEmojiBox>
-                                <S.NotificationAddEmojiButton onClick={() => handleAddEmojiClick(item.id)} className='AddEmojiButton'>
-                                    <S.NotificationAddEmoji src={Emoji} />
-                                </S.NotificationAddEmojiButton>
-                                {item.emoji.map((emoji, childKey) => (
-                                    <S.NotificationEmojiWrapper
-                                        onClick={() => handleEmojiClick(parentKey, emoji)}
-                                        key={childKey}
-                                        className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}
-                                    >
-                                        <S.NotificationEmojiCount className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}>
-                                            {emoji.emoji} {emoji.userList?.length}
-                                        </S.NotificationEmojiCount>
-                                    </S.NotificationEmojiWrapper>
-                                ))}
-                            </S.NotificationEmojiBox>
-                            {isEmojiPickerVisible && activeNotificationId === item.id && (
-                                <React.Suspense fallback={null}>
-                                    <AddEmoji
-                                        isOpened={isEmojiPickerVisible}
-                                        setIsOpened={setEmojiPickerVisible}
-                                        onSelect={handleEmojiSelect}
-                                    />
-                                </React.Suspense>
-                            )}
-                            {changeNoticeId === item.id && (
-                                <React.Suspense fallback={null}>
-                                    <ChangeNotice
-                                        onClose={() => handleActionButtonClick(item.id)}
-                                        notificationId={item.id}
-                                        userId={item.userId}
-                                        mutateNotifications={mutateNotifications}
-                                    />
-                                </React.Suspense>
-                            )}
-                        </S.NotificationWrapper>
-                    ))
-                ) : (
-                    <S.NoNotificationDiv>
-                        <S.NoNotificationImg src={NoNotification} />
-                        <S.NoNotification>알림이 없습니다.</S.NoNotification>
-                    </S.NoNotificationDiv>
+          return {
+            ...notification,
+            emoji: [
+              ...notification.emoji.slice(0, existingEmojiIndex),
+              existingEmoji,
+              ...notification.emoji.slice(existingEmojiIndex + 1),
+            ],
+          };
+        }
+      });
+
+      await toggleNotificationEmoji(String(notifications[parentKey].id), emoji.emoji);
+
+      mutateNotifications(updatedNotifications);
+    } catch (error) {
+      console.error(error);
+      mutateNotifications(notifications);
+    }
+  };
+
+  const handleEmojiSelect = async (emoji: EmojiClickData) => {
+    try {
+      if (activeNotificationId === null) {
+        return;
+      }
+
+      const notification = notifications.find((it) => it.id === activeNotificationId) ?? null;
+      if (notification === null) {
+        return;
+      }
+
+      if (user === null) {
+        return;
+      }
+
+      const updatedNotifications = notifications.map((notification) => {
+        if (notification.id !== activeNotificationId) {
+          return notification;
+        }
+
+        const existingEmojiIndex = notification.emoji.findIndex(
+          (emojiItem) => emojiItem.emoji === emoji.emoji,
+        );
+        const existingEmoji = notification.emoji[existingEmojiIndex];
+
+        if (existingEmoji) {
+          if (existingEmoji.userList.includes(user?.id)) {
+            existingEmoji.userList = existingEmoji.userList.filter((id) => id !== user?.id);
+
+            if (existingEmoji.userList.length === 0) {
+              return {
+                ...notification,
+                emoji: notification.emoji.filter((it) => it.emoji !== emoji.emoji),
+              };
+            }
+          } else {
+            existingEmoji.userList.push(user?.id ?? "");
+          }
+
+          return {
+            ...notification,
+            emoji: [
+              ...notification.emoji.slice(0, existingEmojiIndex),
+              existingEmoji,
+              ...notification.emoji.slice(existingEmojiIndex + 1),
+            ],
+          };
+        } else {
+          return {
+            ...notification,
+            emoji: notification.emoji.concat({
+              emoji: emoji.emoji,
+              userList: [user?.id ?? ""],
+            }),
+          };
+        }
+      });
+
+      await toggleNotificationEmoji(String(notification.id), emoji.emoji);
+      mutateNotifications(updatedNotifications);
+    } catch (error) {
+      console.error(error);
+      mutateNotifications(notifications);
+    } finally {
+      setEmojiPickerVisible(false);
+      setActiveNotificationId(null);
+    }
+  };
+
+  const handleActionButtonClick = (notificationId: string) => {
+    setChangeNoticeId((prev) => (prev === notificationId ? null : notificationId));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const currentNotifications = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return notifications.slice(startIndex, startIndex + itemsPerPage);
+  }, [notifications, currentPage]);
+
+  return (
+    <S.LeftContainer>
+      {isCreateNoticeVisible && (
+        <React.Suspense fallback={null}>
+          <CreateNotice
+            onClose={() => setCreateNoticeVisible(false)}
+            mutateNotifications={mutateNotifications}
+          />
+        </React.Suspense>
+      )}
+      {showAlert && (
+        <CustomAlert
+          titletext="권한이 없습니다"
+          subtext="관리자만 할 수 있는 작업입니다."
+          buttontext="닫기"
+          onClose={() => setShowAlert(false)}
+          position="top-right"
+        />
+      )}
+      <S.NotificationContainer>
+        <S.NotificationTitleContainer>
+          <S.NotificationLogo src={NotificationImg} />
+          <S.NotificationTitle>공지</S.NotificationTitle>
+        </S.NotificationTitleContainer>
+        <S.ArrowLButton onClick={() => setCreateNoticeVisible(true)}>
+          <S.NArrowLogo src={CorrectionImg} />
+        </S.ArrowLButton>
+      </S.NotificationContainer>
+      <S.NotificationBox>
+        {currentNotifications.length > 0 ? (
+          currentNotifications.map((item, parentKey) => (
+            <S.NotificationWrapper key={item.id}>
+              <S.NotificationContentAuthor>
+                <S.NotificationContentAuthorSpan>
+                  {" "}
+                  {item.userName} · {formatDate(item.lastModifiedDate)}{" "}
+                </S.NotificationContentAuthorSpan>
+                {!isStudent && (
+                  <S.NotificationActionButton
+                    onClick={() => handleActionButtonClick(item.id)}
+                    className="point"
+                  >
+                    <S.NotificationActionButtonimg src={Point} />
+                  </S.NotificationActionButton>
                 )}
-            </S.NotificationBox>
-            <S.PaginationContainer>
-                {Array.from({ length: totalPages }, (_, index) => (
-                    <S.PageButton
-                        key={index + 1}
-                        onClick={() => handlePageChange(index + 1)}
-                        active={currentPage === index + 1}
+              </S.NotificationContentAuthor>
+              <S.NotificationContentTitle>{item.title}</S.NotificationContentTitle>
+              <S.NotificationContentDescription>{item.content}</S.NotificationContentDescription>
+              <S.NotificationEmojiBox>
+                <S.NotificationAddEmojiButton
+                  onClick={() => handleAddEmojiClick(item.id)}
+                  className="AddEmojiButton"
+                >
+                  <S.NotificationAddEmoji src={Emoji} />
+                </S.NotificationAddEmojiButton>
+                {item.emoji.map((emoji, childKey) => (
+                  <S.NotificationEmojiWrapper
+                    onClick={() => handleEmojiClick(parentKey, emoji)}
+                    key={childKey}
+                    className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}
+                  >
+                    <S.NotificationEmojiCount
+                      className={emoji.userList?.includes(user?.id ?? "") ? "Clicked" : ""}
                     >
-                        {index + 1}
-                    </S.PageButton>
+                      {emoji.emoji} {emoji.userList?.length}
+                    </S.NotificationEmojiCount>
+                  </S.NotificationEmojiWrapper>
                 ))}
-            </S.PaginationContainer>
-        </S.LeftContainer>
-    );
+              </S.NotificationEmojiBox>
+              {isEmojiPickerVisible && activeNotificationId === item.id && (
+                <React.Suspense fallback={null}>
+                  <AddEmoji
+                    isOpened={isEmojiPickerVisible}
+                    setIsOpened={setEmojiPickerVisible}
+                    onSelect={handleEmojiSelect}
+                  />
+                </React.Suspense>
+              )}
+              {changeNoticeId === item.id && (
+                <React.Suspense fallback={null}>
+                  <ChangeNotice
+                    onClose={() => handleActionButtonClick(item.id)}
+                    notificationId={item.id}
+                    userId={item.userId}
+                    mutateNotifications={mutateNotifications}
+                  />
+                </React.Suspense>
+              )}
+            </S.NotificationWrapper>
+          ))
+        ) : (
+          <S.NoNotificationDiv>
+            <S.NoNotificationImg src={NoNotification} />
+            <S.NoNotification>알림이 없습니다.</S.NoNotification>
+          </S.NoNotificationDiv>
+        )}
+      </S.NotificationBox>
+      <S.PaginationContainer>
+        {Array.from({ length: totalPages }, (_, index) => (
+          <S.PageButton
+            key={index + 1}
+            onClick={() => handlePageChange(index + 1)}
+            active={currentPage === index + 1}
+          >
+            {index + 1}
+          </S.PageButton>
+        ))}
+      </S.PaginationContainer>
+    </S.LeftContainer>
+  );
 };
 
 export default Notification;

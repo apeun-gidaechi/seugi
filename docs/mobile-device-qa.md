@@ -10,29 +10,29 @@ For each screen: note device/simulator model, OS version, app build (commit hash
 
 These do **not** replace on-device QA; they catch regressions in native rules already encoded in TypeScript.
 
-| Command | Scope |
-| --- | --- |
-| `pnpm check` | TypeScript across all workspaces |
-| `pnpm -r test` | API contract/integration (79+), mobile unit tests (114+), web tests |
-| `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles) |
+| Command                             | Scope                                                               |
+| ----------------------------------- | ------------------------------------------------------------------- |
+| `pnpm check`                        | TypeScript across all workspaces                                    |
+| `pnpm -r test`                      | API contract/integration (79+), mobile unit tests (114+), web tests |
+| `pnpm --filter @seugi/mobile build` | Mobile `tsc` + Expo export (Android/iOS bundles)                    |
 
-| Checklist ID | Covered by (mobile `test/*.test.ts` unless noted) |
-| --- | --- |
-| H-01 meal carousel / Classroom / card data rules | `home.test.ts`, `home-screen-data.test.ts` |
-| WG-01 Android meal widget period | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`) |
-| WG-02 iOS meal widget period | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
-| C-01 / C-02 room search / ordering / timestamps | `chat.test.ts`, `chat-room-list.test.ts` |
-| C-03 message search / list merge / unread | `chat.test.ts`, `chat-conversation.test.ts` |
-| C-04 create room member → name back stack | `shell-navigation.test.ts` (`previousCreateRoomDetail`) |
-| M-01 future-date dimming | `meal-calendar.test.ts` |
-| T-01 week label | `date.test.ts` |
-| A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
-| AI-01 CatSeugi rendering | `apps/api/test/ai.test.ts`, `catseugi.test.ts` (`catseugiVisibleText`) |
-| N-01 notice create permission | `workspace-notice-access.test.ts` |
-| W-01 members search / profile | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts` |
-| AU-01 auth CTAs / feedback | `auth-button.test.ts`, `auth-feedback.test.ts` |
-| S-01 tab conversation state | `tab-navigation.test.ts` |
-| S-03 no-workspace registration / add targets | `no-workspace-shell.test.ts` |
+| Checklist ID                                     | Covered by (mobile `test/*.test.ts` unless noted)                                             |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| H-01 meal carousel / Classroom / card data rules | `home.test.ts`, `home-screen-data.test.ts`                                                    |
+| WG-01 Android meal widget period                 | `meal-widget-period.test.ts` (08:10 cutoffs; home card uses 08:20 in `home.test.ts`)          |
+| WG-02 iOS meal widget period                     | `ios-meal-widget-period.test.ts` (`MealType.from` rules; lunch from 09:00, dinner from 13:31) |
+| C-01 / C-02 room search / ordering / timestamps  | `chat.test.ts`, `chat-room-list.test.ts`                                                      |
+| C-03 message search / list merge / unread        | `chat.test.ts`, `chat-conversation.test.ts`                                                   |
+| C-04 create room member → name back stack        | `shell-navigation.test.ts` (`previousCreateRoomDetail`)                                       |
+| M-01 future-date dimming                         | `meal-calendar.test.ts`                                                                       |
+| T-01 week label                                  | `date.test.ts`                                                                                |
+| A-01 assignments / task create                   | `assignments.test.ts`, `taskCalendar.test.ts`                                                 |
+| AI-01 CatSeugi rendering                         | `apps/api/test/ai.test.ts`, `catseugi.test.ts` (`catseugiVisibleText`)                        |
+| N-01 notice create permission                    | `workspace-notice-access.test.ts`                                                             |
+| W-01 members search / profile                    | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts`                        |
+| AU-01 auth CTAs / feedback                       | `auth-button.test.ts`, `auth-feedback.test.ts`                                                |
+| S-01 tab conversation state                      | `tab-navigation.test.ts`                                                                      |
+| S-03 no-workspace registration / add targets     | `no-workspace-shell.test.ts`                                                                  |
 
 Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
 
@@ -44,50 +44,50 @@ Record the commit hash from `pnpm -r test` in evidence notes when closing a row.
 
 ## Authenticated shell (all tabs)
 
-| ID | Screen | Verify |
-| --- | --- | --- |
-| S-01 | Tab switch | Tab roots stay mounted; returning preserves list scroll and open chat per platform rules |
-| S-02 | System back | Android back and iOS edge swipe pop the expected route (detail → tab, search mode → list) |
-| S-03 | No-workspace mode | Five tabs, registration alert, 10s approval poll, platform-specific chat add targets |
+| ID   | Screen            | Verify                                                                                    |
+| ---- | ----------------- | ----------------------------------------------------------------------------------------- |
+| S-01 | Tab switch        | Tab roots stay mounted; returning preserves list scroll and open chat per platform rules  |
+| S-02 | System back       | Android back and iOS edge swipe pop the expected route (detail → tab, search mode → list) |
+| S-03 | No-workspace mode | Five tabs, registration alert, 10s approval poll, platform-specific chat add targets      |
 
 ## Main navigation (parity table)
 
-| ID | Destination | Key checks |
-| --- | --- | --- |
-| H-01 | Home | Card order/spacing, meal carousel time rules, timetable empty/failure copy, assignment card platform empty states, pull-to-refresh |
-| C-01 | Personal chat list | Avatar 36pt, search mode, ordering, unread badges, timestamps |
-| C-02 | Group chat list | Member count on iOS only; search/filter rules |
-| C-03 | Chat conversation | Composer, search, drawer, attachments, reactions, failed send retry, image preview |
-| C-04 | Create room | Member step → name step state; invite (Android group) |
-| P-01 | Profile / account settings | Field editors, photo picker, withdrawal flows |
-| N-01 | Notices | Paging (Android) vs full list (iOS), emoji picker, create/edit/delete permissions (`workspace-notice-access.test.ts`) |
-| W-01 | Workspace detail / members / invite / notifications / general | Picker UI, toggles, member actions, join approvals |
-| J-01 | Join flow | Role → code → confirm → waiting; approval screen copy |
-| M-01 | Meal calendar | Grid, future-date dimming (Android), empty/failure |
-| T-01 | Timetable | Week label range, loading replaces grid (iOS), shadows |
-| A-01 | Assignments / task create | Sort order, badges, date picker validation and wire format |
-| AI-01 | CatSeugi | Suggestion chips, structured answers, draw/team name resolution |
-| AU-01 | Auth | Email + Google + Apple sheets; verification timers per platform |
+| ID    | Destination                                                   | Key checks                                                                                                                         |
+| ----- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| H-01  | Home                                                          | Card order/spacing, meal carousel time rules, timetable empty/failure copy, assignment card platform empty states, pull-to-refresh |
+| C-01  | Personal chat list                                            | Avatar 36pt, search mode, ordering, unread badges, timestamps                                                                      |
+| C-02  | Group chat list                                               | Member count on iOS only; search/filter rules                                                                                      |
+| C-03  | Chat conversation                                             | Composer, search, drawer, attachments, reactions, failed send retry, image preview                                                 |
+| C-04  | Create room                                                   | Member step → name step state; invite (Android group)                                                                              |
+| P-01  | Profile / account settings                                    | Field editors, photo picker, withdrawal flows                                                                                      |
+| N-01  | Notices                                                       | Paging (Android) vs full list (iOS), emoji picker, create/edit/delete permissions (`workspace-notice-access.test.ts`)              |
+| W-01  | Workspace detail / members / invite / notifications / general | Picker UI, toggles, member actions, join approvals                                                                                 |
+| J-01  | Join flow                                                     | Role → code → confirm → waiting; approval screen copy                                                                              |
+| M-01  | Meal calendar                                                 | Grid, future-date dimming (Android), empty/failure                                                                                 |
+| T-01  | Timetable                                                     | Week label range, loading replaces grid (iOS), shadows                                                                             |
+| A-01  | Assignments / task create                                     | Sort order, badges, date picker validation and wire format                                                                         |
+| AI-01 | CatSeugi                                                      | Suggestion chips, structured answers, draw/team name resolution                                                                    |
+| AU-01 | Auth                                                          | Email + Google + Apple sheets; verification timers per platform                                                                    |
 
 ## Widgets
 
-| ID | Check |
-| --- | --- |
+| ID    | Check                                                                            |
+| ----- | -------------------------------------------------------------------------------- |
 | WG-01 | Android meal/timetable widgets refresh after login, workspace change, foreground |
-| WG-02 | iOS App Group snapshot updates and WidgetKit timeline |
+| WG-02 | iOS App Group snapshot updates and WidgetKit timeline                            |
 
 ## Evidence log
 
 Record device QA sessions here before updating `mobile-screen-parity.md` rows. Keep `device QA pending` until both platforms are captured.
 
-| Date | Commit | Scope | Environment | Result | Artifacts |
-| --- | --- | --- | --- | --- | --- |
-| 2026-10-08 | `aed2a66` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 103) | Terminal output; maps to checklist IDs in **Automated verification** above |
-| 2026-10-08 | `6ddda32` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 105, web 2); API `app.ts` route modules split | Terminal output; device rows still pending |
-| 2026-10-08 | `9761312` | Automated gate | local macOS | `pnpm -r test` green (API 79, mobile 112, web 2); shell/no-workspace platform rules extracted | Terminal output; device rows still pending |
-| 2026-10-08 | `25bf367` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 113, web 2); home assignment load error rules | Terminal output; device rows still pending |
-| 2026-10-08 | `8c1a602` | Automated gate | local macOS | `pnpm check`, `pnpm -r test` green (API 79, mobile 114, web 2); API `bootstrap.ts` + `registerRoutes.ts` | Terminal output; device rows still pending |
-| | | H-01 … AU-01 | Android + iOS device/sim | Pending | Screenshots / recording per screen ID |
+| Date       | Commit    | Scope          | Environment              | Result                                                                                                   | Artifacts                                                                  |
+| ---------- | --------- | -------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 2026-10-08 | `aed2a66` | Automated gate | local macOS              | `pnpm check`, `pnpm -r test` green (API 79, mobile 103)                                                  | Terminal output; maps to checklist IDs in **Automated verification** above |
+| 2026-10-08 | `6ddda32` | Automated gate | local macOS              | `pnpm check`, `pnpm -r test` green (API 79, mobile 105, web 2); API `app.ts` route modules split         | Terminal output; device rows still pending                                 |
+| 2026-10-08 | `9761312` | Automated gate | local macOS              | `pnpm -r test` green (API 79, mobile 112, web 2); shell/no-workspace platform rules extracted            | Terminal output; device rows still pending                                 |
+| 2026-10-08 | `25bf367` | Automated gate | local macOS              | `pnpm check`, `pnpm -r test` green (API 79, mobile 113, web 2); home assignment load error rules         | Terminal output; device rows still pending                                 |
+| 2026-10-08 | `8c1a602` | Automated gate | local macOS              | `pnpm check`, `pnpm -r test` green (API 79, mobile 114, web 2); API `bootstrap.ts` + `registerRoutes.ts` | Terminal output; device rows still pending                                 |
+|            |           | H-01 … AU-01   | Android + iOS device/sim | Pending                                                                                                  | Screenshots / recording per screen ID                                      |
 
 ## Sign-off
 

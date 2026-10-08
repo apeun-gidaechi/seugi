@@ -1,7 +1,12 @@
 // Reuse only the localized data file already used by the web emoji picker. The
 // browser picker component itself is never imported into the native bundle.
 import koreanEmojiData from "emoji-picker-react/src/data/emojis-ko";
-import { emojiFromUnified, filterEmojiEntries, type EmojiCategoryId, type EmojiCatalogEntry } from "./emojiCatalogCore";
+import {
+  emojiFromUnified,
+  filterEmojiEntries,
+  type EmojiCategoryId,
+  type EmojiCatalogEntry,
+} from "./emojiCatalogCore";
 
 type EmojiRecord = { n: string[]; u: string; v?: string[] };
 type EmojiDataFile = { emojis: Record<string, EmojiRecord[]> };
@@ -22,11 +27,13 @@ export const EMOJI_CATEGORIES = [
 export type { EmojiCategoryId, EmojiCatalogEntry } from "./emojiCatalogCore";
 
 export const EMOJI_CATALOG: EmojiCatalogEntry[] = EMOJI_CATEGORIES.flatMap(({ id }) =>
-  (localizedData.emojis[id] ?? []).flatMap(({ n, u, v }) => [u, ...(v ?? [])].map((unified) => ({
-    emoji: emojiFromUnified(unified),
-    names: n,
-    category: id,
-  }))),
+  (localizedData.emojis[id] ?? []).flatMap(({ n, u, v }) =>
+    [u, ...(v ?? [])].map((unified) => ({
+      emoji: emojiFromUnified(unified),
+      names: n,
+      category: id,
+    })),
+  ),
 );
 
 export function filterEmojiCatalog(category: EmojiCategoryId, query: string): EmojiCatalogEntry[] {

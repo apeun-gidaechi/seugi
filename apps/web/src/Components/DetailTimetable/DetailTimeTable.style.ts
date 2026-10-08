@@ -1,78 +1,78 @@
-import { SeugiColor } from '@/Design/color/SeugiColor';
-import { SeugiFont } from '@/Design/text/SeugiFont';
-import styled from 'styled-components';
+import { SeugiColor } from "@/Design/color/SeugiColor";
+import { SeugiFont } from "@/Design/text/SeugiFont";
+import styled from "styled-components";
 
 export const CalendarMain = styled.div`
-    width: 100vw;
-    height: 100vh;
+  width: 100vw;
+  height: 100vh;
 
-    position:fixed;
+  position: fixed;
 
-    background: rgba(0, 0, 0, 0.30);
-    
-    z-index:998;
+  background: rgba(0, 0, 0, 0.3);
 
-    top: 0;
-    left: 0;
+  z-index: 998;
 
-    display: flex; 
-    justify-content: center; 
-    align-items: center;
-`
+  top: 0;
+  left: 0;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
 export const CalendarDiv = styled.div`
-    display: flex;
-    position:absolute;
-    width: 360px;
-    height: 450px;
-    padding: 16px;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  position: absolute;
+  width: 360px;
+  height: 450px;
+  padding: 16px;
+  flex-direction: column;
+  align-items: center;
 
-    border-radius: 16px;
-    background: ${SeugiColor.White};
+  border-radius: 16px;
+  background: ${SeugiColor.White};
 
-    box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
+  box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
 
-    z-index: 999;
+  z-index: 999;
 
-    z-index:999;
+  z-index: 999;
 
-    gap: 12px;
-`
+  gap: 12px;
+`;
 
 export const TimetableContainer = styled.div`
-    grid-template-columns: repeat(6, 1fr); 
-    grid-template-rows: repeat(8, 1fr); 
-    display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  display: grid;
 
-    border-radius: 12px;
-    background: ${SeugiColor.White};
-    box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  background: ${SeugiColor.White};
+  box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
 `;
 
 export const HeaderCell = styled.div`
   background-color: #f0f0f0;
-  color:${SeugiColor.Gray500};
+  color: ${SeugiColor.Gray500};
   ${SeugiFont.caption.caption2};
   text-align: center;
   padding: 10px;
-`
+`;
 
 export const DayHeaderCell = styled.div`
   background-color: #f0f0f0;
-  color:${SeugiColor.Gray500};
+  color: ${SeugiColor.Gray500};
   ${SeugiFont.caption.caption2};
   text-align: center;
   padding: 10px;
 `;
 
 export const TimeHeaderCell = styled.div`
-    background-color: #f0f0f0;
-    color:${SeugiColor.Gray600};
-    ${SeugiFont.caption.caption2};
-    text-align: center;
-    padding: 10px;
-`
+  background-color: #f0f0f0;
+  color: ${SeugiColor.Gray600};
+  ${SeugiFont.caption.caption2};
+  text-align: center;
+  padding: 10px;
+`;
 
 export const TimeCell = styled.div`
   background-color: ${SeugiColor.White};
@@ -82,18 +82,18 @@ export const TimeCell = styled.div`
 `;
 
 export const HeaderControls = styled.div`
-    display: flex;
-    padding: 12px;
-    justify-content: space-between;
-    align-items: center;
-    align-self: stretch;
+  display: flex;
+  padding: 12px;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
 
-    border-radius: 12px;
-    background: ${SeugiColor.White};
+  border-radius: 12px;
+  background: ${SeugiColor.White};
 
-    box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
+  box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
 
-    margin-bottom:4px;
+  margin-bottom: 4px;
 `;
 
 export const ArrowButton = styled.button`
@@ -109,7 +109,7 @@ export const ArrowButton = styled.button`
 `;
 
 export const WeekDisplay = styled.div`
-    ${SeugiFont.subtitle.subtitle2};
-    color:${SeugiColor.Black};
-    text-align: center;
+  ${SeugiFont.subtitle.subtitle2};
+  color: ${SeugiColor.Black};
+  text-align: center;
 `;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getWorkspaceMembers } from '@/Api/admin';
+import { useEffect, useState } from "react";
+import { getWorkspaceMembers } from "@/Api/admin";
 
 interface Member {
   id: string;
@@ -8,7 +8,7 @@ interface Member {
 }
 
 const useMembers = (workspaceId: string) => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResult, setSearchResult] = useState<Member[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
@@ -31,14 +31,16 @@ const useMembers = (workspaceId: string) => {
           department: m.member.belong || "",
         }));
 
-        setSearchResult(members.filter(
-          (item) =>
-            item.name.toLowerCase().includes(term.toLowerCase()) ||
-            item.department.toLowerCase().includes(term.toLowerCase())
-        ));
+        setSearchResult(
+          members.filter(
+            (item) =>
+              item.name.toLowerCase().includes(term.toLowerCase()) ||
+              item.department.toLowerCase().includes(term.toLowerCase()),
+          ),
+        );
       } catch (error) {
         console.error("Error fetching members:", error);
-        alert('멤버를 가져오는 중 오류가 발생했습니다.');
+        alert("멤버를 가져오는 중 오류가 발생했습니다.");
       }
     }
   };
@@ -49,7 +51,7 @@ const useMembers = (workspaceId: string) => {
 
   const handleMemberClick = (id: string) => {
     setSelectedMembers((prev) =>
-      prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((memberId) => memberId !== id) : [...prev, id],
     );
   };
 

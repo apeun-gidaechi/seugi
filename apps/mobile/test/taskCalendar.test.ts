@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { finishTaskDatePicker, isTaskDateSelectable, taskCalendarSlots } from "../src/utils/taskCalendar.ts";
+import {
+  finishTaskDatePicker,
+  isTaskDateSelectable,
+  taskCalendarSlots,
+} from "../src/utils/taskCalendar.ts";
 
 test("task calendar fills a complete Sunday-first four-row February", () => {
   const slots = taskCalendarSlots(2026, 1);

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emojiFromUnified, filterEmojiEntries, type EmojiCatalogEntry } from "../src/utils/emojiCatalogCore.ts";
+import {
+  emojiFromUnified,
+  filterEmojiEntries,
+  type EmojiCatalogEntry,
+} from "../src/utils/emojiCatalogCore.ts";
 
 const catalog: EmojiCatalogEntry[] = [
   { emoji: "❤️", names: ["하트", "사랑", "빨간 하트"], category: "symbols" },
@@ -14,13 +18,22 @@ test("emoji unified codepoints reconstruct emoji sequences and skin tones", () =
 });
 
 test("emoji category selection only displays entries in the selected category", () => {
-  assert.deepEqual(filterEmojiEntries(catalog, "animals_nature", "").map(({ emoji }) => emoji), ["🐈"]);
+  assert.deepEqual(
+    filterEmojiEntries(catalog, "animals_nature", "").map(({ emoji }) => emoji),
+    ["🐈"],
+  );
 });
 
 test("Korean emoji search matches localized names across categories", () => {
-  assert.deepEqual(filterEmojiEntries(catalog, "flags", " 사랑 ").map(({ emoji }) => emoji), ["❤️"]);
+  assert.deepEqual(
+    filterEmojiEntries(catalog, "flags", " 사랑 ").map(({ emoji }) => emoji),
+    ["❤️"],
+  );
 });
 
 test("empty Korean emoji search returns the active category", () => {
-  assert.deepEqual(filterEmojiEntries(catalog, "smileys_people", "   ").map(({ emoji }) => emoji), ["👍"]);
+  assert.deepEqual(
+    filterEmojiEntries(catalog, "smileys_people", "   ").map(({ emoji }) => emoji),
+    ["👍"],
+  );
 });

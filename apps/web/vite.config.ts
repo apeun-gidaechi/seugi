@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
-import fs from 'fs';
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     // The monorepo root .env.example owns shared API settings such as VITE_SERVER_URL.
     envDir: resolve(__dirname, "../.."),
     server: {
-      host: '0.0.0.0',
+      host: "0.0.0.0",
       // 개발 환경에서만 https 설정 적용
       // https: mode === 'development' ? {
       //   key: fs.readFileSync(`${__dirname}/certificates/localhost-key.pem`),  // 로컬에서 HTTPS 키 파일 경로

@@ -1,22 +1,48 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import {useLocation} from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import type { ChatRoom } from "@/Components/common/ChatRoom";
 import { createPersonalChatRoom, searchChatRooms } from "@/Api/chat";
 
-type ApiRoom = { id: string; workspaceId: string; type: string; name: string; adminId: string; image?: string; memberIds: string[] };
-const toChatRoom = (room: ApiRoom): ChatRoom => ({ id: room.id, workspaceId: room.workspaceId, type: room.type, roomAdmin: Number(room.adminId), chatName: room.name, chatRoomImg: room.image ?? "", createdAt: "", chatStatusEnum: "ALIVE", joinUserInfo: [], lastMessage: "", lastMessageTimestamp: "", notReadCnt: 0 });
+type ApiRoom = {
+  id: string;
+  workspaceId: string;
+  type: string;
+  name: string;
+  adminId: string;
+  image?: string;
+  memberIds: string[];
+};
+const toChatRoom = (room: ApiRoom): ChatRoom => ({
+  id: room.id,
+  workspaceId: room.workspaceId,
+  type: room.type,
+  roomAdmin: Number(room.adminId),
+  chatName: room.name,
+  chatRoomImg: room.image ?? "",
+  createdAt: "",
+  chatStatusEnum: "ALIVE",
+  joinUserInfo: [],
+  lastMessage: "",
+  lastMessageTimestamp: "",
+  notReadCnt: 0,
+});
 
 // useChatSidebar 훅 정의
-const useChat = () => {  
+const useChat = () => {
   const location = useLocation();
   const pathname = location.pathname;
 
   const [personalChatRooms, updatePersonalChatRooms] = useState<ChatRoom[]>([]); // 개인 채팅방 상태
   const [groupChatRooms, updateGroupChatRooms] = useState<ChatRoom[]>([]); // 그룹 채팅방 상태
-  const selectedChatRooms: ChatRoom[] = pathname === "/groupchat"
-    ? Array.isArray(groupChatRooms) ? groupChatRooms : []
-    : Array.isArray(personalChatRooms) ? personalChatRooms : [];
+  const selectedChatRooms: ChatRoom[] =
+    pathname === "/groupchat"
+      ? Array.isArray(groupChatRooms)
+        ? groupChatRooms
+        : []
+      : Array.isArray(personalChatRooms)
+        ? personalChatRooms
+        : [];
 
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom>(); // 선택한 채팅방
 
@@ -56,7 +82,9 @@ const useChat = () => {
       // updatePersonalChatRooms(newRoomList); // 업데이트된 상태 저장
       // handleChatRoomClick(roomName);
     } catch (error) {
-      console.error(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(
+        `An error occurred: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -67,7 +95,7 @@ const useChat = () => {
   return {
     handleChatRoomClick,
     selectedChatRooms,
-    selectedRoom
+    selectedRoom,
   };
 };
 

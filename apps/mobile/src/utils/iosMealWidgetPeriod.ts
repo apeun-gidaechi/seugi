@@ -1,5 +1,8 @@
 /** iOS meal widget: mirrors upstream `MealType.from` in seugi-ios. */
-export function iosMealWidgetPeriod(now: Date): { type: "조식" | "중식" | "석식"; label: "아침" | "점심" | "저녁" } {
+export function iosMealWidgetPeriod(now: Date): {
+  type: "조식" | "중식" | "석식";
+  label: "아침" | "점심" | "저녁";
+} {
   const hour = now.getHours();
   const minute = now.getMinutes();
 

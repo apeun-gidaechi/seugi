@@ -1,9 +1,9 @@
 // firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js');
-importScripts('https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js');
+importScripts("https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js");
+importScripts("https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js");
 importScripts("swEnv.js");
 
-const apiKey = swEnv.VITE_FIREBASE_API_KEY
+const apiKey = swEnv.VITE_FIREBASE_API_KEY;
 const authDomain = swEnv.VITE_FIREBASE_AUTH_DOMAIN;
 const projectId = swEnv.VITE_FIREBASE_PROJECT_ID;
 const storageBucket = swEnv.VITE_FIREBASE_STORAGE_BUCKET;
@@ -24,8 +24,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-    
-  console.log('Received background message ', payload);
+  console.log("Received background message ", payload);
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,

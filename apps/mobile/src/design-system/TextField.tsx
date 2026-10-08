@@ -70,37 +70,75 @@ export function SeugiTextField({
           editable={editable}
           autoCapitalize={inputProps.autoCapitalize ?? "none"}
           autoCorrect={inputProps.autoCorrect ?? (Platform.OS === "ios" ? false : undefined)}
-          onFocus={(event) => { setFocused(true); onFocus?.(event); }}
-          onBlur={(event) => { setFocused(false); onBlur?.(event); }}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
           placeholderTextColor={disabled ? SeugiColor.Gray400 : SeugiColor.Gray500}
           selectionColor={SeugiColor.Primary500}
           style={[styles.input, disabled && styles.disabledInput, style]}
         />
         {trailing}
         {showClearButton ? (
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="입력 내용 지우기" onPress={clearValue} style={styles.clearButton}>
-            <Svg width={28} height={28} viewBox="0 0 24 24"><Path d={CLEAR_ICON_PATH} fill={SeugiColor.Gray500} fillRule="evenodd" /></Svg>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="입력 내용 지우기"
+            onPress={clearValue}
+            style={styles.clearButton}
+          >
+            <Svg width={28} height={28} viewBox="0 0 24 24">
+              <Path d={CLEAR_ICON_PATH} fill={SeugiColor.Gray500} fillRule="evenodd" />
+            </Svg>
           </TouchableOpacity>
         ) : null}
       </View>
-      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-export function SeugiPasswordTextField(props: Omit<SeugiTextFieldProps, "secureTextEntry" | "trailing">) {
+export function SeugiPasswordTextField(
+  props: Omit<SeugiTextFieldProps, "secureTextEntry" | "trailing">,
+) {
   const [hidden, setHidden] = useState(true);
-  const iconPaths = Platform.OS === "ios"
-    ? hidden ? PASSWORD_HIDE_ICON_PATHS : PASSWORD_SHOW_ICON_PATHS
-    : hidden ? PASSWORD_SHOW_ICON_PATHS : PASSWORD_HIDE_ICON_PATHS;
+  const iconPaths =
+    Platform.OS === "ios"
+      ? hidden
+        ? PASSWORD_HIDE_ICON_PATHS
+        : PASSWORD_SHOW_ICON_PATHS
+      : hidden
+        ? PASSWORD_SHOW_ICON_PATHS
+        : PASSWORD_HIDE_ICON_PATHS;
   return (
     <SeugiTextField
       {...props}
       clearable={false}
       secureTextEntry={hidden}
       trailing={
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel={hidden ? "비밀번호 표시" : "비밀번호 숨기기"} onPress={() => setHidden((current) => !current)} style={styles.visibilityButton}>
-          <Svg width={28} height={28} viewBox="0 0 24 24">{iconPaths.map((path, index) => <Path key={`password-icon-${index}`} d={path} fill={SeugiColor.Gray500} fillRule="evenodd" />)}</Svg>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={hidden ? "비밀번호 표시" : "비밀번호 숨기기"}
+          onPress={() => setHidden((current) => !current)}
+          style={styles.visibilityButton}
+        >
+          <Svg width={28} height={28} viewBox="0 0 24 24">
+            {iconPaths.map((path, index) => (
+              <Path
+                key={`password-icon-${index}`}
+                d={path}
+                fill={SeugiColor.Gray500}
+                fillRule="evenodd"
+              />
+            ))}
+          </Svg>
         </TouchableOpacity>
       }
     />
@@ -131,7 +169,16 @@ export function SeugiCodeTextField({
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <View pointerEvents="none" style={styles.codeCells}>
         {Array.from({ length: limit }, (_, index) => (
-          <View key={index} style={[styles.codeCell, focused && (value.length === index || (index === limit - 1 && value.length === limit)) && styles.focused, error && styles.invalid]}>
+          <View
+            key={index}
+            style={[
+              styles.codeCell,
+              focused &&
+                (value.length === index || (index === limit - 1 && value.length === limit)) &&
+                styles.focused,
+              error && styles.invalid,
+            ]}
+          >
             <Text style={styles.codeDigit}>{value[index] ?? ""}</Text>
           </View>
         ))}
@@ -141,8 +188,14 @@ export function SeugiCodeTextField({
         accessibilityLabel={props.accessibilityLabel ?? "인증 코드"}
         value={value}
         onChangeText={(next) => onChangeText(next.slice(0, limit))}
-        onFocus={(event) => { setFocused(true); props.onFocus?.(event); }}
-        onBlur={(event) => { setFocused(false); props.onBlur?.(event); }}
+        onFocus={(event) => {
+          setFocused(true);
+          props.onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          props.onBlur?.(event);
+        }}
         keyboardType={keyboardType}
         maxLength={limit}
         selectionColor={SeugiColor.Primary500}
@@ -175,8 +228,20 @@ export function SeugiChatTextField({
   return (
     <View style={styles.chatField}>
       {onAddClick ? (
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="첨부 메뉴" onPress={onAddClick} disabled={!editable} style={styles.chatAction}>
-          <Svg width={32} height={32} viewBox="0 0 24 25"><Path d="M5.636 18.728C9.151 22.243 14.849 22.243 18.364 18.728C21.879 15.213 21.879 9.515 18.364 6C14.849 2.485 9.151 2.485 5.636 6C2.121 9.515 2.121 15.213 5.636 18.728ZM7.05 11.364C6.498 11.364 6.05 11.812 6.05 12.364C6.05 12.916 6.498 13.364 7.05 13.364H11V17.314C11 17.866 11.448 18.314 12 18.314C12.552 18.314 13 17.866 13 17.314V13.364H16.95C17.502 13.364 17.95 12.916 17.95 12.364C17.95 11.812 17.502 11.364 16.95 11.364H13V7.414C13 6.862 12.552 6.414 12 6.414C11.448 6.414 11 6.862 11 7.414V11.364H7.05Z" fill={SeugiColor.Gray400} fillRule="evenodd" /></Svg>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="첨부 메뉴"
+          onPress={onAddClick}
+          disabled={!editable}
+          style={styles.chatAction}
+        >
+          <Svg width={32} height={32} viewBox="0 0 24 25">
+            <Path
+              d="M5.636 18.728C9.151 22.243 14.849 22.243 18.364 18.728C21.879 15.213 21.879 9.515 18.364 6C14.849 2.485 9.151 2.485 5.636 6C2.121 9.515 2.121 15.213 5.636 18.728ZM7.05 11.364C6.498 11.364 6.05 11.812 6.05 12.364C6.05 12.916 6.498 13.364 7.05 13.364H11V17.314C11 17.866 11.448 18.314 12 18.314C12.552 18.314 13 17.866 13 17.314V13.364H16.95C17.502 13.364 17.95 12.916 17.95 12.364C17.95 11.812 17.502 11.364 16.95 11.364H13V7.414C13 6.862 12.552 6.414 12 6.414C11.448 6.414 11 6.862 11 7.414V11.364H7.05Z"
+              fill={SeugiColor.Gray400}
+              fillRule="evenodd"
+            />
+          </Svg>
         </TouchableOpacity>
       ) : null}
       <TextInput
@@ -202,36 +267,109 @@ export function SeugiChatTextField({
         onPress={onSendClick}
         style={styles.chatAction}
       >
-        <Svg width={32} height={32} viewBox="0 0 24 24"><Path d="M19.975 20.772C20.385 20.864 20.719 20.437 20.53 20.06L12.447 3.894C12.263 3.526 11.737 3.526 11.553 3.894L3.47 20.06C3.282 20.437 3.614 20.864 4.025 20.772L9.81 19.376C10.223 19.284 10.534 18.941 10.585 18.52L11.899 11.324C11.9 11.319 11.901 11.313 11.901 11.308C11.917 10.703 12.085 11.2 12.099 11.316L13.415 18.52C13.466 18.941 13.777 19.284 14.19 19.376L19.975 20.772Z" fill={sendEnabled && editable ? SeugiColor.Primary500 : SeugiColor.Gray400} fillRule="evenodd" /></Svg>
+        <Svg width={32} height={32} viewBox="0 0 24 24">
+          <Path
+            d="M19.975 20.772C20.385 20.864 20.719 20.437 20.53 20.06L12.447 3.894C12.263 3.526 11.737 3.526 11.553 3.894L3.47 20.06C3.282 20.437 3.614 20.864 4.025 20.772L9.81 19.376C10.223 19.284 10.534 18.941 10.585 18.52L11.899 11.324C11.9 11.319 11.901 11.313 11.901 11.308C11.917 10.703 12.085 11.2 12.099 11.316L13.415 18.52C13.466 18.941 13.777 19.284 14.19 19.376L19.975 20.772Z"
+            fill={sendEnabled && editable ? SeugiColor.Primary500 : SeugiColor.Gray400}
+            fillRule="evenodd"
+          />
+        </Svg>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: SeugiColor.Gray700, fontFamily: "Pretendard", fontSize: 14, fontWeight: "600", marginBottom: 6 },
-  field: { minHeight: 52, flexDirection: "row", alignItems: "center", borderWidth: Platform.OS === "ios" ? 1 : 1.5, borderColor: Platform.OS === "ios" ? SeugiColor.Gray300 : SeugiColor.Gray400, borderRadius: 12, backgroundColor: SeugiColor.White, paddingHorizontal: 16 },
+  label: {
+    color: SeugiColor.Gray700,
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  field: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: Platform.OS === "ios" ? 1 : 1.5,
+    borderColor: Platform.OS === "ios" ? SeugiColor.Gray300 : SeugiColor.Gray400,
+    borderRadius: 12,
+    backgroundColor: SeugiColor.White,
+    paddingHorizontal: 16,
+  },
   focused: { borderWidth: 1.5, borderColor: SeugiColor.Primary500 },
   invalid: { borderColor: SeugiColor.Red500 },
   disabled: { backgroundColor: SeugiColor.White },
   iosDisabled: { backgroundColor: SeugiColor.White, borderColor: SeugiColor.Gray200 },
-  input: { flex: 1, minWidth: 0, minHeight: 49, paddingVertical: 0, color: SeugiColor.Gray800, fontFamily: "Pretendard", fontSize: 16 },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 49,
+    paddingVertical: 0,
+    color: SeugiColor.Gray800,
+    fontFamily: "Pretendard",
+    fontSize: 16,
+  },
   disabledInput: { color: SeugiColor.Gray400 },
   clearButton: { minWidth: 28, minHeight: 28, alignItems: "center", justifyContent: "center" },
-  visibilityButton: { width: 28, height: 28, alignItems: "center", justifyContent: "center", marginLeft: 8 },
+  visibilityButton: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
   error: { color: SeugiColor.Red500, fontSize: 12, marginTop: 4 },
   codeRoot: { minHeight: 52, justifyContent: "center" },
   codeCells: { flexDirection: "row", gap: 4 },
-  codeCell: { flex: 1, height: 52, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 12, backgroundColor: SeugiColor.White },
-  codeDigit: { color: SeugiColor.Gray800, fontFamily: "Pretendard", fontSize: 16, fontWeight: "600" },
+  codeCell: {
+    flex: 1,
+    height: 52,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: SeugiColor.Gray300,
+    borderRadius: 12,
+    backgroundColor: SeugiColor.White,
+  },
+  codeDigit: {
+    color: SeugiColor.Gray800,
+    fontFamily: "Pretendard",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   codeInput: { ...StyleSheet.absoluteFillObject, opacity: 0.02, color: "transparent" },
-  chatField: { minHeight: Platform.OS === "android" ? 60 : 56, maxHeight: 216, flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 8, paddingVertical: 12, borderRadius: 12, backgroundColor: SeugiColor.White, shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
+  chatField: {
+    minHeight: Platform.OS === "android" ? 60 : 56,
+    maxHeight: 216,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: SeugiColor.White,
+    shadowColor: SeugiColor.Black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   chatAction: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  chatInput: { flex: 1, minWidth: 0, height: 32, paddingVertical: 5, color: SeugiColor.Gray800, fontFamily: "Pretendard", fontSize: 16 },
+  chatInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 32,
+    paddingVertical: 5,
+    color: SeugiColor.Gray800,
+    fontFamily: "Pretendard",
+    fontSize: 16,
+  },
   chatMultiline: { minHeight: 32, maxHeight: 176, textAlignVertical: "bottom" },
 });
 
-const CLEAR_ICON_PATH = "M12,21C16.971,21 21,16.971 21,12C21,7.029 16.971,3 12,3C7.029,3 3,7.029 3,12C3,16.971 7.029,21 12,21ZM7.793,14.793C7.402,15.183 7.402,15.817 7.793,16.207C8.183,16.598 8.817,16.598 9.207,16.207L12,13.414L14.793,16.207C15.183,16.598 15.817,16.598 16.207,16.207C16.598,15.817 16.598,15.183 16.207,14.793L13.414,12L16.207,9.207C16.598,8.817 16.598,8.183 16.207,7.793C15.817,7.402 15.183,7.402 14.793,7.793L12,10.586L9.207,7.793C8.817,7.402 8.183,7.402 7.793,7.793C7.402,8.183 7.402,8.817 7.793,9.207L10.586,12L7.793,14.793Z";
+const CLEAR_ICON_PATH =
+  "M12,21C16.971,21 21,16.971 21,12C21,7.029 16.971,3 12,3C7.029,3 3,7.029 3,12C3,16.971 7.029,21 12,21ZM7.793,14.793C7.402,15.183 7.402,15.817 7.793,16.207C8.183,16.598 8.817,16.598 9.207,16.207L12,13.414L14.793,16.207C15.183,16.598 15.817,16.598 16.207,16.207C16.598,15.817 16.598,15.183 16.207,14.793L13.414,12L16.207,9.207C16.598,8.817 16.598,8.183 16.207,7.793C15.817,7.402 15.183,7.402 14.793,7.793L12,10.586L9.207,7.793C8.817,7.402 8.183,7.402 7.793,7.793C7.402,8.183 7.402,8.817 7.793,9.207L10.586,12L7.793,14.793Z";
 const PASSWORD_SHOW_ICON_PATHS = [
   "M11.55,13.965C12.599,13.965 12.999,13.523 12.999,12.423C12.999,11.323 12.599,10.878 11.55,10.878C10.501,10.878 10.101,11.323 10.101,12.423C10.101,13.523 10.501,13.965 11.55,13.965Z",
   "M20.1,12.423C20.106,15.401 16.05,18.843 11.55,18.843C7.05,18.843 2.994,15.401 3,12.423C3.384,9.594 7.05,6 11.55,6C16.05,6 19.716,9.594 20.1,12.423ZM7.869,15.231C6.212,13.715 6.182,11.108 7.809,9.56C9.905,7.566 13.196,7.566 15.291,9.56C16.918,11.108 16.888,13.715 15.231,15.231C13.151,17.135 9.95,17.135 7.869,15.231Z",

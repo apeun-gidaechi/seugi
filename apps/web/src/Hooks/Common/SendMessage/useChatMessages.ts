@@ -24,7 +24,9 @@ const adaptMessage = (message: ChatMessage): Message => ({
 const mergeMessages = (current: Message[], incoming: Message[]) => {
   const byId = new Map<string, Message>();
   for (const message of [...current, ...incoming]) byId.set(message.id ?? message.uuid, message);
-  return [...byId.values()].sort((left, right) => Date.parse(left.timestamp ?? "") - Date.parse(right.timestamp ?? ""));
+  return [...byId.values()].sort(
+    (left, right) => Date.parse(left.timestamp ?? "") - Date.parse(right.timestamp ?? ""),
+  );
 };
 
 const useChatMessages = (selectedRoom: ChatRoom) => {
@@ -40,10 +42,12 @@ const useChatMessages = (selectedRoom: ChatRoom) => {
       if (active) setReceivedMessages((current) => mergeMessages(current, [newMessage]));
     });
 
-    void getChatMessages(roomId).then((response) => {
-      const messages = response.messages.map(adaptMessage);
-      if (active) setReceivedMessages((current) => mergeMessages(current, messages));
-    }).catch((error) => console.error("Error fetching chat messages:", error));
+    void getChatMessages(roomId)
+      .then((response) => {
+        const messages = response.messages.map(adaptMessage);
+        if (active) setReceivedMessages((current) => mergeMessages(current, messages));
+      })
+      .catch((error) => console.error("Error fetching chat messages:", error));
 
     return () => {
       active = false;
@@ -57,7 +61,7 @@ const useChatMessages = (selectedRoom: ChatRoom) => {
 
   return {
     receivedMessages,
-    sendMessage
+    sendMessage,
   };
 };
 

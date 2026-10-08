@@ -50,27 +50,33 @@ export class SchoolDataResetScheduler {
 
   private scheduleMealReset() {
     const delay = nextLocalMonthBoundary(new Date()).getTime() - Date.now();
-    this.mealTimer = setTimeout(() => {
-      void clearMonthlyMealCache(this.store)
-        .catch((error) => this.onError(error, "Scheduled meal cache reset failed"))
-        .finally(() => {
-          this.mealTimer = undefined;
-          if (!this.stopped) this.scheduleMealReset();
-        });
-    }, Math.max(1, delay));
+    this.mealTimer = setTimeout(
+      () => {
+        void clearMonthlyMealCache(this.store)
+          .catch((error) => this.onError(error, "Scheduled meal cache reset failed"))
+          .finally(() => {
+            this.mealTimer = undefined;
+            if (!this.stopped) this.scheduleMealReset();
+          });
+      },
+      Math.max(1, delay),
+    );
     this.mealTimer.unref?.();
   }
 
   private scheduleTimetableReset() {
     const delay = nextLocalSundayBoundary(new Date()).getTime() - Date.now();
-    this.timetableTimer = setTimeout(() => {
-      void clearWeeklyTimetableCache(this.store)
-        .catch((error) => this.onError(error, "Scheduled timetable cache reset failed"))
-        .finally(() => {
-          this.timetableTimer = undefined;
-          if (!this.stopped) this.scheduleTimetableReset();
-        });
-    }, Math.max(1, delay));
+    this.timetableTimer = setTimeout(
+      () => {
+        void clearWeeklyTimetableCache(this.store)
+          .catch((error) => this.onError(error, "Scheduled timetable cache reset failed"))
+          .finally(() => {
+            this.timetableTimer = undefined;
+            if (!this.stopped) this.scheduleTimetableReset();
+          });
+      },
+      Math.max(1, delay),
+    );
     this.timetableTimer.unref?.();
   }
 }

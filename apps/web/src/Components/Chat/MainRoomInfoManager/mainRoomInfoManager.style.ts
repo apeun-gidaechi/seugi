@@ -3,49 +3,47 @@ import { SeugiFont } from "@/Design/text/SeugiFont";
 import styled from "styled-components";
 
 interface OutChatRoomProps {
-    pressed: boolean;
+  pressed: boolean;
 }
 
 interface NotificationSetProps {
-    pressed: boolean;
+  pressed: boolean;
 }
 
-
 export const MainRoomInfoBox = styled.div`
-    width: 272px;
-    height: 152px;
+  width: 272px;
+  height: 152px;
 
-    display: flex;
-    padding: 16px;
-    flex-direction: column;
-    gap: 3px;
+  display: flex;
+  padding: 16px;
+  flex-direction: column;
+  gap: 3px;
 
-    border-radius: 16px;
-    background: #FFF;
-` 
+  border-radius: 16px;
+  background: #fff;
+`;
 
 export const NotificationSet = styled.button<NotificationSetProps>`
-    color: ${(props) =>
-        props.pressed ? `${SeugiColor.Gray600}` : `${SeugiColor.Black}`};
+  color: ${(props) => (props.pressed ? `${SeugiColor.Gray600}` : `${SeugiColor.Black}`)};
 
-    ${SeugiFont.subtitle.subtitle2};
+  ${SeugiFont.subtitle.subtitle2};
 
-    padding: 8px 0px;
-    text-align: left;
-    background: none;
-    border: none;
+  padding: 8px 0px;
+  text-align: left;
+  background: none;
+  border: none;
 `;
 
 export const OutChatRoom = styled.button<OutChatRoomProps>`
-    color: ${SeugiColor.Red500};
+  color: ${SeugiColor.Red500};
 
-    ${SeugiFont.subtitle.subtitle2};
+  ${SeugiFont.subtitle.subtitle2};
 
-    padding: 8px 0px;
+  padding: 8px 0px;
 
-    flex-direction: column;
+  flex-direction: column;
 
-    text-align: left;
-    background: none;
-    border: none;
+  text-align: left;
+  background: none;
+  border: none;
 `;

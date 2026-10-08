@@ -2,12 +2,12 @@
 
 The original repositories were imported for analysis only and are excluded from the git worktree (`.upstream/`). This document maps their capabilities to the TypeScript monorepo implementation.
 
-| Original source | TypeScript target | Status |
-| --- | --- | --- |
-| `seugi-desktop` React/Vite | `apps/web` | Source migrated intact; API base URL should be configured for the local API |
-| `seugi-server` Kotlin/Spring | `apps/api` | HTTP domain routes, Socket.IO, provider adapters, file persistence, and shared PostgreSQL snapshot persistence implemented |
-| `seugi-android` Kotlin/Compose | `apps/mobile` | Expo/React Native client implementing the feature set described in `docs/mobile-screen-parity.md`; **migration incomplete** until Android device QA in `docs/mobile-device-qa.md` is signed off |
-| `seugi-ios` SwiftUI | `apps/mobile` | Same shared Expo client; **migration incomplete** until iOS device QA in `docs/mobile-device-qa.md` is signed off (includes OAuth, widgets, signing) |
+| Original source                | TypeScript target | Status                                                                                                                                                                                          |
+| ------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seugi-desktop` React/Vite     | `apps/web`        | Source migrated intact; API base URL should be configured for the local API                                                                                                                     |
+| `seugi-server` Kotlin/Spring   | `apps/api`        | HTTP domain routes, Socket.IO, provider adapters, file persistence, and shared PostgreSQL snapshot persistence implemented                                                                      |
+| `seugi-android` Kotlin/Compose | `apps/mobile`     | Expo/React Native client implementing the feature set described in `docs/mobile-screen-parity.md`; **migration incomplete** until Android device QA in `docs/mobile-device-qa.md` is signed off |
+| `seugi-ios` SwiftUI            | `apps/mobile`     | Same shared Expo client; **migration incomplete** until iOS device QA in `docs/mobile-device-qa.md` is signed off (includes OAuth, widgets, signing)                                            |
 
 Android home widgets use the authenticated session and selected workspace already stored by the mobile app. The meal widget selects breakfast/lunch/dinner by local time; the timetable widget shows today's periods. They refresh when the session/workspace changes and on Android's 30-minute widget update cycle. The original Android schedule requested 15-minute updates, below Android's supported periodic widget-update minimum. iOS home widgets now share meal and timetable snapshots through an App Group; credentials stay in SecureStore, snapshots refresh when the app session/workspace changes, and WidgetKit controls subsequent timeline refreshes. Device installs still require the app's real Apple development team and App Group capability provisioning.
 

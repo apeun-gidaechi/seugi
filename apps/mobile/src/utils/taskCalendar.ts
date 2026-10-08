@@ -4,12 +4,12 @@ import { localDateKey } from "./date.ts";
 export function taskCalendarSlots(year: number, month: number): Array<string | undefined> {
   const firstWeekday = new Date(year, month, 1).getDay();
   const dayCount = new Date(year, month + 1, 0).getDate();
-  const rows = dayCount === 30 && firstWeekday === 6
-    || dayCount === 31 && firstWeekday >= 5
-    ? 6
-    : dayCount === 28 && firstWeekday === 0
-      ? 4
-      : 5;
+  const rows =
+    (dayCount === 30 && firstWeekday === 6) || (dayCount === 31 && firstWeekday >= 5)
+      ? 6
+      : dayCount === 28 && firstWeekday === 0
+        ? 4
+        : 5;
   const dates = Array.from({ length: dayCount }, (_, index) =>
     localDateKey(new Date(year, month, index + 1)),
   );

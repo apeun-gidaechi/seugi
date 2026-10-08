@@ -17,7 +17,7 @@ export const AssignmentMain = styled.div`
   align-self: stretch;
 `;
 
-export const AssignmentTitleBox = styled.div`  
+export const AssignmentTitleBox = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -41,7 +41,7 @@ export const AssignmentBox = styled.div<AssignmentBoxProps>`
   align-self: stretch;
   height: ${({ hasTasks }) => (hasTasks ? "150px" : "100px")};
   overflow-y: auto;
-  padding-right: 8px; 
+  padding-right: 8px;
 
   h1 {
     font-size: 16px;
@@ -57,7 +57,6 @@ export const AssignmentBox = styled.div<AssignmentBoxProps>`
   }
 `;
 
-
 export const AssignmentButton = styled.li`
   display: flex;
   flex-direction: column;
@@ -67,7 +66,6 @@ export const AssignmentButton = styled.li`
   cursor: pointer;
 
   &:hover {
-
   }
 `;
 
@@ -96,7 +94,7 @@ export const AssignmentDateBox = styled.div`
 `;
 
 export const DaysLeft = styled.div`
-  background-color: #1D93F3;
+  background-color: #1d93f3;
   color: ${SeugiColor.White};
   padding: 4px 8px;
   border-radius: 12px;
@@ -110,10 +108,9 @@ export const NoTask = styled.div`
   font-weight: 500;
   color: ${SeugiColor.Black};
   ${SeugiFont.subtitle.subtitle2};
-`
-
+`;
 
 export const NoTaskWrap = styled.div`
   justify-content: center;
   align-items: center;
-`
+`;

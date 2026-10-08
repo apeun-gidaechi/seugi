@@ -6,13 +6,22 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { type Workspace } from "@seugi/contracts";
 import { NoWorkspaceShell } from "./src/screens/NoWorkspaceShell";
-import { EAS_PROJECT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID, IOS_ALLOW_ALARM_KEY, IOS_DEVICE_TOKEN_KEY } from "./src/config";
+import {
+  EAS_PROJECT_ID,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_WEB_CLIENT_ID,
+  IOS_ALLOW_ALARM_KEY,
+  IOS_DEVICE_TOKEN_KEY,
+} from "./src/config";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { AuthenticatedAppShell } from "./src/screens/AuthenticatedAppShell";
 import type { SeugiTab } from "./src/design-system/BottomNavigation";
 import { api } from "./src/services/api";
 import { localDateKey } from "./src/utils/date";
-import { androidRegistrationFailureMessage, emailRegistrationAutoSignIn } from "./src/utils/authFeedback";
+import {
+  androidRegistrationFailureMessage,
+  emailRegistrationAutoSignIn,
+} from "./src/utils/authFeedback";
 import { refreshHomeWidgets } from "./src/widgets/refresh";
 
 const accessTokenKey = "seugi.access-token";
@@ -62,10 +71,7 @@ export default function App() {
     setWorkspaces(list);
     const storedId = await SecureStore.getItemAsync(workspaceIdKey);
     const selected = list.find((item) => item.id === storedId) ?? list[0];
-    setWorkspace(
-      (current) =>
-        (current && list.find((item) => item.id === current.id)) || selected,
-    );
+    setWorkspace((current) => (current && list.find((item) => item.id === current.id)) || selected);
     if (selected) await SecureStore.setItemAsync(workspaceIdKey, selected.id);
   }, []);
   const reload = useCallback(async () => {
@@ -127,7 +133,9 @@ export default function App() {
       return;
     }
     let active = true;
-    const finish = () => { if (active) setNotificationPermissionChecked(true); };
+    const finish = () => {
+      if (active) setNotificationPermissionChecked(true);
+    };
     const requestPermission = async () => {
       try {
         await Notifications.requestPermissionsAsync();
@@ -151,7 +159,14 @@ export default function App() {
         Alert.alert(
           "스기 알람 설정",
           "스기의 알람 기능을 이용하기 위해선 권한을 허용해야합니다.",
-          [{ text: "확인", onPress: () => { void requestPermission().catch(() => undefined); } }],
+          [
+            {
+              text: "확인",
+              onPress: () => {
+                void requestPermission().catch(() => undefined);
+              },
+            },
+          ],
           { cancelable: false },
         );
         return;
@@ -163,13 +178,18 @@ export default function App() {
         finish();
       }
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
   useEffect(() => {
     if (!authenticated || !notificationPermissionChecked || Platform.OS === "web") return;
     let active = true;
     (async () => {
-      if (Platform.OS === "ios" && await SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY) === "false") {
+      if (
+        Platform.OS === "ios" &&
+        (await SecureStore.getItemAsync(IOS_ALLOW_ALARM_KEY)) === "false"
+      ) {
         const token = await SecureStore.getItemAsync(IOS_DEVICE_TOKEN_KEY);
         if (token) {
           await api.removeDeviceToken(token);
@@ -190,11 +210,7 @@ export default function App() {
       if (Platform.OS === "ios") await SecureStore.setItemAsync(IOS_DEVICE_TOKEN_KEY, token);
       if (active) setDeviceToken(token);
     })().catch((reason: unknown) => {
-      if (active)
-        console.warn(
-          "[notifications] Push registration failed.",
-          reason,
-        );
+      if (active) console.warn("[notifications] Push registration failed.", reason);
     });
     return () => {
       active = false;
@@ -206,8 +222,7 @@ export default function App() {
       api.setToken(token);
       api.setRefreshToken(refreshToken);
       await SecureStore.setItemAsync(accessTokenKey, token);
-      if (refreshToken)
-        await SecureStore.setItemAsync(refreshTokenKey, refreshToken);
+      if (refreshToken) await SecureStore.setItemAsync(refreshTokenKey, refreshToken);
       await load();
       setAuthenticated(true);
     },
@@ -229,19 +244,19 @@ export default function App() {
           setCode("");
           return true;
         }
-        await persistSession(
-          response.data?.accessToken,
-          response.data?.refreshToken,
-        );
+        await persistSession(response.data?.accessToken, response.data?.refreshToken);
         return true;
       } catch (reason) {
         const fallback = reason instanceof Error ? reason.message : "로그인에 실패했습니다";
-        const status = reason instanceof Error && "status" in reason && typeof reason.status === "number"
-          ? reason.status
-          : undefined;
-        setError(register && Platform.OS === "android"
-          ? androidRegistrationFailureMessage(status, fallback)
-          : fallback);
+        const status =
+          reason instanceof Error && "status" in reason && typeof reason.status === "number"
+            ? reason.status
+            : undefined;
+        setError(
+          register && Platform.OS === "android"
+            ? androidRegistrationFailureMessage(status, fallback)
+            : fallback,
+        );
         return false;
       } finally {
         setLoading(false);
@@ -259,16 +274,9 @@ export default function App() {
           platform: Platform.OS === "ios" ? "IOS" : "ANDROID",
           name: name || undefined,
         });
-        await persistSession(
-          response.data?.accessToken,
-          response.data?.refreshToken,
-        );
+        await persistSession(response.data?.accessToken, response.data?.refreshToken);
       } catch (reason) {
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Google 로그인에 실패했습니다",
-        );
+        setError(reason instanceof Error ? reason.message : "Google 로그인에 실패했습니다");
       } finally {
         setLoading(false);
       }
@@ -292,8 +300,7 @@ export default function App() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      if (!credential.authorizationCode)
-        throw new Error("Apple 인증 코드를 받지 못했습니다");
+      if (!credential.authorizationCode) throw new Error("Apple 인증 코드를 받지 못했습니다");
       const fullName = credential.fullName;
       const appleName = fullName
         ? [fullName.familyName, fullName.givenName].filter(Boolean).join("")
@@ -303,21 +310,14 @@ export default function App() {
         platform: "IOS",
         name: appleName || name || undefined,
       });
-      await persistSession(
-        response.data?.accessToken,
-        response.data?.refreshToken,
-      );
+      await persistSession(response.data?.accessToken, response.data?.refreshToken);
     } catch (reason) {
       if (
         !(reason instanceof Error) ||
         !("code" in reason) ||
         reason.code !== "ERR_REQUEST_CANCELED"
       )
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Apple 로그인에 실패했습니다",
-        );
+        setError(reason instanceof Error ? reason.message : "Apple 로그인에 실패했습니다");
     } finally {
       setLoading(false);
     }
@@ -391,8 +391,7 @@ export default function App() {
       onSelectWorkspace={selectWorkspace}
       onDeviceTokenChange={setDeviceToken}
       onLogout={async () => {
-        if (deviceToken)
-          await api.removeDeviceToken(deviceToken).catch(() => undefined);
+        if (deviceToken) await api.removeDeviceToken(deviceToken).catch(() => undefined);
         api.setToken();
         api.setRefreshToken();
         await SecureStore.deleteItemAsync(accessTokenKey);

@@ -5,7 +5,7 @@ import CodeTextField from "@/Components/Onboarding/CodeTextField/CodeTextField";
 
 import Backimg from "@/Assets/image/Backimg.svg";
 
-import useSchoolCode from '@/Hooks/Workspace/Schoolcode/index';
+import useSchoolCode from "@/Hooks/Workspace/Schoolcode/index";
 
 const SchoolCode = () => {
   const { ...SchoolCode } = useSchoolCode();

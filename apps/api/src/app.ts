@@ -22,9 +22,7 @@ declare module "@fastify/jwt" {
 export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const jwtSecret =
     process.env.JWT_SECRET ??
-    (process.env.NODE_ENV === "production"
-      ? undefined
-      : "development-only-change-me");
+    (process.env.NODE_ENV === "production" ? undefined : "development-only-change-me");
   if (!jwtSecret) throw new Error("JWT_SECRET_REQUIRED");
   const app = Fastify({
     logger: {
@@ -56,10 +54,7 @@ export async function buildApp(store = new Store()): Promise<FastifyInstance> {
   const refreshTokenTtl = process.env.JWT_REFRESH_TTL ?? "30d";
   const issueTokens = (memberId: string) => ({
     accessToken: app.jwt.sign({ sub: memberId }, { expiresIn: accessTokenTtl }),
-    refreshToken: app.jwt.sign(
-      { sub: memberId },
-      { expiresIn: refreshTokenTtl },
-    ),
+    refreshToken: app.jwt.sign({ sub: memberId }, { expiresIn: refreshTokenTtl }),
   });
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
   registerStoreLifecycle(app, store);

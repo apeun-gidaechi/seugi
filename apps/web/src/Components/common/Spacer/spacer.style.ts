@@ -1,9 +1,9 @@
-import styled, {RuleSet} from "styled-components";
+import styled, { RuleSet } from "styled-components";
 
 export const Container = styled.div<{
-  $customStyle?: RuleSet
+  $customStyle?: RuleSet;
 }>`
-    ${props => props.$customStyle};
-    display: flex;
-    flex: 1;
-`; 
+  ${(props) => props.$customStyle};
+  display: flex;
+  flex: 1;
+`;

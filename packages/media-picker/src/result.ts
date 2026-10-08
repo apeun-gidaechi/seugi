@@ -5,9 +5,7 @@ export type PickedImage = {
   size?: number;
 };
 
-export type PickImageResult =
-  | { canceled: true }
-  | { canceled: false; assets: PickedImage[] };
+export type PickImageResult = { canceled: true } | { canceled: false; assets: PickedImage[] };
 
 export function firstPickedImage(result: PickImageResult): PickedImage | undefined {
   if (result.canceled) return undefined;

@@ -14,12 +14,17 @@ test("native Google server-auth-code exchange uses the original empty redirect U
     return new Response("{}", { status: 400 });
   }) as typeof fetch;
   try {
-    await assert.rejects(new OAuthProvider().google("server-auth-code", "ANDROID"), /authorization code 교환에 실패/);
+    await assert.rejects(
+      new OAuthProvider().google("server-auth-code", "ANDROID"),
+      /authorization code 교환에 실패/,
+    );
     assert.equal(redirectUri, "");
   } finally {
     globalThis.fetch = savedFetch;
-    if (savedClientId === undefined) delete process.env.GOOGLE_CLIENT_ID; else process.env.GOOGLE_CLIENT_ID = savedClientId;
-    if (savedClientSecret === undefined) delete process.env.GOOGLE_CLIENT_SECRET; else process.env.GOOGLE_CLIENT_SECRET = savedClientSecret;
+    if (savedClientId === undefined) delete process.env.GOOGLE_CLIENT_ID;
+    else process.env.GOOGLE_CLIENT_ID = savedClientId;
+    if (savedClientSecret === undefined) delete process.env.GOOGLE_CLIENT_SECRET;
+    else process.env.GOOGLE_CLIENT_SECRET = savedClientSecret;
   }
 });
 
@@ -35,13 +40,18 @@ test("native Apple authorization-code exchange uses the mobile client ID", async
     return new Response("{}", { status: 400 });
   }) as typeof fetch;
   try {
-    await assert.rejects(new OAuthProvider().apple("apple-auth-code", "IOS", "스기 사용자"), /Apple authorization code 교환에 실패/);
+    await assert.rejects(
+      new OAuthProvider().apple("apple-auth-code", "IOS", "스기 사용자"),
+      /Apple authorization code 교환에 실패/,
+    );
     assert.equal(form?.get("client_id"), "com.seugi.app");
     assert.equal(form?.get("code"), "apple-auth-code");
     assert.equal(form?.get("grant_type"), "authorization_code");
   } finally {
     globalThis.fetch = savedFetch;
-    if (savedClientId === undefined) delete process.env.APPLE_MOBILE_CLIENT_ID; else process.env.APPLE_MOBILE_CLIENT_ID = savedClientId;
-    if (savedClientSecret === undefined) delete process.env.APPLE_CLIENT_SECRET; else process.env.APPLE_CLIENT_SECRET = savedClientSecret;
+    if (savedClientId === undefined) delete process.env.APPLE_MOBILE_CLIENT_ID;
+    else process.env.APPLE_MOBILE_CLIENT_ID = savedClientId;
+    if (savedClientSecret === undefined) delete process.env.APPLE_CLIENT_SECRET;
+    else process.env.APPLE_CLIENT_SECRET = savedClientSecret;
   }
 });

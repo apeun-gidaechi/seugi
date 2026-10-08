@@ -24,13 +24,12 @@ export const SoonScheduleTitle = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`
+`;
 
 export const CalendarLogo = styled.img`
   width: 32px;
   height: 32px;
 `;
-
 
 export const ScheduleTitle = styled.span`
   color: ${SeugiColor.Black};
@@ -51,7 +50,7 @@ export const SArrowLogo = styled.img`
 
 export const Box = styled.div`
   overflow-y: auto;
-  max-height: 200px; 
+  max-height: 200px;
 `;
 
 export const DateBox = styled.div`
@@ -65,32 +64,31 @@ export const DateBox = styled.div`
 `;
 
 export const Row = styled.div`
-  margin-top:4px;
-  padding:0 0 12px 0;
+  margin-top: 4px;
+  padding: 0 0 12px 0;
   display: flex;
   justify-content: space-between;
-  align-items: center;            
+  align-items: center;
   margin-bottom: 10px;
 `;
 
 export const DateText = styled.span`
-  margin-right: 4px;  
+  margin-right: 4px;
   color: ${SeugiColor.Primary500};
   ${SeugiFont.body.body1};
 `;
 
 export const SubTitle = styled.span`
-  flex-grow: 1;       
+  flex-grow: 1;
   color: ${SeugiColor.Black};
   ${SeugiFont.body.body2};
 `;
 
 export const D_DayText = styled.span`
-  margin-left: 4px;   
+  margin-left: 4px;
   color: ${SeugiColor.Gray600};
   ${SeugiFont.caption.caption1};
 `;
-
 
 export const NoCalendarDiv = styled.div`
   position: relative;
@@ -98,13 +96,13 @@ export const NoCalendarDiv = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-`
+`;
 
 export const NoCalendarImg = styled.img`
-  margin-bottom:4px;
-`
+  margin-bottom: 4px;
+`;
 
 export const NoCalendarText = styled.span`
   ${SeugiFont.subtitle.subtitle2};
   color: ${SeugiColor.Black};
-`
+`;

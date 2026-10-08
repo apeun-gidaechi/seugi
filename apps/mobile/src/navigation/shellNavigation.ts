@@ -82,6 +82,10 @@ export function shellShowsMainTopBar(
   return true;
 }
 
-export function shellRouteKey(tab: SeugiTab, detailStack: AppDetail[], activeConversationId?: string) {
+export function shellRouteKey(
+  tab: SeugiTab,
+  detailStack: AppDetail[],
+  activeConversationId?: string,
+) {
   return `${tab}:${detailStack.join("/")}:${activeConversationId ?? ""}`;
 }

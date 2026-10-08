@@ -3,8 +3,12 @@ import { withPublicSeugiApi } from "./client";
 export const sendVerificationCode = (email: string) =>
   withPublicSeugiApi((api) => api.sendVerification(email));
 
-export const registerMember = (input: { name?: string; email: string; password: string; code: string }) =>
-  withPublicSeugiApi((api) => api.register(input));
+export const registerMember = (input: {
+  name?: string;
+  email: string;
+  password: string;
+  code: string;
+}) => withPublicSeugiApi((api) => api.register(input));
 
 export const loginMember = (input: { email: string; password: string; token?: string }) =>
   withPublicSeugiApi((api) => api.login(input));

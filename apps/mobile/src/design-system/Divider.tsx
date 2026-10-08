@@ -15,11 +15,14 @@ export function SeugiDivider({
   color = SeugiColor.Gray200,
   style,
 }: SeugiDividerProps) {
-  return <View accessible={false} style={[
-    direction === "horizontal"
-      ? { height: thickness }
-      : { width: thickness, height: "100%" },
-    { backgroundColor: color },
-    style,
-  ]} />;
+  return (
+    <View
+      accessible={false}
+      style={[
+        direction === "horizontal" ? { height: thickness } : { width: thickness, height: "100%" },
+        { backgroundColor: color },
+        style,
+      ]}
+    />
+  );
 }

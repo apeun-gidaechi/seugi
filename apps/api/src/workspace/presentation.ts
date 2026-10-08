@@ -71,10 +71,8 @@ export function createWorkspacePresentation(store: Store) {
     };
   };
 
-  const canManageWorkspace = (
-    workspace: { id: string; ownerId: string },
-    memberId: string,
-  ) => ["ADMIN", "MIDDLE_ADMIN"].includes(roleIn(workspace, memberId) ?? "");
+  const canManageWorkspace = (workspace: { id: string; ownerId: string }, memberId: string) =>
+    ["ADMIN", "MIDDLE_ADMIN"].includes(roleIn(workspace, memberId) ?? "");
 
   const canApproveRole = (
     workspace: { id: string; ownerId: string },

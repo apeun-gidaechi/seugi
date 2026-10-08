@@ -8,10 +8,9 @@ const firebaseEnvironmentKeys = [
   "VITE_FIREBASE_MEASUREMENT_ID",
 ] as const;
 
-export type FirebaseServiceWorkerEnvironment = Partial<Record<
-  (typeof firebaseEnvironmentKeys)[number],
-  string | undefined
->>;
+export type FirebaseServiceWorkerEnvironment = Partial<
+  Record<(typeof firebaseEnvironmentKeys)[number], string | undefined>
+>;
 
 export function renderFirebaseServiceWorkerEnvironment(
   environment: FirebaseServiceWorkerEnvironment,

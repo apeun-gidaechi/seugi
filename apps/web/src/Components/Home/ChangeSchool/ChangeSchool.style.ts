@@ -8,17 +8,17 @@ export const Modal = styled.div`
 
   position: fixed;
 
-  background: rgba(0, 0, 0, 0.30);
-  
+  background: rgba(0, 0, 0, 0.3);
+
   z-index: 999;
 
   top: 0;
   left: 0;
 
-  display: flex; 
-  justify-content: center; 
+  display: flex;
+  justify-content: center;
   align-items: center;
-`
+`;
 
 export const ChangeSchoolMain = styled.div`
   position: absolute;
@@ -47,7 +47,6 @@ export const Subscribed = styled.div`
   justify-content: space-between;
   align-items: center;
   align-self: stretch;
-
 `;
 
 export const SchoolName = styled.span`
@@ -144,7 +143,7 @@ export const WaitingJoin = styled.span`
   left: 10px;
   color: ${SeugiColor.Gray600};
 
- ${SeugiFont.body.body1};
+  ${SeugiFont.body.body1};
 
   padding: 0 0 4px 0;
 `;
@@ -160,8 +159,8 @@ export const JoinSchool = styled.button`
   border-radius: 12px;
 
   border: none;
-  background-color:none;
-  background:none;
+  background-color: none;
+  background: none;
 
   cursor: pointer;
 
@@ -180,8 +179,8 @@ export const CreateSchool = styled.button`
   border-radius: 12px;
 
   border: none;
-  background-color:none;
-  background:none;
+  background-color: none;
+  background: none;
 
   cursor: pointer;
 
@@ -204,4 +203,4 @@ export const MoveButton = styled.div`
   align-items: center;
   gap: 4px;
   align-self: stretch;
-`
+`;

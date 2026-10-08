@@ -38,8 +38,24 @@ test("home upcoming schedules cap Android at three future items", () => {
 
 test("current timetable period starts after 08:50 local time", () => {
   const entries = [
-    { id: "1", workspaceId: "w", grade: "1", classNum: "1", time: "1", subject: "수학", date: "2026-10-08" },
-    { id: "2", workspaceId: "w", grade: "1", classNum: "1", time: "2", subject: "영어", date: "2026-10-08" },
+    {
+      id: "1",
+      workspaceId: "w",
+      grade: "1",
+      classNum: "1",
+      time: "1",
+      subject: "수학",
+      date: "2026-10-08",
+    },
+    {
+      id: "2",
+      workspaceId: "w",
+      grade: "1",
+      classNum: "1",
+      time: "2",
+      subject: "영어",
+      date: "2026-10-08",
+    },
   ];
   const atFirst = getCurrentTimetablePeriod(entries, new Date(2026, 9, 8, 9, 30));
   assert.equal(atFirst.period, 1);

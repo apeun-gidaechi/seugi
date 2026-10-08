@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { workspaceInviteConfirmationTitle, workspaceInviteNeedsConfirmation } from "../src/utils/workspaceInviteConfirmation.ts";
+import {
+  workspaceInviteConfirmationTitle,
+  workspaceInviteNeedsConfirmation,
+} from "../src/utils/workspaceInviteConfirmation.ts";
 
 test("only Android asks for confirmation before processing invite requests", () => {
   assert.equal(workspaceInviteNeedsConfirmation("android"), true);

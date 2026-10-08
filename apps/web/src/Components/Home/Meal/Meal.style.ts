@@ -1,6 +1,6 @@
-import styled from 'styled-components';
-import { SeugiColor } from '@/Design/color/SeugiColor';
-import { SeugiFont } from '@/Design/text/SeugiFont';
+import styled from "styled-components";
+import { SeugiColor } from "@/Design/color/SeugiColor";
+import { SeugiFont } from "@/Design/text/SeugiFont";
 
 export const CafeteriaContainer = styled.div`
   padding: 12px 12px 16px 12px;
@@ -25,7 +25,7 @@ export const CafeteriaTitleDiv = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`
+`;
 
 export const CafeteriaImg = styled.img`
   width: 28px;
@@ -47,8 +47,8 @@ export const CafeteriaDiv = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  
-  margin:4px 0 4px 5px;
+
+  margin: 4px 0 4px 5px;
 `;
 
 export const TimeButton = styled.button`
@@ -84,7 +84,7 @@ export const CafeteriaTitle = styled.p`
 `;
 
 export const Menu = styled.span`
-  color:${SeugiColor.Gray700};
+  color: ${SeugiColor.Gray700};
 
   ${SeugiFont.subtitle.subtitle2};
 `;
@@ -97,22 +97,22 @@ export const CalorieDiv = styled.div`
 
   border-radius: 34px;
   background: ${SeugiColor.Primary500};
-`
+`;
 
 export const CalorieText = styled.span`
   color: ${SeugiColor.White};
 
   ${SeugiFont.caption.caption1};
- `
+`;
 
 export const NoMealMessage = styled.span`
-  color:${SeugiColor.Gray700};
+  color: ${SeugiColor.Gray700};
 
   ${SeugiFont.subtitle.subtitle2};
-`
+`;
 
 export const NoMealImg = styled.img`
-  margin-bottom:4px;
+  margin-bottom: 4px;
 `;
 
 export const NoMealDiv = styled.div`
@@ -121,4 +121,4 @@ export const NoMealDiv = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-`
+`;

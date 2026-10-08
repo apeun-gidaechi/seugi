@@ -7,7 +7,11 @@ export const memberApiSpec = {
   addDeviceToken: route("POST", "/member/device-token"),
   removeDeviceToken: route("DELETE", "/member/device-token"),
   logoutMember: route("POST", "/member/logout"),
-  refreshMember: query("GET", "/member/refresh", (token: string) => `/member/refresh?token=${segment(token)}`),
+  refreshMember: query(
+    "GET",
+    "/member/refresh",
+    (token: string) => `/member/refresh?token=${segment(token)}`,
+  ),
   memberInfo: route("GET", "/member/myInfo"),
   removeMember: route("DELETE", "/member/remove"),
 } as const;

@@ -1,49 +1,58 @@
 import React, { useState, useEffect } from "react";
 import * as S from "@/Components/Home/Subscribed/Home.style";
 
-import Schools from '@/Components/Home/Schools/Schools';
+import Schools from "@/Components/Home/Schools/Schools";
 import Meal from "@/Components/Home/Meal/Meal";
 import CatSeugi from "@/Components/Home/CatSeugi/CatSeugi";
 import Calendar from "@/Components/Home/Calendar/Calendar";
-import Notification from '@/Components/Home/Notification/Notification';
-import TimeTable from '@/Components/Home/TimeTable/TimeTable';
+import Notification from "@/Components/Home/Notification/Notification";
+import TimeTable from "@/Components/Home/TimeTable/TimeTable";
 import Assignment from "../Assignment/Assignment";
 import RegisterSchool from "@/Components/Home/Subscribed/RegisterSchool/RegisterSchool";
 import useSWR from "swr";
 import { getMyWorkspaces, getMyWaitingWorkspace } from "@/Api/workspace";
-import { getNotification, getTimeTable, getMenus, getSchedules, getTasks, getClassroomTasks } from "@/Api/Home";
+import {
+  getNotification,
+  getTimeTable,
+  getMenus,
+  getSchedules,
+  getTasks,
+  getClassroomTasks,
+} from "@/Api/Home";
 import Cookies from "js-cookie";
 import { handleUserRole } from "@/Util/Role/WhatisYourRole";
 
 const Home = () => {
   const today = new Date();
   const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
   const date = `${year}-${month}-${day}`;
 
   const [page, setPage] = useState(0);
-  const currentWorkspaceId = Cookies.get('workspaceId') ?? '';
+  const currentWorkspaceId = Cookies.get("workspaceId") ?? "";
   const [workspaceId, setWorkspaceId] = useState(currentWorkspaceId);
 
-  const [userRole, setUserRole] = useState<string | undefined>(Cookies.get('userRole'));
+  const [userRole, setUserRole] = useState<string | undefined>(Cookies.get("userRole"));
 
   useEffect(() => {
     if (workspaceId) {
-      handleUserRole(workspaceId).then(role => {
-        setUserRole(role); 
+      handleUserRole(workspaceId).then((role) => {
+        setUserRole(role);
       });
     }
   }, [workspaceId]);
 
-  const { data: workspaces } = useSWR('workspaces', getMyWorkspaces);
-  const { data: pendingWorkspaces } = useSWR('pendingWorkspaces', getMyWaitingWorkspace);
+  const { data: workspaces } = useSWR("workspaces", getMyWorkspaces);
+  const { data: pendingWorkspaces } = useSWR("pendingWorkspaces", getMyWaitingWorkspace);
   const { data: timeTable } = useSWR([workspaceId], (args) => getTimeTable(...args));
-  const { data: notifications, mutate: mutateNotifications } = useSWR([workspaceId, page], (args) => getNotification(...args));
+  const { data: notifications, mutate: mutateNotifications } = useSWR([workspaceId, page], (args) =>
+    getNotification(...args),
+  );
   const { data: menu } = useSWR([workspaceId, date], (args) => getMenus(...args));
   const { data: schedule } = useSWR([workspaceId, month], (args) => getSchedules(...args));
   const { data: tasks } = useSWR([workspaceId], (args) => getTasks(...args));
-  const { data: classroomTasks } = useSWR('classroomTasks', getClassroomTasks);
+  const { data: classroomTasks } = useSWR("classroomTasks", getClassroomTasks);
 
   return (
     <S.HomeMain>

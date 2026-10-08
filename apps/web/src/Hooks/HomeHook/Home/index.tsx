@@ -1,35 +1,35 @@
-import React, { useEffect } from 'react'
-import { handleUserRole } from '@/Util/Role/WhatisYourRole';
-import { useNavigate } from 'react-router-dom';
-import { paths } from '@/Constants/paths';
-import Cookies from 'js-cookie';
+import React, { useEffect } from "react";
+import { handleUserRole } from "@/Util/Role/WhatisYourRole";
+import { useNavigate } from "react-router-dom";
+import { paths } from "@/Constants/paths";
+import Cookies from "js-cookie";
 
 const index = () => {
-    const token = Cookies.get("accessToken");
-    const navigate = useNavigate();
-    const workspaceId = typeof window !== 'undefined' ? Cookies.get('workspaceId') : null;
+  const token = Cookies.get("accessToken");
+  const navigate = useNavigate();
+  const workspaceId = typeof window !== "undefined" ? Cookies.get("workspaceId") : null;
 
-    useEffect(() => {
-        if (workspaceId) {
-            handleUserRole(workspaceId);
-        } else {
-            console.error('워크스페이스가 없어요');
-        }
-    }, [workspaceId]);
-
-    const handleCreate = () => {
-        navigate(paths.createschool);
+  useEffect(() => {
+    if (workspaceId) {
+      handleUserRole(workspaceId);
+    } else {
+      console.error("워크스페이스가 없어요");
     }
+  }, [workspaceId]);
 
-    const handleJoin = () => {
-        navigate(paths.schoolcode);
-    }
+  const handleCreate = () => {
+    navigate(paths.createschool);
+  };
 
-    return {
-        token,
-        handleCreate,
-        handleJoin
-    }
-}
+  const handleJoin = () => {
+    navigate(paths.schoolcode);
+  };
 
-export default index
+  return {
+    token,
+    handleCreate,
+    handleJoin,
+  };
+};
+
+export default index;

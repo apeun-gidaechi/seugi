@@ -31,5 +31,12 @@ const styles = StyleSheet.create({
   emptySlot: { width: 0 },
   title: { flex: 1, minWidth: 0, justifyContent: "center" },
   trailing: { justifyContent: "center", alignItems: "flex-end" },
-  shadow: { zIndex: 1, shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
+  shadow: {
+    zIndex: 1,
+    shadowColor: SeugiColor.Black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
 });

@@ -14,7 +14,10 @@ test("iOS join failures use the native alert wording for code lookup and applica
 });
 
 test("Android join failures retain the server's toast message", () => {
-  assert.deepEqual(workspaceJoinFailureFeedback("android", "search", "초대 코드를 찾을 수 없습니다"), {
-    title: "초대 코드를 찾을 수 없습니다",
-  });
+  assert.deepEqual(
+    workspaceJoinFailureFeedback("android", "search", "초대 코드를 찾을 수 없습니다"),
+    {
+      title: "초대 코드를 찾을 수 없습니다",
+    },
+  );
 });

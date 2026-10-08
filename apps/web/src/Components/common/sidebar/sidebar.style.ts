@@ -8,7 +8,7 @@ export const SideBarChat = styled.div`
   width: 320px;
   height: 100%;
   padding: 8px 0px;
-  background: #FFF; 
+  background: #fff;
   /* margin-left: 80px; */
   box-shadow: 0 3px 9px 0 rgba(0, 0, 0, 0.04);
   overflow-y: auto;
@@ -16,7 +16,7 @@ export const SideBarChat = styled.div`
   @media (max-width: 768px) {
     width: 100%;
     margin-left: 0;
-  }  
+  }
 `;
 
 export const ChatingPage = styled.div`
@@ -36,8 +36,8 @@ export const SideFinder = styled.div`
   width: 264px;
   margin-left: 12px;
   border-radius: 12px;
-  border: 1px solid #E6E6E6;
-  background: #FFF;
+  border: 1px solid #e6e6e6;
+  background: #fff;
 
   @media (max-width: 768px) {
     width: calc(100% - 24px);
@@ -58,7 +58,7 @@ export const FindChatingRoom = styled.input`
   color: ${SeugiColor.Gray500};
   ${SeugiFont.subtitle.subtitle2};
   &:focus {
-    color: black; 
+    color: black;
   }
 
   @media (max-width: 768px) {
@@ -73,17 +73,16 @@ export const PlusButtonImg = styled.img`
   height: 26.667px;
 `;
 
-export const SearchIcon = styled.img`
-`;
+export const SearchIcon = styled.img``;
 
 export const PlusButton = styled.button`
-  background: none; 
-  border: none; 
-  display: inline; 
+  background: none;
+  border: none;
+  display: inline;
   position: absolute;
   margin-left: 282px;
-  margin-top: 10px; 
-  z-index: 10; 
+  margin-top: 10px;
+  z-index: 10;
 
   @media (max-width: 768px) {
     margin-left: calc(100% - 38px);

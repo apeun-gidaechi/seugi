@@ -73,13 +73,13 @@ export const NoSchoolDiv = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-`
+`;
 
 export const NoSchoolMessage = styled.span`
-  color:${SeugiColor.Gray700};
+  color: ${SeugiColor.Gray700};
 
   ${SeugiFont.subtitle.subtitle2};
-`
+`;
 
 export const ArrowLButton = styled.button`
   background: none;
@@ -93,12 +93,12 @@ export const ArrowLogo = styled.img`
 `;
 
 export const ButtonDiv = styled.div`
-  display:flex;
-  justify-content:center;
-`
+  display: flex;
+  justify-content: center;
+`;
 
 export const SchoolTitleDiv = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`
+`;

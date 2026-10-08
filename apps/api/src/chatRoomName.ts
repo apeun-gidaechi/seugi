@@ -5,5 +5,8 @@ export function chatRoomName(
   currentMemberId: string,
 ) {
   if (roomType === "GROUP") return roomName;
-  return members.filter((member) => member.id !== currentMemberId).map((member) => member.name).join(", ");
+  return members
+    .filter((member) => member.id !== currentMemberId)
+    .map((member) => member.name)
+    .join(", ");
 }

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import {SeugiFont} from "@/Design/text/SeugiFont";
+import { SeugiFont } from "@/Design/text/SeugiFont";
 import { SeugiColor } from "@/Design/color/SeugiColor";
 
 export const SideBarChat = styled.div`
@@ -12,7 +12,7 @@ export const SideBarChat = styled.div`
   overflow-y: hidden;
 
   @media (max-width: 768px) {
-    width: 100%;     
+    width: 100%;
     margin-left: 0;
   }
 `;
@@ -80,37 +80,37 @@ export const PlusButtonImg = styled.img`
 `;
 
 export const ChatRoomsWrap = styled.div`
-    display: flex;
-    width: 100%;
-    padding: 8px;
-    flex-direction: column;
-    border-radius: 12px;
-    background: #FFF;
-    box-shadow: 0 3px 9px 0 rgba(0, 0, 0, 0.04);
-    overflow-y: hidden;
+  display: flex;
+  width: 100%;
+  padding: 8px;
+  flex-direction: column;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 9px 0 rgba(0, 0, 0, 0.04);
+  overflow-y: hidden;
 `;
 
 export const ChatRoomList = styled.div`
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: scroll;
 `;
 
 export const ChatRoom = styled.div`
-    display: flex;
-    min-height: 72px;
-    align-items: center;
-    cursor: pointer;
-    color: ${SeugiColor.Black};
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  cursor: pointer;
+  color: ${SeugiColor.Black};
 
-    ${SeugiFont.subtitle.subtitle2}
-    padding: 4px 16px;
-    width: 100%;
+  ${SeugiFont.subtitle.subtitle2}
+  padding: 4px 16px;
+  width: 100%;
 
-    &:active {
-        background-color: red;
-    }
+  &:active {
+    background-color: red;
+  }
 `;
 
 export const ChatRoomAvatar = styled.img`
@@ -122,4 +122,3 @@ export const ChatRoomAvatar = styled.img`
 export const ChatRoomAvatarWrap = styled.div`
   padding-right: 16px;
 `;
-

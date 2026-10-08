@@ -9,16 +9,28 @@ export function messageLocalDateKey(value: string) {
 }
 
 export function formatChatLocalDate(value: string) {
-  return new Date(value).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+  return new Date(value).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
 }
 
 export function formatChatLocalTime(value: string) {
-  return new Date(value).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true });
+  return new Date(value).toLocaleTimeString("ko-KR", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function chatVisibleMessage(message: ChatMessage, room: Room) {
-  const participants = room.joinUserInfo?.map(({ userInfo }) => ({ id: userInfo.id, name: userInfo.name })) ?? [];
-  return message.type === "BOT" ? catseugiVisibleText(message.message, participants) : message.message;
+  const participants =
+    room.joinUserInfo?.map(({ userInfo }) => ({ id: userInfo.id, name: userInfo.name })) ?? [];
+  return message.type === "BOT"
+    ? catseugiVisibleText(message.message, participants)
+    : message.message;
 }
 
 export function fileNameFromChatUrl(url: string) {
@@ -33,24 +45,26 @@ export function fileNameFromChatUrl(url: string) {
 export function mimeTypeForFileName(name: string) {
   const extension = name.split(".").pop()?.toLowerCase();
   return (
-    {
-      pdf: "application/pdf",
-      png: "image/png",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      gif: "image/gif",
-      webp: "image/webp",
-      heic: "image/heic",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ppt: "application/vnd.ms-powerpoint",
-      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      zip: "application/zip",
-    } as Record<string, string>
-  )[extension ?? ""] ?? "application/octet-stream";
+    (
+      {
+        pdf: "application/pdf",
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        heic: "image/heic",
+        txt: "text/plain",
+        doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ppt: "application/vnd.ms-powerpoint",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        zip: "application/zip",
+      } as Record<string, string>
+    )[extension ?? ""] ?? "application/octet-stream"
+  );
 }
 
 export function mergeOlderChatMessages(current: ChatMessage[], older: ChatMessage[]) {
@@ -58,7 +72,11 @@ export function mergeOlderChatMessages(current: ChatMessage[], older: ChatMessag
   return [...older.filter((item) => !currentIds.has(item.id)), ...current];
 }
 
-export function filterChatMessagesForSearch(messages: ChatMessage[], platform: ChatPlatform, searchText: string) {
+export function filterChatMessagesForSearch(
+  messages: ChatMessage[],
+  platform: ChatPlatform,
+  searchText: string,
+) {
   return messages
     .filter((item) => searchText.length === 0 || item.messageStatus !== "DELETE")
     .filter((item) => matchesChatMessageSearch(platform, item.message, searchText));
@@ -67,13 +85,17 @@ export function filterChatMessagesForSearch(messages: ChatMessage[], platform: C
 export function ownMessageUnreadCount(room: Room, memberId: string, messageCreatedAt: string) {
   return room.memberIds.filter((id) => {
     if (id === memberId) return false;
-    const readAt = room.memberReadAt?.[id] ?? room.joinUserInfo?.find(({ userInfo }) => userInfo.id === id)?.timestamp;
+    const readAt =
+      room.memberReadAt?.[id] ??
+      room.joinUserInfo?.find(({ userInfo }) => userInfo.id === id)?.timestamp;
     return !readAt || readAt < messageCreatedAt;
   }).length;
 }
 
 export function shouldShowChatDateDivider(previous: ChatMessage | undefined, current: ChatMessage) {
-  return !previous || messageLocalDateKey(previous.createdAt) !== messageLocalDateKey(current.createdAt);
+  return (
+    !previous || messageLocalDateKey(previous.createdAt) !== messageLocalDateKey(current.createdAt)
+  );
 }
 
 export function shouldShowChatSender(

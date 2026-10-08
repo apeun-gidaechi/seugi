@@ -5,9 +5,7 @@ export function orderAssignments<T extends { dueDate?: string | null }>(
   if (platform !== "android") return items;
 
   // Kotlin's sortedBy places null due dates before dated assignments.
-  return [...items].sort((left, right) =>
-    (left.dueDate ?? "").localeCompare(right.dueDate ?? ""),
-  );
+  return [...items].sort((left, right) => (left.dueDate ?? "").localeCompare(right.dueDate ?? ""));
 }
 
 export function formatAssignmentDueDate(

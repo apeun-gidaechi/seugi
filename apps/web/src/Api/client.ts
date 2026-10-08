@@ -1,11 +1,14 @@
 import { SeugiApi } from "@seugi/api-client";
 import Cookies from "js-cookie";
 
-export const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined)
-  || (import.meta.env.DEV ? "http://localhost:8080" : window.location.origin);
+export const SERVER_URL =
+  (import.meta.env.VITE_SERVER_URL as string | undefined) ||
+  (import.meta.env.DEV ? "http://localhost:8080" : window.location.origin);
 const tokenValue = (token?: string) => token?.replace(/^Bearer\s+/i, "");
 
-export async function withSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ data?: T }>): Promise<T> {
+export async function withSeugiApi<T>(
+  operation: (api: SeugiApi) => Promise<{ data?: T }>,
+): Promise<T> {
   const initialToken = tokenValue(Cookies.get("accessToken"));
   const api = new SeugiApi(SERVER_URL, initialToken, tokenValue(Cookies.get("refreshToken")));
   try {
@@ -18,7 +21,9 @@ export async function withSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ da
   }
 }
 
-export async function withPublicSeugiApi<T>(operation: (api: SeugiApi) => Promise<{ data?: T }>): Promise<T> {
+export async function withPublicSeugiApi<T>(
+  operation: (api: SeugiApi) => Promise<{ data?: T }>,
+): Promise<T> {
   const api = new SeugiApi(SERVER_URL);
   return (await operation(api)).data as T;
 }

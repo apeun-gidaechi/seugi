@@ -1,10 +1,8 @@
-import CreateSchool from '@/Components/WorkSpace/CreateSchool/CreateSchool'
-import React from 'react'
+import CreateSchool from "@/Components/WorkSpace/CreateSchool/CreateSchool";
+import React from "react";
 
 const CreateSchoolPage = () => {
-  return (
-    <CreateSchool />
-  )
-}
+  return <CreateSchool />;
+};
 
-export default CreateSchoolPage 
+export default CreateSchoolPage;

@@ -35,7 +35,11 @@ export function homeTodaysTimetable(timetable: Timetable[], today: string) {
     .sort((a, b) => Number(a.time) - Number(b.time));
 }
 
-export function homeUpcomingSchedules(schedules: Schedule[], today: string, platform: "ios" | "android") {
+export function homeUpcomingSchedules(
+  schedules: Schedule[],
+  today: string,
+  platform: "ios" | "android",
+) {
   return schedules
     .filter((item) =>
       platform === "ios"

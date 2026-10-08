@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canInviteRoomMembers, canSendChatText, chatDownloadedFileUri, chatReactionMutation, hasChatPayload, isChatListAtBottom, matchesChatMessageSearch, matchesChatRoomSearch, prepareChatText } from "../src/utils/chat.ts";
+import {
+  canInviteRoomMembers,
+  canSendChatText,
+  chatDownloadedFileUri,
+  chatReactionMutation,
+  hasChatPayload,
+  isChatListAtBottom,
+  matchesChatMessageSearch,
+  matchesChatRoomSearch,
+  prepareChatText,
+} from "../src/utils/chat.ts";
 
 test("native chat-room member invitations are available only in group rooms", () => {
   assert.equal(canInviteRoomMembers("GROUP", "android"), true);
@@ -9,8 +19,14 @@ test("native chat-room member invitations are available only in group rooms", ()
 });
 
 test("chat previews resolve the same sanitized local path used by downloads", () => {
-  assert.equal(chatDownloadedFileUri("file:///documents/", "/uploads/a%20b.png?sig=1"), "file:///documents/a%20b.png");
-  assert.equal(chatDownloadedFileUri("file:///documents/", "/uploads/image.png", "folder/image?.png"), "file:///documents/folder_image_.png");
+  assert.equal(
+    chatDownloadedFileUri("file:///documents/", "/uploads/a%20b.png?sig=1"),
+    "file:///documents/a%20b.png",
+  );
+  assert.equal(
+    chatDownloadedFileUri("file:///documents/", "/uploads/image.png", "folder/image?.png"),
+    "file:///documents/folder_image_.png",
+  );
 });
 
 test("chat text is sent verbatim, including leading/trailing whitespace", () => {

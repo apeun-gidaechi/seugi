@@ -28,7 +28,8 @@ export function filterEmojiEntries(
 ): EmojiCatalogEntry[] {
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
   return catalog.filter((entry) => {
-    if (normalizedQuery) return entry.names.some((name) => name.toLocaleLowerCase("ko-KR").includes(normalizedQuery));
+    if (normalizedQuery)
+      return entry.names.some((name) => name.toLocaleLowerCase("ko-KR").includes(normalizedQuery));
     return entry.category === category;
   });
 }

@@ -1,33 +1,271 @@
 export { API_SPEC } from "./api-spec.js";
 export { createTaskSchema, type CreateTaskInput } from "./task.js";
-export { createWorkspaceSchema, updateWorkspaceSchema, joinWorkspaceSchema, workspaceFieldsSchema, workspaceNotificationsSchema, workspaceMemberSchema, workspaceWaitlistActionSchema, workspaceWaitlistQuerySchema, workspaceRoleSchema, updateWorkspaceMemberRoleSchema, kickWorkspaceMembersSchema, workspaceCodeParamSchema, type CreateWorkspaceInput, type UpdateWorkspaceInput, type JoinWorkspaceInput, type WorkspaceWaitlistActionInput, type UpdateWorkspaceMemberRoleInput, type KickWorkspaceMembersInput, type WorkspaceSearchSummary } from "./workspace.js";
-export { registerMemberSchema, loginMemberSchema, editMemberSchema, memberDeviceTokenSchema, logoutMemberSchema, emailVerificationSchema, type RegisterMemberInput, type LoginMemberInput, type EditMemberInput, type LogoutMemberInput, type EmailVerificationInput } from "./member.js";
-export { editProfileSchema, editStudentNumberSchema, profileWorkspaceQuerySchema, otherProfileQuerySchema, type EditProfileInput, type EditStudentNumberInput } from "./profile.js";
-export { createChatRoomSchema, chatMemberEventSchema, chatRoomSearchSchema, messageHistoryQuerySchema, chatEmojiSchema, deleteMessageSchema, chatMessageInputSchema, legacyStompChatMessageSchema, type CreateChatRoomInput, type ChatMemberEventInput, type LegacyStompChatMessageInput, type RoomType, type Room, type ChatMessage } from "./chat.js";
-export { createNotificationSchema, updateNotificationSchema, notificationEmojiSchema, notificationPageQuerySchema, type CreateNotificationInput, type UpdateNotificationInput, type NotificationPageQuery } from "./notification.js";
-export { createTimetableSchema, updateTimetableSchema, mealDateQuerySchema, mealRangeQuerySchema, monthScheduleQuerySchema, timetableQuerySchema, type CreateTimetableInput, type UpdateTimetableInput } from "./school.js";
-export { oauthProviderSchema, authenticateOAuthSchema, connectGoogleSchema, sendVerificationQuerySchema, aiPromptSchema, uploadTypeSchema, type AuthenticateOAuthInput, type ConnectGoogleInput } from "./integrations.js";
+export {
+  createWorkspaceSchema,
+  updateWorkspaceSchema,
+  joinWorkspaceSchema,
+  workspaceFieldsSchema,
+  workspaceNotificationsSchema,
+  workspaceMemberSchema,
+  workspaceWaitlistActionSchema,
+  workspaceWaitlistQuerySchema,
+  workspaceRoleSchema,
+  updateWorkspaceMemberRoleSchema,
+  kickWorkspaceMembersSchema,
+  workspaceCodeParamSchema,
+  type CreateWorkspaceInput,
+  type UpdateWorkspaceInput,
+  type JoinWorkspaceInput,
+  type WorkspaceWaitlistActionInput,
+  type UpdateWorkspaceMemberRoleInput,
+  type KickWorkspaceMembersInput,
+  type WorkspaceSearchSummary,
+} from "./workspace.js";
+export {
+  registerMemberSchema,
+  loginMemberSchema,
+  editMemberSchema,
+  memberDeviceTokenSchema,
+  logoutMemberSchema,
+  emailVerificationSchema,
+  type RegisterMemberInput,
+  type LoginMemberInput,
+  type EditMemberInput,
+  type LogoutMemberInput,
+  type EmailVerificationInput,
+} from "./member.js";
+export {
+  editProfileSchema,
+  editStudentNumberSchema,
+  profileWorkspaceQuerySchema,
+  otherProfileQuerySchema,
+  type EditProfileInput,
+  type EditStudentNumberInput,
+} from "./profile.js";
+export {
+  createChatRoomSchema,
+  chatMemberEventSchema,
+  chatRoomSearchSchema,
+  messageHistoryQuerySchema,
+  chatEmojiSchema,
+  deleteMessageSchema,
+  chatMessageInputSchema,
+  legacyStompChatMessageSchema,
+  type CreateChatRoomInput,
+  type ChatMemberEventInput,
+  type LegacyStompChatMessageInput,
+  type RoomType,
+  type Room,
+  type ChatMessage,
+} from "./chat.js";
+export {
+  createNotificationSchema,
+  updateNotificationSchema,
+  notificationEmojiSchema,
+  notificationPageQuerySchema,
+  type CreateNotificationInput,
+  type UpdateNotificationInput,
+  type NotificationPageQuery,
+} from "./notification.js";
+export {
+  createTimetableSchema,
+  updateTimetableSchema,
+  mealDateQuerySchema,
+  mealRangeQuerySchema,
+  monthScheduleQuerySchema,
+  timetableQuerySchema,
+  type CreateTimetableInput,
+  type UpdateTimetableInput,
+} from "./school.js";
+export {
+  oauthProviderSchema,
+  authenticateOAuthSchema,
+  connectGoogleSchema,
+  sendVerificationQuerySchema,
+  aiPromptSchema,
+  uploadTypeSchema,
+  type AuthenticateOAuthInput,
+  type ConnectGoogleInput,
+} from "./integrations.js";
 export { CHAT_EMOJIS } from "./constants.js";
-export { idParamSchema, workspaceIdParamSchema, tokenQuerySchema, uploadNameParamSchema } from "./common.js";
-export type { ChatMessageInput, ChatMessageAck, ChatMessageDeletedEvent, ChatMessageEmojiEvent, ChatMemberReadEvent, ClientToServerEvents, ServerToClientEvents } from "./realtime.js";
+export {
+  idParamSchema,
+  workspaceIdParamSchema,
+  tokenQuerySchema,
+  uploadNameParamSchema,
+} from "./common.js";
+export type {
+  ChatMessageInput,
+  ChatMessageAck,
+  ChatMessageDeletedEvent,
+  ChatMessageEmojiEvent,
+  ChatMemberReadEvent,
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from "./realtime.js";
 
 export type ApiResponse<T> = { message: string; data?: T };
 export type Role = "STUDENT" | "TEACHER" | "MIDDLE_ADMIN" | "ADMIN";
 
-export interface Tokens { accessToken: string; refreshToken: string }
-export interface Member { id: string; email: string; name: string; picture?: string; birth?: string; role?: Role }
-export interface Profile extends Member { workspaceId: string; role: Role; grade?: number; class?: number; number?: number; phone?: string; status?: string; nick?: string; spot?: string; belong?: string; wire?: string; location?: string; permission?: Role; profileImage?: string; schGrade?: number; schClass?: number; schNumber?: number }
-export interface LegacyProfile extends Profile { member: { id: string; email: string; birth: string; name: string; picture: string | null }; profileImage: string; permission: Role; schGrade?: number; schClass?: number; schNumber?: number }
-export type WorkspaceMemberView = Omit<LegacyProfile, "member" | "status"> & { status: string; member: { id: string; email: string; name: string; nick: string; picture: string; spot: string; belong: string; phone: string; wire: string; location: string; permission: Role; schGrade?: number; schClass?: number; schNumber?: number } };
-export interface Workspace { id: string; code: string; name: string; schoolCode?: string; educationOfficeCode?: string; schoolType?: string; image?: string; members: string[]; waitlist: string[]; ownerId: string; status?: "ALIVE" | "DELETE"; workspaceId?: string; workspaceName?: string; workspaceImageUrl?: string; workspaceAdmin?: string; middleAdmin?: string[]; teacher?: string[]; student?: string[] }
+export interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}
+export interface Member {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  birth?: string;
+  role?: Role;
+}
+export interface Profile extends Member {
+  workspaceId: string;
+  role: Role;
+  grade?: number;
+  class?: number;
+  number?: number;
+  phone?: string;
+  status?: string;
+  nick?: string;
+  spot?: string;
+  belong?: string;
+  wire?: string;
+  location?: string;
+  permission?: Role;
+  profileImage?: string;
+  schGrade?: number;
+  schClass?: number;
+  schNumber?: number;
+}
+export interface LegacyProfile extends Profile {
+  member: { id: string; email: string; birth: string; name: string; picture: string | null };
+  profileImage: string;
+  permission: Role;
+  schGrade?: number;
+  schClass?: number;
+  schNumber?: number;
+}
+export type WorkspaceMemberView = Omit<LegacyProfile, "member" | "status"> & {
+  status: string;
+  member: {
+    id: string;
+    email: string;
+    name: string;
+    nick: string;
+    picture: string;
+    spot: string;
+    belong: string;
+    phone: string;
+    wire: string;
+    location: string;
+    permission: Role;
+    schGrade?: number;
+    schClass?: number;
+    schNumber?: number;
+  };
+};
+export interface Workspace {
+  id: string;
+  code: string;
+  name: string;
+  schoolCode?: string;
+  educationOfficeCode?: string;
+  schoolType?: string;
+  image?: string;
+  members: string[];
+  waitlist: string[];
+  ownerId: string;
+  status?: "ALIVE" | "DELETE";
+  workspaceId?: string;
+  workspaceName?: string;
+  workspaceImageUrl?: string;
+  workspaceAdmin?: string;
+  middleAdmin?: string[];
+  teacher?: string[];
+  student?: string[];
+}
 export type PendingWorkspaceRequest = Workspace & { requestedRoles: Array<"STUDENT" | "TEACHER"> };
-export interface WorkspaceMemberChartProfile { workspaceId: string; member: Pick<Member, "id" | "email" | "name" | "birth" | "picture">; permission: Role; schGrade: number; schClass: number; schNumber: number; status: string; nick: string; belong: string; spot: string; phone: string; wire: string; location: string }
-export interface WorkspaceMemberChart { admin: Record<string, WorkspaceMemberChartProfile[]>; middleAdmin: Record<string, WorkspaceMemberChartProfile[]>; teachers: Record<string, WorkspaceMemberChartProfile[]>; students: Record<string, WorkspaceMemberChartProfile[]> }
-export interface WorkspaceWaitlistMember extends Member { role: Exclude<Role, "ADMIN">; permission: Exclude<Role, "ADMIN"> | "MIDDLEADMIN" }
-export interface Notification { id: string; workspaceId: string; title: string; content: string; authorId: string; createdAt: string; updatedAt?: string; emojis: Record<string, string[]>; userId?: string; userName?: string; emoji?: Array<{ emoji: string; userList: string[] }>; createdDate?: string; lastModifiedDate?: string }
-export interface LegacyNotification extends Notification { userId: string; userName: string; emoji: Array<{ emoji: string; userList: string[] }>; createdDate: string; lastModifiedDate: string }
-export interface Timetable { id: string; workspaceId: string; grade: string; classNum: string; time: string; subject: string; date: string }
-export interface Task { id: string; workspaceId: string; title: string; description?: string; content?: string; dueDate?: string; createdAt: string }
-export interface ClassroomTask { id: string; title: string; description?: string; link?: string; dueDate?: string }
-export interface Meal { date: string; type: string; menu: string[]; calorie?: string }
-export interface Schedule { date: string; name: string; workspaceId: string }
+export interface WorkspaceMemberChartProfile {
+  workspaceId: string;
+  member: Pick<Member, "id" | "email" | "name" | "birth" | "picture">;
+  permission: Role;
+  schGrade: number;
+  schClass: number;
+  schNumber: number;
+  status: string;
+  nick: string;
+  belong: string;
+  spot: string;
+  phone: string;
+  wire: string;
+  location: string;
+}
+export interface WorkspaceMemberChart {
+  admin: Record<string, WorkspaceMemberChartProfile[]>;
+  middleAdmin: Record<string, WorkspaceMemberChartProfile[]>;
+  teachers: Record<string, WorkspaceMemberChartProfile[]>;
+  students: Record<string, WorkspaceMemberChartProfile[]>;
+}
+export interface WorkspaceWaitlistMember extends Member {
+  role: Exclude<Role, "ADMIN">;
+  permission: Exclude<Role, "ADMIN"> | "MIDDLEADMIN";
+}
+export interface Notification {
+  id: string;
+  workspaceId: string;
+  title: string;
+  content: string;
+  authorId: string;
+  createdAt: string;
+  updatedAt?: string;
+  emojis: Record<string, string[]>;
+  userId?: string;
+  userName?: string;
+  emoji?: Array<{ emoji: string; userList: string[] }>;
+  createdDate?: string;
+  lastModifiedDate?: string;
+}
+export interface LegacyNotification extends Notification {
+  userId: string;
+  userName: string;
+  emoji: Array<{ emoji: string; userList: string[] }>;
+  createdDate: string;
+  lastModifiedDate: string;
+}
+export interface Timetable {
+  id: string;
+  workspaceId: string;
+  grade: string;
+  classNum: string;
+  time: string;
+  subject: string;
+  date: string;
+}
+export interface Task {
+  id: string;
+  workspaceId: string;
+  title: string;
+  description?: string;
+  content?: string;
+  dueDate?: string;
+  createdAt: string;
+}
+export interface ClassroomTask {
+  id: string;
+  title: string;
+  description?: string;
+  link?: string;
+  dueDate?: string;
+}
+export interface Meal {
+  date: string;
+  type: string;
+  menu: string[];
+  calorie?: string;
+}
+export interface Schedule {
+  date: string;
+  name: string;
+  workspaceId: string;
+}

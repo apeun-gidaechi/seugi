@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import * as S from './DetailTimeTable.style';
-import { addDays, format, startOfWeek } from 'date-fns';
-import Cookies from 'js-cookie';
-import PopOver from '@/Components/DetailTimetable/PopOver/PopOver';
-import { getWeeklyTimetable } from '@/Api/timetable';
+import React, { useState, useEffect } from "react";
+import * as S from "./DetailTimeTable.style";
+import { addDays, format, startOfWeek } from "date-fns";
+import Cookies from "js-cookie";
+import PopOver from "@/Components/DetailTimetable/PopOver/PopOver";
+import { getWeeklyTimetable } from "@/Api/timetable";
 
 interface TimetableData {
   period: number;
@@ -17,18 +17,22 @@ interface Props {
 
 const DetailTimetable = ({ onClose }: Props) => {
   const workspaceId = Cookies.get("workspaceId");
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+  );
   const [timetableData, setTimetableData] = useState<(TimetableData | null)[][]>([]);
   const [activeSubject, setActiveSubject] = useState<TimetableData | null>(null);
-  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(
+    null,
+  );
 
-  const days = ['월', '화', '수', '목', '금'];
+  const days = ["월", "화", "수", "목", "금"];
   const periods = [1, 2, 3, 4, 5, 6, 7];
 
   const getWeekRange = (startDate: Date) => {
     const start = startDate;
     const end = addDays(startDate, 4);
-    return `${format(start, 'MM/dd')} ~ ${format(end, 'MM/dd')}`;
+    return `${format(start, "MM/dd")} ~ ${format(end, "MM/dd")}`;
   };
 
   const handlePrevWeek = () => {
@@ -45,16 +49,18 @@ const DetailTimetable = ({ onClose }: Props) => {
       const timetable = await getWeeklyTimetable(workspaceId);
 
       if (timetable) {
-        const newTimetable: (TimetableData | null)[][] = Array(7).fill(null).map(() => Array(5).fill(null));
+        const newTimetable: (TimetableData | null)[][] = Array(7)
+          .fill(null)
+          .map(() => Array(5).fill(null));
 
         timetable.forEach((item) => {
-          const dayIndex = days.indexOf(format(new Date(item.date), 'eee'));
+          const dayIndex = days.indexOf(format(new Date(item.date), "eee"));
 
           const periodIndex = parseInt(item.time) - 1;
 
           if (dayIndex !== -1 && periodIndex !== -1) {
             newTimetable[periodIndex][dayIndex] = {
-              period: periodIndex + 1, 
+              period: periodIndex + 1,
               day: days[dayIndex],
               subject: item.subject,
             };
@@ -67,7 +73,6 @@ const DetailTimetable = ({ onClose }: Props) => {
       console.error(err);
     }
   };
-
 
   useEffect(() => {
     handleGetWeekTimetable(currentWeekStart);
@@ -110,20 +115,20 @@ const DetailTimetable = ({ onClose }: Props) => {
               {days.map((day, dayIndex) => (
                 <S.TimeCell
                   key={dayIndex}
-                  onClick={(event) => handleSubjectClick(timetableData[period - 1]?.[dayIndex], event)}
+                  onClick={(event) =>
+                    handleSubjectClick(timetableData[period - 1]?.[dayIndex], event)
+                  }
                 >
                   {timetableData[period - 1] && timetableData[period - 1][dayIndex]
                     ? timetableData[period - 1][dayIndex]?.subject
-                    : '+'}
+                    : "+"}
                 </S.TimeCell>
               ))}
             </React.Fragment>
           ))}
         </S.TimetableContainer>
 
-        {activeSubject && popoverPosition && (
-          <PopOver onClose={handleClosePopover} />
-        )}
+        {activeSubject && popoverPosition && <PopOver onClose={handleClosePopover} />}
       </S.CalendarDiv>
     </S.CalendarMain>
   );

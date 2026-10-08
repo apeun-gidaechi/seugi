@@ -1,14 +1,38 @@
 import Svg, { Path } from "react-native-svg";
 import { SeugiColor } from "@seugi/design-tokens";
 
-export function SeugiAddIcon({ size = 24, color = SeugiColor.Primary500 }: { size?: number; color?: string }) {
-  return <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
-    <Path fill={color} fillRule="evenodd" d="M12 1.10052C12.5523 1.10052 13 1.54824 13 2.10052L13 21.8995C13 22.4518 12.5523 22.8995 12 22.8995C11.4477 22.8995 11 22.4518 11 21.8995V2.10052C11 1.54824 11.4477 1.10052 12 1.10052ZM1.10051 12C1.10051 11.4477 1.54822 11 2.10051 11H21.8995C22.4518 11 22.8995 11.4477 22.8995 12C22.8995 12.5523 22.4518 13 21.8995 13L2.10051 13C1.54822 13 1.10051 12.5523 1.10051 12Z" />
-  </Svg>;
+export function SeugiAddIcon({
+  size = 24,
+  color = SeugiColor.Primary500,
+}: {
+  size?: number;
+  color?: string;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
+      <Path
+        fill={color}
+        fillRule="evenodd"
+        d="M12 1.10052C12.5523 1.10052 13 1.54824 13 2.10052L13 21.8995C13 22.4518 12.5523 22.8995 12 22.8995C11.4477 22.8995 11 22.4518 11 21.8995V2.10052C11 1.54824 11.4477 1.10052 12 1.10052ZM1.10051 12C1.10051 11.4477 1.54822 11 2.10051 11H21.8995C22.4518 11 22.8995 11.4477 22.8995 12C22.8995 12.5523 22.4518 13 21.8995 13L2.10051 13C1.54822 13 1.10051 12.5523 1.10051 12Z"
+      />
+    </Svg>
+  );
 }
 
-export function SeugiAddFillIcon({ size = 24, color = SeugiColor.Primary500 }: { size?: number; color?: string }) {
-  return <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
-    <Path fill={color} fillRule="evenodd" d="M5.63604 18.364C9.15076 21.8787 14.8492 21.8787 18.364 18.364C21.8787 14.8492 21.8787 9.15076 18.364 5.63604C14.8492 2.12132 9.15076 2.12132 5.63604 5.63604C2.12132 9.15076 2.12132 14.8492 5.63604 18.364ZM7.05025 11C6.49797 11 6.05025 11.4477 6.05025 12C6.05025 12.5523 6.49797 13 7.05025 13H11L11 16.9497C11 17.502 11.4477 17.9497 12 17.9497C12.5523 17.9497 13 17.502 13 16.9497V13H16.9497C17.502 13 17.9497 12.5523 17.9497 12C17.9497 11.4477 17.502 11 16.9497 11H13L13 7.05025C13 6.49797 12.5523 6.05025 12 6.05025C11.4477 6.05025 11 6.49797 11 7.05025L11 11H7.05025Z" />
-  </Svg>;
+export function SeugiAddFillIcon({
+  size = 24,
+  color = SeugiColor.Primary500,
+}: {
+  size?: number;
+  color?: string;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
+      <Path
+        fill={color}
+        fillRule="evenodd"
+        d="M5.63604 18.364C9.15076 21.8787 14.8492 21.8787 18.364 18.364C21.8787 14.8492 21.8787 9.15076 18.364 5.63604C14.8492 2.12132 9.15076 2.12132 5.63604 5.63604C2.12132 9.15076 2.12132 14.8492 5.63604 18.364ZM7.05025 11C6.49797 11 6.05025 11.4477 6.05025 12C6.05025 12.5523 6.49797 13 7.05025 13H11L11 16.9497C11 17.502 11.4477 17.9497 12 17.9497C12.5523 17.9497 13 17.502 13 16.9497V13H16.9497C17.502 13 17.9497 12.5523 17.9497 12C17.9497 11.4477 17.502 11 16.9497 11H13L13 7.05025C13 6.49797 12.5523 6.05025 12 6.05025C11.4477 6.05025 11 6.49797 11 7.05025L11 11H7.05025Z"
+      />
+    </Svg>
+  );
 }

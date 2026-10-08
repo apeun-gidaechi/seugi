@@ -10,12 +10,7 @@ const Toggle = () => {
 
   return (
     <S.BtnWrapper>
-      <S.CheckBox
-        type="checkbox"
-        id="toggleBtn"
-        onChange={toggleHandler}
-        checked={latestSort}
-      />
+      <S.CheckBox type="checkbox" id="toggleBtn" onChange={toggleHandler} checked={latestSort} />
       <S.ButtonLabel htmlFor="toggleBtn" latestSort={latestSort}>
         <S.ToggleIndicator latestSort={latestSort} />
       </S.ButtonLabel>

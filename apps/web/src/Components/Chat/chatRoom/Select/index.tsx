@@ -1,9 +1,9 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-import * as S from './index.style';
+import * as S from "./index.style";
 
-import useChatMessages from '@/Hooks/Common/SendMessage/useChatMessages';
-import {ChatRoom} from "@/Components/common/ChatRoom";
+import useChatMessages from "@/Hooks/Common/SendMessage/useChatMessages";
+import { ChatRoom } from "@/Components/common/ChatRoom";
 import MessageBox from "@/Components/Chat/MessageBox/messageBox";
 import FileIcon from "@/Assets/image/chat/fileButton/file_line.svg";
 import ImageIcon from "@/Assets/image/chat/fileButton/image_line.svg";
@@ -17,11 +17,8 @@ interface SelectedChatRoomProps {
   room: ChatRoom;
 }
 
-const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
-  const {
-    receivedMessages,
-    sendMessage
-  } = useChatMessages(room);
+const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({ room }) => {
+  const { receivedMessages, sendMessage } = useChatMessages(room);
   const { uploadFile } = useFileUpload((file) => sendMessage("", [file.url]));
 
   // 현재 날짜를 원하는 형식으로 포맷팅하는 함수
@@ -93,7 +90,7 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
     <S.ChatContainer>
       <S.InChatContainer ref={inChatContainerRef}>
         {receivedMessages.map((message, index) => (
-          <MessageBox key={index} message={message}/>
+          <MessageBox key={index} message={message} />
         ))}
       </S.InChatContainer>
 
@@ -102,16 +99,16 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
           {showDropdown && (
             <S.DropdownMenu>
               <S.DropdownItem onClick={() => fileInputRef.current?.click()}>
-                <S.UploadImg src={FileIcon} alt="File upload"/>
+                <S.UploadImg src={FileIcon} alt="File upload" />
                 파일 업로드
               </S.DropdownItem>
               <S.DropdownItem onClick={() => imageInputRef.current?.click()}>
-                <S.UploadImg src={ImageIcon} alt="Image upload"/>
+                <S.UploadImg src={ImageIcon} alt="Image upload" />
                 이미지 업로드
               </S.DropdownItem>
             </S.DropdownMenu>
           )}
-          <S.PlusMessageFile src={PlusMessageFile}/>
+          <S.PlusMessageFile src={PlusMessageFile} />
         </S.PlustFileButton>
 
         <S.SendMessageInput
@@ -123,18 +120,14 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
         />
 
         <S.SendArrowButton onClick={handleClick} disabled={!hasText}>
-          {hasText ? (
-            <S.SendArrow src={SendArrowBlue}/>
-          ) : (
-            <S.SendArrow src={SendArrow}/>
-          )}
+          {hasText ? <S.SendArrow src={SendArrowBlue} /> : <S.SendArrow src={SendArrow} />}
         </S.SendArrowButton>
       </S.SendMessageWrap>
 
       <input
         type="file"
         ref={fileInputRef}
-        style={{display: "none"}}
+        style={{ display: "none" }}
         onChange={handleFileUpload}
       />
 
@@ -142,7 +135,7 @@ const SelectedChatRoom: React.FC<SelectedChatRoomProps> = ({room}) => {
         type="file"
         ref={imageInputRef}
         accept="image/*"
-        style={{display: "none"}}
+        style={{ display: "none" }}
         onChange={handleImageUpload}
       />
     </S.ChatContainer>

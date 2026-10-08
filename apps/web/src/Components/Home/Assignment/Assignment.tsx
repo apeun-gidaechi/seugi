@@ -38,16 +38,16 @@ const Assignment = ({ tasks = [], classroomTasks = [] }: AssignmentProps) => {
 
       const today = new Date();
       const validTasks = Array.isArray(fetchedTasks)
-        ? fetchedTasks.filter(task => task.dueDate && new Date(task.dueDate) >= today)
+        ? fetchedTasks.filter((task) => task.dueDate && new Date(task.dueDate) >= today)
         : [];
       const noDueDateTasks = Array.isArray(fetchedTasks)
-        ? fetchedTasks.filter(task => !task.dueDate)
+        ? fetchedTasks.filter((task) => !task.dueDate)
         : [];
       const validClassroomTasks = Array.isArray(fetchedClassroomTasks)
-        ? fetchedClassroomTasks.filter(task => task.dueDate && new Date(task.dueDate) >= today)
+        ? fetchedClassroomTasks.filter((task) => task.dueDate && new Date(task.dueDate) >= today)
         : [];
       const noDueDateClassroomTasks = Array.isArray(fetchedClassroomTasks)
-        ? fetchedClassroomTasks.filter(task => !task.dueDate)
+        ? fetchedClassroomTasks.filter((task) => !task.dueDate)
         : [];
 
       setLocalTasks([...validTasks, ...noDueDateTasks]);
@@ -97,13 +97,16 @@ const Assignment = ({ tasks = [], classroomTasks = [] }: AssignmentProps) => {
         {localClassroomTasks.length > 0 ? (
           <ul>
             {localClassroomTasks.map((task) => (
-              <S.AssignmentButton key={task.id} onClick={() => handleClassroomTaskClick(task.link ?? "")}>
+              <S.AssignmentButton
+                key={task.id}
+                onClick={() => handleClassroomTaskClick(task.link ?? "")}
+              >
                 <S.AssignmentButtonText>{task.title}</S.AssignmentButtonText>
                 <S.AssignmentDescription>
                   {task.description ? task.description : "설명 없음"}
                 </S.AssignmentDescription>
                 <S.AssignmentDateBox>
-                  <p>{task.dueDate ? new Date(task.dueDate).toLocaleString() : '기한 없음'}</p>
+                  <p>{task.dueDate ? new Date(task.dueDate).toLocaleString() : "기한 없음"}</p>
                 </S.AssignmentDateBox>
               </S.AssignmentButton>
             ))}

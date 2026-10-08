@@ -10,9 +10,10 @@ export function notificationRecipientIds(
   authorId: string,
   roleFor: (memberId: string) => Role | undefined,
 ) {
-  return workspace.members.filter((memberId) =>
-    memberId !== authorId &&
-    ["STUDENT", "MIDDLE_ADMIN", "ADMIN"].includes(roleFor(memberId) ?? ""),
+  return workspace.members.filter(
+    (memberId) =>
+      memberId !== authorId &&
+      ["STUDENT", "MIDDLE_ADMIN", "ADMIN"].includes(roleFor(memberId) ?? ""),
   );
 }
 
@@ -30,11 +31,38 @@ export class PushNotifications {
     const target = [...new Set(tokens)].filter(Boolean);
     const expo = target.filter((token) => /^Expo(nent)?PushToken\[/.test(token));
     const fcm = target.filter((token) => !/^Expo(nent)?PushToken\[/.test(token));
-    if (expo.length) await Promise.all(this.chunks(expo, 100).map(async (chunk) => {
-      const response = await this.fetcher("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(chunk.map((to) => ({ to, title: payload.title, body: payload.body, sound: "default", ...(payload.imageUrl ? { data: { imageUrl: payload.imageUrl } } : {}) }))) });
-      if (!response.ok) throw new Error("EXPO_PUSH_REQUEST_FAILED");
-    }));
-    if (this.enabled && fcm.length) await Promise.all(this.chunks(fcm, 500).map((chunk) => getMessaging().sendEachForMulticast({ tokens: chunk, notification: { title: payload.title, body: payload.body, imageUrl: payload.imageUrl } })));
+    if (expo.length)
+      await Promise.all(
+        this.chunks(expo, 100).map(async (chunk) => {
+          const response = await this.fetcher("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: { "content-type": "application/json", accept: "application/json" },
+            body: JSON.stringify(
+              chunk.map((to) => ({
+                to,
+                title: payload.title,
+                body: payload.body,
+                sound: "default",
+                ...(payload.imageUrl ? { data: { imageUrl: payload.imageUrl } } : {}),
+              })),
+            ),
+          });
+          if (!response.ok) throw new Error("EXPO_PUSH_REQUEST_FAILED");
+        }),
+      );
+    if (this.enabled && fcm.length)
+      await Promise.all(
+        this.chunks(fcm, 500).map((chunk) =>
+          getMessaging().sendEachForMulticast({
+            tokens: chunk,
+            notification: { title: payload.title, body: payload.body, imageUrl: payload.imageUrl },
+          }),
+        ),
+      );
   }
-  private chunks<T>(items: T[], size: number) { return Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size)); }
+  private chunks<T>(items: T[], size: number) {
+    return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
+      items.slice(index * size, (index + 1) * size),
+    );
+  }
 }

@@ -18,7 +18,11 @@ export const designTokens = Object.freeze({
   space: { xs: "4px", sm: "8px", md: "12px", lg: "16px", xl: "24px", "2xl": "32px", "3xl": "48px" },
   radius: { sm: "4px", md: "12px", lg: "16px", xl: "36px", pill: "99px" },
   shadow: { card: "0 4px 12px rgba(0, 0, 0, 0.06)", soft: "0 3px 9px rgba(0, 0, 0, 0.04)" },
-  type: { family: "Pretendard", body: SeugiFont.body.body2.fontSize, small: SeugiFont.caption.caption2.fontSize },
+  type: {
+    family: "Pretendard",
+    body: SeugiFont.body.body2.fontSize,
+    small: SeugiFont.caption.caption2.fontSize,
+  },
   breakpoint: { mobile: "768px" },
 });
 

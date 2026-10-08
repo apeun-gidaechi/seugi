@@ -1,10 +1,8 @@
-import SchoolCode from '@/Components/WorkSpace/SchoolCode/SchoolCode';
-import React from 'react'
+import SchoolCode from "@/Components/WorkSpace/SchoolCode/SchoolCode";
+import React from "react";
 
 const index = () => {
-  return (
-    <SchoolCode />
-  )
-}
+  return <SchoolCode />;
+};
 
 export default index;

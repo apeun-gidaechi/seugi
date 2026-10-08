@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatAssignmentDueDate, formatHomeAssignmentDueDate, orderAssignments, serializeTaskDueDate, taskCreateFailureMessage } from "../src/utils/assignments.ts";
+import {
+  formatAssignmentDueDate,
+  formatHomeAssignmentDueDate,
+  orderAssignments,
+  serializeTaskDueDate,
+  taskCreateFailureMessage,
+} from "../src/utils/assignments.ts";
 
 test("Android assignments sort by due date and keep undated tasks first like Kotlin sortedBy", () => {
   const tasks = [
@@ -9,11 +15,10 @@ test("Android assignments sort by due date and keep undated tasks first like Kot
     { id: "earlier", dueDate: "2026-10-09" },
   ];
 
-  assert.deepEqual(orderAssignments(tasks, "android").map(({ id }) => id), [
-    "undated",
-    "earlier",
-    "later",
-  ]);
+  assert.deepEqual(
+    orderAssignments(tasks, "android").map(({ id }) => id),
+    ["undated", "earlier", "later"],
+  );
 });
 
 test("iOS preserves the API task order", () => {
@@ -38,7 +43,10 @@ test("assignment due labels retain Android and iOS native wording and date math"
 });
 
 test("task creation failures use the native Android toast text", () => {
-  assert.equal(taskCreateFailureMessage("android", new Error("server detail")), "과제 생성에 실패하였습니다.");
+  assert.equal(
+    taskCreateFailureMessage("android", new Error("server detail")),
+    "과제 생성에 실패하였습니다.",
+  );
   assert.equal(taskCreateFailureMessage("ios", new Error("server detail")), "server detail");
 });
 

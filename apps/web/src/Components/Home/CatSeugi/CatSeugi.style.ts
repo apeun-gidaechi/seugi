@@ -15,7 +15,7 @@ export const RightDownContainer = styled.div`
   background: ${SeugiColor.White};
 
   box-shadow: 0px 3px 9px 0px rgba(0, 0, 0, 0.04);
-  z-index:900;
+  z-index: 900;
 `;
 
 export const SeugiTitleContainer = styled.div`
@@ -45,7 +45,7 @@ export const CatSeugi = styled.div`
   align-self: stretch;
 
   border-radius: 99px;
-  border: 1.5px solid #1C8DF4;
+  border: 1.5px solid #1c8df4;
   background: ${SeugiColor.White};
 `;
 
@@ -67,7 +67,6 @@ export const CatSeugiInput = styled.input`
 
   padding: 0 0 0 4px;
 `;
-
 
 export const SearchButton = styled.button`
   border: none;
@@ -97,7 +96,6 @@ export const LastQuestionBox = styled.div`
   gap: 4px;
   align-self: stretch;
 `;
-
 
 export const LastText = styled.div`
   display: flex;
@@ -137,16 +135,16 @@ export const QuestionDay = styled.span`
 `;
 
 export const MessageContainer = styled.div`
-    width:100%;
-    margin-top: 10px;
-    padding: 10px;
-    background-color: ${SeugiColor.Gray100};
-    border: 1px solid ${SeugiColor.Gray100};
-    border-radius: 4px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background-color: ${SeugiColor.Gray100};
+  border: 1px solid ${SeugiColor.Gray100};
+  border-radius: 4px;
 `;
 
 export const MessageText = styled.p`
-    margin: 0;
-    ${SeugiFont.subtitle.subtitle2};
-    color: #333;
+  margin: 0;
+  ${SeugiFont.subtitle.subtitle2};
+  color: #333;
 `;

@@ -1,101 +1,101 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom';
-import { paths } from '@/Constants/paths';
-import { registerMember, sendVerificationCode } from '@/Api/auth';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { paths } from "@/Constants/paths";
+import { registerMember, sendVerificationCode } from "@/Api/auth";
 
 const index = () => {
-    const location = useLocation();
-    const { name, email, password } = location.state || {};
-    const [timer, setTimer] = useState(0);
-    const [showAlert, setShowAlert] = useState(false);
-    const [code, setCode] = useState<string[]>(Array(6).fill(''));
-    const [isCodeSent, setIsCodeSent] = useState(false);
-    const navigate = useNavigate();
+  const location = useLocation();
+  const { name, email, password } = location.state || {};
+  const [timer, setTimer] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [code, setCode] = useState<string[]>(Array(6).fill(""));
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const navigate = useNavigate();
 
-    const handleCloseAlert = () => {
-        setShowAlert(false);
+  const handleCloseAlert = () => {
+    setShowAlert(false);
+  };
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "auto";
     };
+  }, []);
 
-    useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.body.style.overflow = 'auto';
-        }
-    }, []);
-
-    // 인증코드 보내기 함수
-    const handleSendCode = async () => {
-        try {
-            if (!email) return;
-            await sendVerificationCode(email);
-            setTimer(300);
-            setShowAlert(true);
-            setIsCodeSent(true);
-        } catch (error) {
-            console.error('인증 코드를 보내지 못했습니다.');
-        }
-    };
-
-    // CodeTextField 컴포넌트에서 입력값을 받아서 코드 문자열로 만드는 함수
-    const handleCodeChange = (updatedCode: string[]) => {
-        setCode(updatedCode);
-    };
-
-    // 회원가입 정보 보내기
-    const sendCode = async () => {
-        const verificationCode = code.join('');
-        try {
-            await registerMember({
-                name,
-                email,
-                password,
-                code: verificationCode,
-            });
-            navigate(paths.login);
-        } catch (error) {
-            console.error('회원가입을 완료하지 못했습니다.');
-        }
-    };
-
-    useEffect(() => {
-        if (timer > 0) {
-            const intervalId = setInterval(() => {
-                setTimer((prevTimer) => prevTimer - 1);
-            }, 1000);
-
-            return () => clearInterval(intervalId);
-        }
-    }, [timer]);
-
-    // 타이머 형식을 분:초로 변환
-    const formatTime = (time: number) => {
-        const minutes = String(Math.floor(time / 60));
-        const seconds = String(time % 60).padStart(2, '0');
-        return `${minutes}분 ${seconds}초`;
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            sendCode();
-        }
-    };
-
-    const Backclick = () => {
-        navigate(paths.signup)
+  // 인증코드 보내기 함수
+  const handleSendCode = async () => {
+    try {
+      if (!email) return;
+      await sendVerificationCode(email);
+      setTimer(300);
+      setShowAlert(true);
+      setIsCodeSent(true);
+    } catch (error) {
+      console.error("인증 코드를 보내지 못했습니다.");
     }
+  };
 
-    return {
-        timer,
-        showAlert,
-        isCodeSent,
-        handleCloseAlert,
-        handleSendCode,
-        handleCodeChange,
-        sendCode,
-        formatTime,
-        handleKeyDown,
-        Backclick
+  // CodeTextField 컴포넌트에서 입력값을 받아서 코드 문자열로 만드는 함수
+  const handleCodeChange = (updatedCode: string[]) => {
+    setCode(updatedCode);
+  };
+
+  // 회원가입 정보 보내기
+  const sendCode = async () => {
+    const verificationCode = code.join("");
+    try {
+      await registerMember({
+        name,
+        email,
+        password,
+        code: verificationCode,
+      });
+      navigate(paths.login);
+    } catch (error) {
+      console.error("회원가입을 완료하지 못했습니다.");
     }
-}
+  };
+
+  useEffect(() => {
+    if (timer > 0) {
+      const intervalId = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [timer]);
+
+  // 타이머 형식을 분:초로 변환
+  const formatTime = (time: number) => {
+    const minutes = String(Math.floor(time / 60));
+    const seconds = String(time % 60).padStart(2, "0");
+    return `${minutes}분 ${seconds}초`;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      sendCode();
+    }
+  };
+
+  const Backclick = () => {
+    navigate(paths.signup);
+  };
+
+  return {
+    timer,
+    showAlert,
+    isCodeSent,
+    handleCloseAlert,
+    handleSendCode,
+    handleCodeChange,
+    sendCode,
+    formatTime,
+    handleKeyDown,
+    Backclick,
+  };
+};
 
 export default index;

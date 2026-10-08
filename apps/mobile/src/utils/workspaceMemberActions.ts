@@ -25,6 +25,7 @@ export function workspaceMemberActionAvailability({
     remove:
       memberRole !== "STUDENT" &&
       !isOwnerTarget &&
-      (isOwner || (actorRole === "MIDDLE_ADMIN" && memberRole !== "MIDDLE_ADMIN" && memberRole !== "ADMIN")),
+      (isOwner ||
+        (actorRole === "MIDDLE_ADMIN" && memberRole !== "MIDDLE_ADMIN" && memberRole !== "ADMIN")),
   };
 }
