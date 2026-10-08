@@ -1,4 +1,4 @@
-import type { ChatMessage } from "./index.js";
+import type { ChatMessage } from "./chat.js";
 
 export interface ChatMessageInput {
   roomId: string;
