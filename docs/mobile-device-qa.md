@@ -26,7 +26,7 @@ These do **not** replace on-device QA; they catch regressions in native rules al
 | M-01 future-date dimming | `meal-calendar.test.ts` |
 | T-01 week label | `date.test.ts` |
 | A-01 assignments / task create | `assignments.test.ts`, `taskCalendar.test.ts` |
-| AI-01 CatSeugi rendering | `apps/api/test/ai.test.ts` (shared `catseugiVisibleText`) |
+| AI-01 CatSeugi rendering | `apps/api/test/ai.test.ts`, `catseugi.test.ts` (`catseugiVisibleText`) |
 | W-01 members search / profile | `workspace-member-search.test.ts`, `workspace-member-profile*.test.ts` |
 | AU-01 auth CTAs / feedback | `auth-button.test.ts`, `auth-feedback.test.ts` |
 | S-01 tab conversation state | `tab-navigation.test.ts` |
