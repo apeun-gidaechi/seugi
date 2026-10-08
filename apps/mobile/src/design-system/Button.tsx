@@ -8,7 +8,7 @@ export type SeugiButtonVariant =
   | "transparent"
   | "shadow"
   | "gray";
-export type SeugiButtonSize = "large" | "small";
+export type SeugiButtonSize = "large" | "medium" | "small";
 
 const colors: Record<
   SeugiButtonVariant,
@@ -56,7 +56,7 @@ export function SeugiButton({
       style={({ pressed }) => [
         styles.button,
         style,
-        size === "large" ? styles.large : styles.small,
+        size === "large" ? styles.large : size === "medium" ? styles.medium : styles.small,
         fullWidth && styles.fullWidth,
         variant === "shadow" && styles.shadow,
         { backgroundColor: inactive ? palette.disabledBackground : palette.background },
@@ -84,6 +84,7 @@ export function SeugiButton({
 const styles = StyleSheet.create({
   button: { minWidth: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, overflow: "hidden" },
   large: { minHeight: 54, paddingHorizontal: 16, paddingVertical: 12 },
+  medium: { minHeight: 45, paddingHorizontal: 12, paddingVertical: 10 },
   small: { minHeight: 36, paddingHorizontal: 12, paddingVertical: 8 },
   fullWidth: { alignSelf: "stretch" },
   shadow: { shadowColor: SeugiColor.Black, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
