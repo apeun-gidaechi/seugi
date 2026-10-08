@@ -39,7 +39,7 @@ import { Store, type WaitlistRole } from "./store.js";
 import { NeisClient } from "./neis.js";
 import { OAuthProvider } from "./oauth.js";
 import { chatRoomName } from "./chatRoomName.js";
-import { notificationRecipientIds, PushNotifications } from "./push.js";
+import { PushNotifications } from "./push.js";
 import { FileStorage } from "./storage.js";
 import { redactRequestUrl } from "./logging.js";
 import { body, ok, query } from "./http/helpers.js";
