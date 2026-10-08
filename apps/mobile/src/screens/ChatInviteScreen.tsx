@@ -3,6 +3,9 @@ import type { WorkspaceMemberView } from "@seugi/contracts";
 import { SeugiColor } from "@seugi/design-tokens";
 import { absoluteApiUrl } from "../utils/url";
 import { SeugiAvatar } from "../design-system/Avatar";
+import { SeugiCheckbox } from "../design-system/Checkbox";
+import { SeugiBackIcon } from "../design-system/BackIcon";
+import { SeugiCloseIcon } from "../design-system/NativeIndicators";
 import { workspaceMemberDisplayName } from "../utils/member";
 
 type ChatInviteScreenProps = {
@@ -26,7 +29,7 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
     <View style={styles.screen}>
       <View style={styles.header}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="뒤로" onPress={onBack} disabled={busy}>
-          <Text style={styles.backIcon}>‹</Text>
+          <SeugiBackIcon />
         </TouchableOpacity>
         <Text style={styles.title}>멤버 선택</Text>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="선택 완료" onPress={onComplete} disabled={!selectedIds.length || busy}>
@@ -38,7 +41,7 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
         <ScrollView horizontal contentContainerStyle={styles.selectedList} showsHorizontalScrollIndicator={false}>
           {selectedMembers.map((member) => (
             <TouchableOpacity key={member.id} accessibilityRole="button" accessibilityLabel={`${workspaceMemberDisplayName(member)} 선택 해제`} style={styles.selectedChip} onPress={() => onToggle(member.id)} disabled={busy}>
-              <Text style={styles.selectedText}>{workspaceMemberDisplayName(member)} ×</Text>
+              <Text style={styles.selectedText}>{workspaceMemberDisplayName(member)}</Text><SeugiCloseIcon size={14} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -52,7 +55,7 @@ export function ChatInviteScreen({ members, selectedIds, busy, notice, onBack, o
           const checked = selectedIds.includes(item.id);
           return (
             <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked }} style={styles.memberRow} onPress={() => onToggle(item.id)} disabled={busy}>
-              <Text style={checked ? styles.checked : styles.unchecked}>{checked ? "☑" : "□"}</Text>
+              <SeugiCheckbox checked={checked} enabled={!busy} />
               <SeugiAvatar uri={item.picture ? absoluteApiUrl(item.picture) : undefined} name={item.name} imageStyle={styles.avatar} fallbackStyle={styles.avatar} labelStyle={styles.avatarText} />
               <Text style={styles.memberName}>{workspaceMemberDisplayName(item)}</Text>
             </TouchableOpacity>
@@ -73,12 +76,10 @@ const styles = StyleSheet.create({
   disabled: { color: SeugiColor.Gray300 },
   selectedContainer: { minHeight: 64, maxHeight: 136, borderWidth: 1, borderColor: SeugiColor.Gray300, borderRadius: 12, marginHorizontal: 20, marginTop: 16, marginBottom: 12, paddingHorizontal: 8, paddingVertical: 6, gap: 4 },
   selectedList: { alignItems: "center", gap: 6 },
-  selectedChip: { backgroundColor: SeugiColor.Gray100, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 7 },
+  selectedChip: { backgroundColor: SeugiColor.Gray100, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 6 },
   selectedText: { color: SeugiColor.Gray600, fontSize: 13 },
   hint: { color: SeugiColor.Gray500, fontSize: 12, paddingHorizontal: 20, paddingVertical: 8 },
   memberRow: { minHeight: 72, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, backgroundColor: SeugiColor.White, borderBottomWidth: 1, borderBottomColor: SeugiColor.Gray100 },
-  checked: { color: SeugiColor.Primary500, fontSize: 20 },
-  unchecked: { color: SeugiColor.Gray400, fontSize: 20 },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: SeugiColor.Primary100 },
   avatarText: { color: SeugiColor.Primary500, fontWeight: "700" },
   memberName: { color: SeugiColor.Gray800, fontSize: 15 },

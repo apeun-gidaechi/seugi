@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BackHandler,
   FlatList,
-  Image,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
@@ -13,31 +13,36 @@ import { SeugiColor } from "@seugi/design-tokens";
 import type { Room, Workspace } from "@seugi/contracts";
 import { api } from "../services/api";
 import { absoluteApiUrl } from "../utils/url";
+import { SeugiAvatar } from "../design-system/Avatar";
+import { SeugiBadge } from "../design-system/Badge";
+import { matchesChatRoomSearch } from "../utils/chat";
 
-type RoomMessagesProps = { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void };
+export type ChatImagePreview = { url: string; name: string; onSend?: () => void; onClose?: () => void };
+type RoomMessagesProps = { room: Room; onBack: () => void; onOpenRoom: (room: Room) => void; onPreviewImage: (image: ChatImagePreview) => void };
 
 export function ChatScreen({
   workspace,
   roomType,
   RoomMessagesComponent,
   initialRoom,
+  isFocused = true,
   onConversationChange,
+  onPreviewImage,
   roomSearch,
-  roomSearchActive,
 }: {
   workspace: Workspace;
   roomType: "group" | "personal";
   RoomMessagesComponent: React.ComponentType<RoomMessagesProps>;
   initialRoom?: Room;
+  isFocused?: boolean;
   onConversationChange: (room?: Room) => void;
+  onPreviewImage: (image: ChatImagePreview) => void;
   roomSearch: string;
-  roomSearchActive: boolean;
 }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selected, setSelected] = useState<Room | undefined>(initialRoom);
-  const [message, setMessage] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const searchRequest = useRef(0);
+  const previousWorkspaceId = useRef(workspace.id);
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -47,15 +52,21 @@ export function ChatScreen({
       setRefreshing(false);
     }
   }, [workspace.id, roomType]);
-  useEffect(() => { if (initialRoom) onConversationChange(initialRoom); }, [initialRoom?.id]);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (roomSearchActive || !roomSearch) void search(roomSearch);
-      else void refresh().catch(() => undefined);
-    }, roomSearchActive && roomSearch ? 180 : 0);
-    return () => clearTimeout(timer);
-  }, [refresh, roomSearch, roomSearchActive]);
+    if (previousWorkspaceId.current === workspace.id) return;
+    previousWorkspaceId.current = workspace.id;
+    setRooms([]);
+    setSelected(undefined);
+    onConversationChange(undefined);
+  }, [workspace.id]);
   useEffect(() => {
+    if (!initialRoom) return;
+    setSelected(initialRoom);
+    onConversationChange(initialRoom);
+  }, [initialRoom?.id]);
+  useEffect(() => { void refresh().catch(() => undefined); }, [refresh]);
+  useEffect(() => {
+    if (!isFocused) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (!selected) return false;
       setSelected(undefined);
@@ -63,25 +74,18 @@ export function ChatScreen({
       return true;
     });
     return () => subscription.remove();
-  }, [onConversationChange, selected]);
-  const search = async (word = roomSearch) => {
-    const requestId = ++searchRequest.current;
-    setMessage("");
-    try {
-      const result = word.trim()
-        ? await api.searchRooms(workspace.id, word.trim(), roomType)
-        : await api.rooms(workspace.id, roomType);
-      if (requestId !== searchRequest.current) return;
-      setRooms(sortRooms(result.data));
-    } catch (e) {
-      if (requestId === searchRequest.current) setMessage(e instanceof Error ? e.message : "채팅방 검색에 실패했습니다");
-    }
-  };
+  }, [isFocused, onConversationChange, selected]);
+  const visibleRooms = rooms.filter((room) => matchesChatRoomSearch(
+    Platform.OS === "ios" ? "ios" : "android",
+    room.chatName || room.name,
+    roomSearch,
+  ));
   if (selected)
     return (
       <RoomMessagesComponent
         key={selected.id}
         room={selected}
+        onPreviewImage={onPreviewImage}
         onBack={() => { setSelected(undefined); onConversationChange(undefined); }}
         onOpenRoom={(room) => { setSelected(room); onConversationChange(room); }}
       />
@@ -89,30 +93,29 @@ export function ChatScreen({
   return (
     <FlatList
       style={styles.content}
-      data={rooms}
+      data={visibleRooms}
       keyExtractor={(item) => item.id}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void (roomSearch.trim() ? search(roomSearch) : refresh()).catch(() => undefined)} tintColor={SeugiColor.Primary500} colors={[SeugiColor.Primary500]} />}
-      ListHeaderComponent={message ? <Text style={styles.error}>{message}</Text> : null}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh().catch(() => undefined)} tintColor={SeugiColor.Primary500} colors={[SeugiColor.Primary500]} />}
       ListEmptyComponent={
         <Text style={styles.empty}>
-          {roomSearch.trim()
+          {roomSearch
             ? "검색 결과가 없습니다."
             : "아직 참여한 채팅방이 없습니다."}
         </Text>
       }
       renderItem={({ item }) => (
         <TouchableOpacity accessibilityRole="button" style={styles.row} onPress={() => { setSelected(item); onConversationChange(item); }}>
-          <View style={styles.roomAvatar}>{(item.image ?? item.chatRoomImg) ? <Image source={{ uri: absoluteApiUrl(item.image ?? item.chatRoomImg ?? "") }} style={styles.roomAvatarImage} /> : <Text style={styles.roomAvatarText}>{item.name.slice(0, 1)}</Text>}</View>
+          <SeugiAvatar uri={(item.image ?? item.chatRoomImg) ? absoluteApiUrl(item.image ?? item.chatRoomImg ?? "") : undefined} name={item.chatName || item.name} imageStyle={styles.roomAvatarImage} fallbackStyle={styles.roomAvatar} />
           <View style={styles.roomInfo}>
             <View style={styles.roomTitleRow}>
-              <Text style={styles.rowTitle} numberOfLines={1}>{item.name}</Text>
-              {roomType === "group" ? <Text style={styles.memberCount}>{item.memberIds.length}</Text> : null}
+              <Text style={styles.rowTitle} numberOfLines={1}>{item.chatName || item.name}</Text>
+              {Platform.OS === "ios" && roomType === "group" ? <Text style={styles.memberCount}>{item.joinUserInfo?.length ?? item.memberIds.length}</Text> : null}
             </View>
-            <Text style={styles.muted} numberOfLines={1}>{item.lastMessage ?? ""}</Text>
+            {(Platform.OS !== "ios" || item.lastMessage != null) ? <Text style={styles.muted} numberOfLines={1}>{item.lastMessage ?? ""}</Text> : null}
           </View>
           <View style={styles.roomMeta}>
             <Text style={styles.timestamp}>{formatChatTime(item.lastMessageTimestamp)}</Text>
-            {(item.notReadCnt ?? 0) > 0 ? <Text style={styles.unreadBadge}>{item.notReadCnt! > 300 ? "300+" : item.notReadCnt}</Text> : null}
+            {(item.notReadCnt ?? 0) > 0 ? <SeugiBadge count={item.notReadCnt} /> : null}
           </View>
         </TouchableOpacity>
       )}
@@ -121,21 +124,19 @@ export function ChatScreen({
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, padding: 16 },
-  row: { minHeight: 80, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: SeugiColor.White },
-  roomAvatar: { width: 48, height: 48, borderRadius: 24, overflow: "hidden", backgroundColor: SeugiColor.Primary100, alignItems: "center", justifyContent: "center" },
-  roomAvatarImage: { width: 48, height: 48 },
-  roomAvatarText: { color: SeugiColor.Primary500, fontSize: 19, fontWeight: "600" },
+  content: { flex: 1, backgroundColor: SeugiColor.White },
+  row: { minHeight: 68, paddingHorizontal: 16, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: SeugiColor.White },
+  roomAvatar: { width: 36, height: 36, borderRadius: 18, overflow: "hidden", backgroundColor: SeugiColor.Primary200, alignItems: "center", justifyContent: "center" },
+  roomAvatarImage: { width: 36, height: 36, borderRadius: 18 },
   roomInfo: { flex: 1, minWidth: 0, gap: 4 },
   roomTitleRow: { flexDirection: "row", alignItems: "flex-end", gap: 4 },
   memberCount: { color: SeugiColor.Gray500, fontSize: 13 },
   roomMeta: { alignItems: "flex-end", gap: 4 },
   timestamp: { color: SeugiColor.Gray500, fontSize: 12 },
-  unreadBadge: { minWidth: 20, overflow: "hidden", textAlign: "center", color: SeugiColor.White, backgroundColor: SeugiColor.Yellow100, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, fontSize: 11 },
   activeTab: { color: SeugiColor.Primary500, fontWeight: "700" },
   inactiveTab: { color: SeugiColor.Gray500 },
-  muted: { color: SeugiColor.Gray500, fontSize: 12 },
-  rowTitle: { fontWeight: "600" },
+  muted: { color: Platform.OS === "ios" ? SeugiColor.Gray600 : SeugiColor.Black, fontSize: 14 },
+  rowTitle: { color: SeugiColor.Black, fontSize: 16, fontWeight: "600" },
   error: { color: SeugiColor.Red500, marginVertical: 8, textAlign: "center" },
   empty: { color: SeugiColor.Gray600, textAlign: "center", padding: 30 },
 });
@@ -150,6 +151,16 @@ function formatChatTime(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+  if (Platform.OS === "ios") {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startYesterday = new Date(startToday);
+    startYesterday.setDate(startYesterday.getDate() - 1);
+    const startLastYear = new Date(now.getFullYear() - 1, 0, 1);
+    if (date >= startToday) return `${date.getHours() < 12 ? "오전" : "오후"} ${String(date.getHours() % 12 || 12).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    if (date >= startYesterday || date >= startLastYear) return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+  }
   const hour = date.getHours();
   const displayHour = hour >= 12 && hour !== 12 ? hour - 12 : hour;
   return `${hour < 12 ? "오전" : "오후"} ${String(displayHour).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
