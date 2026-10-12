@@ -43,21 +43,8 @@ process.on("SIGINT", () => {
 try {
   await run("pnpm", ["exec", "playwright", "install", "chromium"]);
   await new Promise((resolve) => setTimeout(resolve, 1500));
-  await run("pnpm", [
-    "exec",
-    "wait-on",
-    `${baseUrl}/index.json`,
-    "-t",
-    "60000",
-  ]);
-  await run("pnpm", [
-    "exec",
-    "test-storybook",
-    "--url",
-    baseUrl,
-    "--maxWorkers",
-    "4",
-  ]);
+  await run("pnpm", ["exec", "wait-on", `${baseUrl}/index.json`, "-t", "60000"]);
+  await run("pnpm", ["exec", "test-storybook", "--url", baseUrl, "--maxWorkers", "4"]);
 } finally {
   shutdown();
 }

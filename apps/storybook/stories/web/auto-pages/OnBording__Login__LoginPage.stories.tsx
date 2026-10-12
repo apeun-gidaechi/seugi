@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Page from "../../../../web/src/Pages/OnBording/Login/LoginPage";
 
 const meta = {
@@ -18,7 +17,7 @@ const meta = {
   ],
   parameters: {
     layout: "fullscreen",
-    router: { initialEntries: [{"pathname":"/login"}] },
+    router: { initialEntries: [{ pathname: "/login" }] },
   },
 } satisfies Meta<typeof Page>;
 

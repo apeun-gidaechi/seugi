@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Page from "../../../../web/src/Pages/Admin/Alarm/AdminAlarm";
 
 const meta = {

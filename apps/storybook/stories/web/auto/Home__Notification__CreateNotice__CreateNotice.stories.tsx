@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Component from "../../../../web/src/Components/Home/Notification/CreateNotice/CreateNotice";
 
 const meta = {
@@ -26,5 +25,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Component {...withDefaultStoryProps("Home/Notification/CreateNotice/CreateNotice", args)} />,
+  render: (args) => (
+    <Component {...withDefaultStoryProps("Home/Notification/CreateNotice/CreateNotice", args)} />
+  ),
 };

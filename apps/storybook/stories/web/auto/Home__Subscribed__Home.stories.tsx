@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Component from "../../../../web/src/Components/Home/Subscribed/Home";
 
 const meta = {
@@ -18,7 +17,7 @@ const meta = {
   ],
   parameters: {
     layout: "fullscreen",
-    router: { initialEntries: [{"pathname":"/"}] },
+    router: { initialEntries: [{ pathname: "/" }] },
   },
 } satisfies Meta<typeof Component>;
 

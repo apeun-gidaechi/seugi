@@ -15,12 +15,8 @@ const modules = fs
   .filter((name) => name.endsWith(".tsx"))
   .map((name) => name.replace(/\.tsx$/, ""));
 
-const missingDemos = modules.filter(
-  (name) => !demosSource.includes(`design-system/${name}`),
-);
-const missingCatalog = modules.filter(
-  (name) => !catalogSource.includes(`design-system/${name}`),
-);
+const missingDemos = modules.filter((name) => !demosSource.includes(`design-system/${name}`));
+const missingCatalog = modules.filter((name) => !catalogSource.includes(`design-system/${name}`));
 
 if (missingDemos.length > 0) {
   console.error("designSystemDemos.tsx missing imports for:");

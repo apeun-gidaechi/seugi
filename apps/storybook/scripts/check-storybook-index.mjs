@@ -37,4 +37,6 @@ if (entryCount < storyFiles.length) {
   process.exit(1);
 }
 
-console.log(`Storybook index lists ${entryCount} entries (${storyFiles.length} CSF files on disk).`);
+console.log(
+  `Storybook index lists ${entryCount} entries (${storyFiles.length} CSF files on disk).`,
+);

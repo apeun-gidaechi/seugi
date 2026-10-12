@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Component from "../../../../web/src/Components/common/sidebar/sidebar";
 
 const meta = {

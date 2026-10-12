@@ -3,6 +3,7 @@
  * Generates one CSF story per web Components tsx file (except router/shell/styles).
  * Re-run after adding web components: pnpm --filter @seugi/storybook sync-stories
  */
+import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -94,8 +95,7 @@ for (const file of files) {
   const title = `Web/Components/${slug}`;
   const initialEntries = COMPONENT_INITIAL_ENTRIES[slug] ?? ["/"];
   const initialEntriesJson = JSON.stringify(initialEntries);
-  const body = `${header}
-import Component from "${importPath}";
+  const body = `${header}import Component from "${importPath}";
 
 const meta = {
   title: "${title}",

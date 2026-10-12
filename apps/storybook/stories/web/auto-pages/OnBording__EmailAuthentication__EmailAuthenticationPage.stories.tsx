@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Page from "../../../../web/src/Pages/OnBording/EmailAuthentication/EmailAuthenticationPage";
 
 const meta = {
@@ -18,7 +17,14 @@ const meta = {
   ],
   parameters: {
     layout: "fullscreen",
-    router: { initialEntries: [{"pathname":"/emailauthentication","state":{"name":"스기 QA","email":"demo@seugi.app","password":"demo-password"}}] },
+    router: {
+      initialEntries: [
+        {
+          pathname: "/emailauthentication",
+          state: { name: "스기 QA", email: "demo@seugi.app", password: "demo-password" },
+        },
+      ],
+    },
   },
 } satisfies Meta<typeof Page>;
 
@@ -26,5 +32,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Page {...withDefaultStoryProps("OnBording/EmailAuthentication/EmailAuthenticationPage", args)} />,
+  render: (args) => (
+    <Page
+      {...withDefaultStoryProps("OnBording/EmailAuthentication/EmailAuthenticationPage", args)}
+    />
+  ),
 };

@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Page from "../../../../web/src/Pages/OnBording/EmailSignUp/EmailSignUpPage";
 
 const meta = {
@@ -18,7 +17,7 @@ const meta = {
   ],
   parameters: {
     layout: "fullscreen",
-    router: { initialEntries: [{"pathname":"/emailsignup"}] },
+    router: { initialEntries: [{ pathname: "/emailsignup" }] },
   },
 } satisfies Meta<typeof Page>;
 
@@ -26,5 +25,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Page {...withDefaultStoryProps("OnBording/EmailSignUp/EmailSignUpPage", args)} />,
+  render: (args) => (
+    <Page {...withDefaultStoryProps("OnBording/EmailSignUp/EmailSignUpPage", args)} />
+  ),
 };

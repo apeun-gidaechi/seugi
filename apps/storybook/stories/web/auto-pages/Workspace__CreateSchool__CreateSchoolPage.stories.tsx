@@ -3,7 +3,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
-
 import Page from "../../../../web/src/Pages/Workspace/CreateSchool/CreateSchoolPage";
 
 const meta = {
@@ -26,5 +25,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => <Page {...withDefaultStoryProps("Workspace/CreateSchool/CreateSchoolPage", args)} />,
+  render: (args) => (
+    <Page {...withDefaultStoryProps("Workspace/CreateSchool/CreateSchoolPage", args)} />
+  ),
 };

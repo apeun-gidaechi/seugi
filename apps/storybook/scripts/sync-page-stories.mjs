@@ -2,6 +2,7 @@
 /**
  * Generates one CSF story per web Pages tsx file with a default export.
  */
+import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
