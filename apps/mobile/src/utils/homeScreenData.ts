@@ -41,11 +41,7 @@ export function homeUpcomingSchedules(
   platform: "ios" | "android",
 ) {
   return schedules
-    .filter((item) =>
-      platform === "ios"
-        ? item.date.slice(0, 10) > today
-        : Number(item.date.slice(8, 10)) >= new Date().getDate(),
-    )
+    .filter((item) => item.date.slice(0, 10) > today)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, platform === "android" ? 3 : undefined);
 }

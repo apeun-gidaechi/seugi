@@ -9,12 +9,12 @@ export function sortChatRooms(items?: Room[]) {
 export function formatChatRoomTimestamp(
   value: string | null | undefined,
   platform: "ios" | "android",
+  now: Date = new Date(),
 ) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   if (platform === "ios") {
-    const now = new Date();
     const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startYesterday = new Date(startToday);
     startYesterday.setDate(startYesterday.getDate() - 1);

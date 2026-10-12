@@ -30,8 +30,9 @@ test("chat rooms sort by last message timestamp descending", () => {
 });
 
 test("iOS chat timestamps use today-time labels for same-day messages", () => {
+  const reference = new Date(2026, 9, 8, 15, 0);
   const noon = new Date(2026, 9, 8, 14, 5);
-  const label = formatChatRoomTimestamp(noon.toISOString(), "ios");
+  const label = formatChatRoomTimestamp(noon.toISOString(), "ios", reference);
   assert.match(label, /^오후 02:05$/);
 });
 

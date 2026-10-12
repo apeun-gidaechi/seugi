@@ -1,16 +1,25 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServerEvents, ServerToClientEvents } from "@seugi/contracts";
 import type { SeugiApi } from "@seugi/api-client";
-import { isPlaygroundApp } from "./appVariant";
 
 type SeugiSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+function shouldUsePlaygroundSocket(): boolean {
+  if (process.env.EXPO_PUBLIC_APP_VARIANT === "playground") return true;
+  try {
+    const { isPlaygroundApp } = require("./appVariant") as typeof import("./appVariant");
+    return isPlaygroundApp();
+  } catch {
+    return false;
+  }
+}
 
 export function createAuthenticatedSocket(
   api: SeugiApi,
   apiUrl: string,
   onAuthenticationFailure: () => void = () => undefined,
 ): SeugiSocket {
-  if (isPlaygroundApp()) {
+  if (shouldUsePlaygroundSocket()) {
     const { createPlaygroundSocket } = require("./playground/playgroundSocket") as {
       createPlaygroundSocket: () => SeugiSocket;
     };
