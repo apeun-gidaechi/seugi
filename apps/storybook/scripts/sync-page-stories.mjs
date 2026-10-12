@@ -14,6 +14,26 @@ const outDir = path.resolve(storybookAppRoot, "stories/web/auto-pages");
 
 const SKIP_PARTS = [".style."];
 
+/** MemoryRouter paths required for page hooks (e.g. chat sidebar). */
+const PAGE_INITIAL_ENTRIES = {
+  "chat/chat": ["/chat"],
+  "GroupChat/index": ["/groupchat"],
+  "Admin/Setting/Setting": ["/admingeneral"],
+  "Admin/General/AdminGeneral": ["/admingeneral"],
+  "Admin/Alarm/AdminAlarm": ["/adminalarm"],
+  "Admin/ManageMember/ManageMember": ["/managemember"],
+  "Admin/InviteMember/InviteMember": ["/invitemember"],
+  "Home/home": ["/"],
+  "OnBording/EmailAuthentication/EmailAuthenticationPage": [
+    {
+      pathname: "/emailauthentication",
+      state: { name: "스기 QA", email: "demo@seugi.app", password: "demo-password" },
+    },
+  ],
+  "OnBording/EmailSignUp/EmailSignUpPage": [{ pathname: "/emailsignup" }],
+  "OnBording/Login/LoginPage": [{ pathname: "/login" }],
+};
+
 function walk(dir) {
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -49,7 +69,6 @@ function storyFileName(slug) {
 const header = `/* auto-generated — pnpm --filter @seugi/storybook sync-stories */
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
-import { MemoryRouter } from "react-router-dom";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
 `;
@@ -74,6 +93,8 @@ for (const file of files) {
   const storyFilePath = path.join(outDir, outName);
   const importPath = importPathFromStory(storyFilePath, file);
   const title = `Web/Pages/${slug}`;
+  const initialEntries = PAGE_INITIAL_ENTRIES[slug] ?? ["/"];
+  const initialEntriesJson = JSON.stringify(initialEntries);
   const body = `${header}
 import Page from "${importPath}";
 
@@ -82,14 +103,15 @@ const meta = {
   component: Page,
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <div style={{ minHeight: "100vh", background: "#f5f6f8" }}>
-          <Story />
-        </div>
-      </MemoryRouter>
+      <div style={{ minHeight: "100vh", background: "#f5f6f8" }}>
+        <Story />
+      </div>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    router: { initialEntries: ${initialEntriesJson} },
+  },
 } satisfies Meta<typeof Page>;
 
 export default meta;

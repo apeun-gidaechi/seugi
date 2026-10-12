@@ -23,6 +23,10 @@ Open [http://localhost:6006](http://localhost:6006).
 
 `pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`. Auto stories merge defaults from `stories/web/storybookComponentMocks.ts` so components render without the full app shell.
 
+Storybook installs a **fetch mock** (`.storybook/installStorybookFetchMock.ts`) and a **socket shim** (`storybookSocketService.ts`, aliased over `socketService`) plus demo `workspaceId` / tokens so SWR, REST, and chat pages work offline. Chat page stories use `MemoryRouter` paths `/chat` and `/groupchat` (see `sync-page-stories.mjs`). `pnpm --filter @seugi/storybook check` also runs a production **build** as a compile/smoke gate.
+
+Playground chat screens use an in-memory **socket stub** (`playgroundSocket.ts`) so `ChatConversationScreen` can send/receive messages without a chat server.
+
 React Native design-system and screens: **Seugi Playground** on iOS/Android (Storybook does not bundle RN).
 
 ## iOS / Android — Playground dev client
@@ -77,19 +81,19 @@ The playground JS entry is selected by bundle id `com.seugi.playground` even if 
 
 After launch, the playground home lists:
 
-1. **Design system** — all `src/design-system/*` primitives (buttons, fields, icons, …)
+1. **Design system** — list in `designSystemDemos` (one focused demo per `src/design-system/*.tsx`, plus **Full catalog** scroll)
 2. **Screens** — searchable list of screen demos (`src/screens/*`, auth flows, shells)
 3. **Components** — shared `src/components/*` demos
 
-The playground variant wires `PlaygroundSeugiApi` (in-memory fixtures) so Home, Chat, Notices, Assignments, and most workspace screens render with sample data. Real-time chat sockets are not simulated.
+The playground variant wires `PlaygroundSeugiApi` (in-memory fixtures) so Home, Chat, Notices, Assignments, and most workspace screens render with sample data. Chat uses `playgroundSocket.ts` (in-memory ack + messages, no chat server).
 
 `pnpm --filter @seugi/mobile test` runs coverage scripts so playground stays complete:
 
 - `check-playground-screen-coverage.mjs` — every `src/screens/**/*Screen.tsx` in `screenDemos`
-- `check-playground-design-system-coverage.mjs` — every `src/design-system/*.tsx` imported in `DesignSystemCatalogScreen`
+- `check-playground-design-system-coverage.mjs` — every `src/design-system/*.tsx` in `designSystemDemos` and `DesignSystemCatalogScreen`
 - `check-playground-component-coverage.mjs` — every `src/components/*.tsx` in `componentDemos`
 
-`pnpm --filter @seugi/storybook check` verifies auto stories for each web `Components` and `Pages` default export. Global `StoryProviders` seeds a demo user for context-dependent UI.
+`pnpm --filter @seugi/storybook check` verifies auto stories for each web `Components` and `Pages` default export, runs a production **build**, checks `storybook-static/index.json`, then runs **Playwright test-runner** smoke against every story (`test:smoke` after a build). Global `StoryProviders` supplies `SelectedProvider`, Google OAuth, fetch/socket mocks, and a single `MemoryRouter` (per-story routes via `parameters.router.initialEntries`).
 
 ## Production app on a physical iPhone
 

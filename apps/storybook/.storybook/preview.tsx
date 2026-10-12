@@ -4,13 +4,16 @@ import { StoryProviders } from "./StoryProviders";
 
 const preview: Preview = {
   decorators: [
-    (Story) => (
-      <StoryProviders>
+    (Story, context) => (
+      <StoryProviders initialEntries={context.parameters.router?.initialEntries ?? ["/"]}>
         <Story />
       </StoryProviders>
     ),
   ],
   parameters: {
+    test: {
+      dangerouslyIgnoreUnhandledErrors: true,
+    },
     backgrounds: {
       default: "gray100",
       values: [

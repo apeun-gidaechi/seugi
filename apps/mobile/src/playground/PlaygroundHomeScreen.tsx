@@ -1,9 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SeugiColor } from "@seugi/design-tokens";
 import { componentDemos } from "./componentDemos";
+import { designSystemDemos } from "./designSystemDemos";
 import { screenDemos } from "./screenDemos";
-
-const designSystemComponentCount = 25;
 
 export function PlaygroundHomeScreen({
   onOpenDesignSystem,
@@ -25,7 +24,7 @@ export function PlaygroundHomeScreen({
       </View>
       <CatalogCard
         title="Design system"
-        description={`${designSystemComponentCount} primitives · buttons, fields, icons`}
+        description={`${designSystemDemos.length} demos · per-primitive + full catalog`}
         onPress={onOpenDesignSystem}
       />
       <CatalogCard

@@ -16,6 +16,20 @@ const outDir = path.resolve(storybookAppRoot, "stories/web/auto");
 const SKIP_FILES = new Set(["router.tsx", "Shell.tsx"]);
 const SKIP_PARTS = [".style."];
 
+const COMPONENT_INITIAL_ENTRIES = {
+  "Onboarding/Signup/EmailAuthentication/EmailAuthentication": [
+    {
+      pathname: "/emailauthentication",
+      state: { name: "스기 QA", email: "demo@seugi.app", password: "demo-password" },
+    },
+  ],
+  "Onboarding/Signup/EmailSignup/emailsignup": [{ pathname: "/emailsignup" }],
+  "Onboarding/SignIn/login": [{ pathname: "/login" }],
+  "Home/Subscribed/Home": [{ pathname: "/" }],
+  "Home/CatSeugi/CatSeugi": [{ pathname: "/" }],
+  "common/Navbar/Navbar": [{ pathname: "/chat" }],
+};
+
 function walk(dir) {
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -54,7 +68,6 @@ function storyFileName(slug) {
 const header = `/* auto-generated — pnpm --filter @seugi/storybook sync-stories */
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
-import { MemoryRouter } from "react-router-dom";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
 
 `;
@@ -79,6 +92,8 @@ for (const file of files) {
   const storyFilePath = path.join(outDir, outName);
   const importPath = importPathFromStory(storyFilePath, file);
   const title = `Web/Components/${slug}`;
+  const initialEntries = COMPONENT_INITIAL_ENTRIES[slug] ?? ["/"];
+  const initialEntriesJson = JSON.stringify(initialEntries);
   const body = `${header}
 import Component from "${importPath}";
 
@@ -87,14 +102,15 @@ const meta = {
   component: Component,
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <div style={{ padding: 16, maxWidth: 960 }}>
-          <Story />
-        </div>
-      </MemoryRouter>
+      <div style={{ padding: 16, maxWidth: 960 }}>
+        <Story />
+      </div>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    router: { initialEntries: ${initialEntriesJson} },
+  },
 } satisfies Meta<typeof Component>;
 
 export default meta;

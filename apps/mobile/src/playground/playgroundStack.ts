@@ -3,7 +3,6 @@ import type { PlaygroundSection } from "./types";
 
 export type PlaygroundStackParamList = {
   Home: undefined;
-  DesignSystem: undefined;
   Section: { section: PlaygroundSection };
   Demo: { section: PlaygroundSection; id: string };
 };

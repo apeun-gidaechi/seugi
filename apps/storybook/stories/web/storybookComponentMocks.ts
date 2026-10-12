@@ -53,6 +53,10 @@ export const defaultComponentStoryProps: Record<string, unknown> = {
 const SLUG_ARGS: Record<string, Record<string, unknown>> = {
   "Alert/Alert": { position: "top-right", subtext: "Storybook demo", titletext: "Alert" },
   "common/TextField/TextField": { value: "스기" },
+  "Admin/ManageMember/DropDown/DropDown": {
+    options: ["전체", "학생", "선생님"],
+    value: "전체",
+  },
 };
 
 export function withDefaultStoryProps(slug: string, args: Record<string, unknown>) {

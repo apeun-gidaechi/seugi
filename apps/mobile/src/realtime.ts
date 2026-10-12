@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServerEvents, ServerToClientEvents } from "@seugi/contracts";
 import type { SeugiApi } from "@seugi/api-client";
+import { isPlaygroundApp } from "./appVariant";
 
 type SeugiSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -9,6 +10,12 @@ export function createAuthenticatedSocket(
   apiUrl: string,
   onAuthenticationFailure: () => void = () => undefined,
 ): SeugiSocket {
+  if (isPlaygroundApp()) {
+    const { createPlaygroundSocket } = require("./playground/playgroundSocket") as {
+      createPlaygroundSocket: () => SeugiSocket;
+    };
+    return createPlaygroundSocket();
+  }
   const socket = io(apiUrl, { auth: { token: api.accessToken() }, timeout: 15000 }) as SeugiSocket;
   let refreshAttempted = false;
 

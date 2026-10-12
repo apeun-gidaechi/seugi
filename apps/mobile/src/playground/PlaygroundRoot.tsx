@@ -5,40 +5,34 @@ import { SeugiColor } from "@seugi/design-tokens";
 import { PlaygroundChrome } from "./PlaygroundChrome";
 import { PlaygroundHomeScreen } from "./PlaygroundHomeScreen";
 import { PlaygroundListScreen } from "./PlaygroundListScreen";
-import { DesignSystemCatalogScreen } from "./DesignSystemCatalogScreen";
 import { screenDemos } from "./screenDemos";
 import { componentDemos } from "./componentDemos";
+import { designSystemDemos } from "./designSystemDemos";
 import type { PlaygroundSection } from "./types";
 import { type PlaygroundStackParamList, playgroundStackScreenOptions } from "./playgroundStack";
 
 const Stack = createNativeStackNavigator<PlaygroundStackParamList>();
 
 function sectionEntries(section: PlaygroundSection) {
-  return section === "screens" ? screenDemos : componentDemos;
+  if (section === "screens") return screenDemos;
+  if (section === "design-system") return designSystemDemos;
+  return componentDemos;
 }
 
 function sectionTitle(section: PlaygroundSection) {
-  return section === "screens" ? "Screens" : "Components";
+  if (section === "screens") return "Screens";
+  if (section === "design-system") return "Design system";
+  return "Components";
 }
 
 function HomeScreen({ navigation }: NativeStackScreenProps<PlaygroundStackParamList, "Home">) {
   return (
     <PlaygroundChrome title="Playground">
       <PlaygroundHomeScreen
-        onOpenDesignSystem={() => navigation.navigate("DesignSystem")}
+        onOpenDesignSystem={() => navigation.navigate("Section", { section: "design-system" })}
         onOpenScreens={() => navigation.navigate("Section", { section: "screens" })}
         onOpenComponents={() => navigation.navigate("Section", { section: "components" })}
       />
-    </PlaygroundChrome>
-  );
-}
-
-function DesignSystemScreen({
-  navigation,
-}: NativeStackScreenProps<PlaygroundStackParamList, "DesignSystem">) {
-  return (
-    <PlaygroundChrome title="Design system" onBack={() => navigation.goBack()}>
-      <DesignSystemCatalogScreen />
     </PlaygroundChrome>
   );
 }
@@ -84,7 +78,6 @@ export function PlaygroundRoot() {
   return (
     <Stack.Navigator screenOptions={playgroundStackScreenOptions}>
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="DesignSystem" component={DesignSystemScreen} />
       <Stack.Screen name="Section" component={SectionScreen} />
       <Stack.Screen name="Demo" component={DemoScreen} />
     </Stack.Navigator>

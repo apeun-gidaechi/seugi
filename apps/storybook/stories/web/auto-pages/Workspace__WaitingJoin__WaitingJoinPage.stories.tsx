@@ -1,8 +1,8 @@
 /* auto-generated — pnpm --filter @seugi/storybook sync-stories */
 // @ts-nocheck
 import type { Meta, StoryObj } from "@storybook/react";
-import { MemoryRouter } from "react-router-dom";
 import { withDefaultStoryProps } from "../storybookComponentMocks";
+
 
 import Page from "../../../../web/src/Pages/Workspace/WaitingJoin/WaitingJoinPage";
 
@@ -11,21 +11,20 @@ const meta = {
   component: Page,
   decorators: [
     (Story) => (
-      <MemoryRouter>
-        <div style={{ minHeight: "100vh", background: "#f5f6f8" }}>
-          <Story />
-        </div>
-      </MemoryRouter>
+      <div style={{ minHeight: "100vh", background: "#f5f6f8" }}>
+        <Story />
+      </div>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    router: { initialEntries: ["/"] },
+  },
 } satisfies Meta<typeof Page>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => (
-    <Page {...withDefaultStoryProps("Workspace/WaitingJoin/WaitingJoinPage", args)} />
-  ),
+  render: (args) => <Page {...withDefaultStoryProps("Workspace/WaitingJoin/WaitingJoinPage", args)} />,
 };
