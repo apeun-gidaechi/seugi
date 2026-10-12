@@ -21,7 +21,7 @@ Open [http://localhost:6006](http://localhost:6006).
 | **Web/Pages/**        | Auto stories — one per `apps/web/src/Pages/**/*.tsx` default export      |
 | **Mobile/Playground** | How to open the RN playground on device                                  |
 
-`pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components`. Auto stories merge defaults from `stories/web/storybookComponentMocks.ts` so components render without the full app shell.
+`pnpm --filter @seugi/storybook sync-stories` regenerates web component stories after you add files under `apps/web/src/Components` (commit the output; CI builds the checked-in CSF files). Auto stories merge defaults from `stories/web/storybookComponentMocks.ts` so components render without the full app shell.
 
 Storybook installs a **fetch mock** (`.storybook/installStorybookFetchMock.ts`) and a **socket shim** (`storybookSocketService.ts`, aliased over `socketService`) plus demo `workspaceId` / tokens so SWR, REST, and chat pages work offline. Chat page stories use `MemoryRouter` paths `/chat` and `/groupchat` (see `sync-page-stories.mjs`). `pnpm --filter @seugi/storybook check` also runs a production **build** as a compile/smoke gate.
 

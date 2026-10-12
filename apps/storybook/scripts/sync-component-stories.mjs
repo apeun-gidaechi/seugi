@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webSrc = path.resolve(__dirname, "../../web/src");
 const componentsRoot = path.join(webSrc, "Components");
 const storybookAppRoot = path.resolve(__dirname, "..");
+const repoRoot = path.resolve(storybookAppRoot, "../..");
 const outDir = path.resolve(storybookAppRoot, "stories/web/auto");
 
 const SKIP_FILES = new Set(["router.tsx", "Shell.tsx"]);
@@ -123,5 +124,10 @@ export const Default: Story = {
   fs.writeFileSync(path.join(outDir, outName), body);
   written += 1;
 }
+
+execSync(`pnpm exec prettier --write "${path.relative(repoRoot, outDir)}"`, {
+  cwd: repoRoot,
+  stdio: "inherit",
+});
 
 console.log(`Wrote ${written} web component stories to ${outDir}`);

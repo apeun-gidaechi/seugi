@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webSrc = path.resolve(__dirname, "../../web/src");
 const pagesRoot = path.join(webSrc, "Pages");
 const storybookAppRoot = path.resolve(__dirname, "..");
+const repoRoot = path.resolve(storybookAppRoot, "../..");
 const outDir = path.resolve(storybookAppRoot, "stories/web/auto-pages");
 
 const SKIP_PARTS = [".style."];
@@ -96,8 +97,7 @@ for (const file of files) {
   const title = `Web/Pages/${slug}`;
   const initialEntries = PAGE_INITIAL_ENTRIES[slug] ?? ["/"];
   const initialEntriesJson = JSON.stringify(initialEntries);
-  const body = `${header}
-import Page from "${importPath}";
+  const body = `${header}import Page from "${importPath}";
 
 const meta = {
   title: "${title}",
@@ -125,5 +125,10 @@ export const Default: Story = {
   fs.writeFileSync(path.join(outDir, outName), body);
   written += 1;
 }
+
+execSync(`pnpm exec prettier --write "${path.relative(repoRoot, outDir)}"`, {
+  cwd: repoRoot,
+  stdio: "inherit",
+});
 
 console.log(`Wrote ${written} web page stories to ${outDir}`);
